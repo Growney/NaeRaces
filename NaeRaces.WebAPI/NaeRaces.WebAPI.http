@@ -1,0 +1,6 @@
+@NaeRaces.WebAPI_HostAddress = http://localhost:5030
+
+GET {{NaeRaces.WebAPI_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
