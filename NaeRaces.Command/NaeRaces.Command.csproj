@@ -7,7 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\EventDbLite\EventDbLite.csproj" />
+    <ProjectReference Include="..\EventDbLite\EventDbLite\EventDbLite.csproj" />
     <ProjectReference Include="..\NaeRaces.Events\NaeRaces.Events.csproj" />
   </ItemGroup>
 
