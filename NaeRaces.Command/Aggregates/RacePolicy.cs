@@ -78,6 +78,10 @@ public class RacePolicy : AggregateRoot<Guid>
         public bool IsWithinBrackets { get; set; }
     }
 
+    public RacePolicy()
+    {
+
+    }
     public RacePolicy(Guid racePolicyId, Guid clubId, ValueTypes.Name name, string description)
     {
         Raise(new RacePolicyCreated(racePolicyId, clubId, name.Value, description));

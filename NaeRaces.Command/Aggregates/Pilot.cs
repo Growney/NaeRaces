@@ -40,6 +40,10 @@ public class Pilot : AggregateRoot<Guid>
         public bool IsValidatingMemberOnCommiteeOfClub { get; set; }
     }
 
+    public Pilot()
+    {
+    }
+
     public Pilot(Guid pilotId, string callSign)
     {
         Raise(new PilotRegistered(pilotId, callSign));

@@ -19,6 +19,11 @@ public class Team : AggregateRoot<Guid>
         public HashSet<Guid> PilotIds { get; set; } = [];
     }
 
+    public Team()
+    {
+
+    }
+
     public Team(Guid teamId, string name, Guid captainPilotId)
     {
         if (Id != default)

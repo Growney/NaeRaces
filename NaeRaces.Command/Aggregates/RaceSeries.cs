@@ -11,6 +11,10 @@ public class RaceSeries : AggregateRoot<Guid>
     private string? _name;
     private readonly HashSet<Guid> _raceIds = [];
 
+    public RaceSeries()
+    {
+    }
+
     public RaceSeries(Guid raceSeriesId, string name)
     {
         if (Id != default)

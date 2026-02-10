@@ -70,7 +70,10 @@ public class Race : AggregateRoot<Guid>
         public double Discount { get; set; }
         public bool IsConfirmed { get; set; }
     }
+    public Race()
+    {
 
+    }
     public Race(Guid raceId, ValueTypes.Name name, Guid clubId, int locationId)
     {
         Raise(new RacePlanned(raceId, name.Value, clubId, locationId));

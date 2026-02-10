@@ -64,6 +64,10 @@ public class Club : AggregateRoot<Guid>
         public Guid RegistrationId { get; set; }
         public bool IsConfirmed { get; set; }
     }
+    public Club()
+    {
+        // Parameterless constructor for framework
+    }
 
     public Club(Guid clubId,Code code, Name name, Guid founderPilotId)
     {

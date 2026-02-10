@@ -13,4 +13,9 @@
     <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.23.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\EventDbLite\EventDbLite\EventDbLite.csproj" />
+    <ProjectReference Include="..\NaeRaces.Command\NaeRaces.Command.csproj" />
+  </ItemGroup>
+
 </Project>
