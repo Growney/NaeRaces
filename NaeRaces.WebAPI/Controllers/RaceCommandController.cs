@@ -21,6 +21,11 @@ public class RaceCommandController : Controller
         [FromQuery, BindRequired] Guid clubId,
         [FromQuery, BindRequired] int locationId)
     {
+        if(raceId == Guid.Empty)
+        {
+            return BadRequest("RaceId must be a non-empty GUID.");
+        }
+
         Name nameValueType = Name.Create(name);
 
         Race newRace = _aggregateRepository.CreateNew<Race>(() => new Race(raceId, nameValueType, clubId, locationId));
@@ -35,6 +40,11 @@ public class RaceCommandController : Controller
         [FromQuery, BindRequired] string name,
         [FromQuery, BindRequired] int teamSize)
     {
+        if(raceId == Guid.Empty)
+        {
+            return BadRequest("RaceId must be a non-empty GUID.");
+        }
+
         Name nameValueType = Name.Create(name);
 
         Race newRace = _aggregateRepository.CreateNew<Race>(() => new Race(raceId, nameValueType, teamSize));

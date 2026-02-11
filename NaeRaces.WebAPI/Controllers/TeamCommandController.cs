@@ -19,6 +19,11 @@ public class TeamCommandController : Controller
         [FromQuery, BindRequired] string name,
         [FromQuery, BindRequired] Guid captainPilotId)
     {
+        if(teamId == Guid.Empty)
+        {
+            return BadRequest("TeamId cannot be empty.");
+        }
+
         Team newTeam = _aggregateRepository.CreateNew<Team>(() => new Team(teamId, name, captainPilotId));
 
         await _aggregateRepository.Save(newTeam);

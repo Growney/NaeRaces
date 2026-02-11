@@ -1,4 +1,5 @@
 ﻿using EventDbLite.Aggregates;
+using NaeRaces.Command.ValueTypes;
 using NaeRaces.Events;
 using System;
 using System.Collections.Generic;
@@ -8,7 +9,8 @@ namespace NaeRaces.Command.Aggregates;
 
 public class Pilot : AggregateRoot<Guid>
 {
-    private string? _callSign;
+    private CallSign _callSign;
+    private string? _name;
     private string? _nationality;
     private DateTime? _dateOfBirth;
     private readonly List<GovernmentDocumentValidation> _governmentDocValidations = [];
@@ -44,18 +46,26 @@ public class Pilot : AggregateRoot<Guid>
     {
     }
 
-    public Pilot(Guid pilotId, string callSign)
+    public Pilot(Guid pilotId, CallSign callSign)
     {
-        Raise(new PilotRegistered(pilotId, callSign));
+        Raise(new PilotRegistered(pilotId, callSign.Value));
     }
 
-    public void ChangePilotCallSign(string newCallSign)
+    public void ChangePilotCallSign(CallSign newCallSign)
     {
         ThrowIfIdNotSet();
-        if (_callSign == newCallSign)
+        if (_callSign.Equals(newCallSign))
             return;
 
-        Raise(new PilotCallSignChanged(Id, newCallSign));
+        Raise(new PilotCallSignChanged(Id, newCallSign.Value));
+    }
+    public void SetPilotName(string name)
+    {
+        ThrowIfIdNotSet();
+        if(_name == name)
+            return;
+
+        Raise(new PilotNameSet(Id, name));
     }
 
     public void SetPilotNationality(string nationality)
@@ -116,12 +126,17 @@ public class Pilot : AggregateRoot<Guid>
     private void When(PilotRegistered e)
     {
         Id = e.PilotId;
-        _callSign = e.CallSign;
+        _callSign = CallSign.Rehydrate(e.CallSign);
+    }
+
+    private void When(PilotNameSet e)
+    {
+        _name = e.Name;
     }
 
     private void When(PilotCallSignChanged e)
     {
-        _callSign = e.NewCallSign;
+        _callSign = CallSign.Rehydrate(e.NewCallSign);
     }
 
     private void When(PilotNationalitySet e)

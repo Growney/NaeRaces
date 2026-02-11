@@ -1,3 +1,5 @@
+using NaeRaces.Query.EntityFrameworkCore.Extensions;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -5,6 +7,13 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
+builder.Services.AddKurrentDbEventDbLite(x =>
+{
+
+});
+builder.Services.AddSqlServerNaeRacesQueryDbContext(builder.Configuration);
+builder.Services.AddNaeRacesEntityFrameworkCoreQueryReactions();
+builder.Services.AddNaeRacesEntityFrameworkCoreQueryHandlers();
 
 var app = builder.Build();
 

@@ -1,18 +1,25 @@
 ﻿using EventDbLite.Abstractions;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Controllers;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using NaeRaces.Command.Aggregates;
 using NaeRaces.Command.ValueTypes;
+using NaeRaces.Query.Abstractions;
+using NaeRaces.WebAPI.Models;
 
 namespace NaeRaces.WebAPI.Controllers;
 
 public class ClubCommandController : Controller
 {
     private readonly IAggregateRepository _aggregateRepository;
+    private readonly IClubUniquenessQueryHandler _clubUniquenessQueryHandler;
+    private readonly IPilotDetailsQueryHandler _pilotDetailsQueryHandler;
 
-    public ClubCommandController(IAggregateRepository aggregateRepository)
+    public ClubCommandController(IAggregateRepository aggregateRepository, IClubUniquenessQueryHandler clubUniquenessQueryHandler, IPilotDetailsQueryHandler pilotDetailsQueryHandler)
     {
         _aggregateRepository = aggregateRepository;
+        _clubUniquenessQueryHandler = clubUniquenessQueryHandler;
+        _pilotDetailsQueryHandler = pilotDetailsQueryHandler;
     }
 
     [HttpPost("api/club")]
@@ -22,8 +29,23 @@ public class ClubCommandController : Controller
         [FromQuery, BindRequired] Guid founderPilotId)
     {
 
+        if(clubId == Guid.Empty)
+        {
+            return BadRequest("Club Id must be set");
+        }
+
         Code codeValueType = Code.Create(code);
         Name nameValueType = Name.Create(name);
+
+        if (!await _pilotDetailsQueryHandler.DoesPilotExist(founderPilotId))
+        {
+            return BadRequest("Founder pilot not found");
+        }
+
+        if (await _clubUniquenessQueryHandler.DoesClubCodeExist(code) || await _clubUniquenessQueryHandler.DoesClubNameExist(code))
+        {
+            return Conflict("A club with the same code or name already exists.");
+        }
 
         Club newClub = _aggregateRepository.CreateNew<Club>(() => new Club(clubId, codeValueType, nameValueType, founderPilotId));
 
@@ -39,6 +61,11 @@ public class ClubCommandController : Controller
     {
         Code codeValueType = Code.Create(code);
         Name nameValueType = Name.Create(name);
+
+        if (await _clubUniquenessQueryHandler.DoesClubCodeExist(code) || await _clubUniquenessQueryHandler.DoesClubNameExist(code))
+        {
+            return Conflict("A club with the same code or name already exists.");
+        }
 
         Club? club = await _aggregateRepository.Get<Club, Guid>(clubId);
 
@@ -87,6 +114,21 @@ public class ClubCommandController : Controller
         [FromQuery] string phoneNumber,
         [FromQuery] string emailAddress)
     {
+        if(string.IsNullOrWhiteSpace(phoneNumber) && string.IsNullOrWhiteSpace(emailAddress))
+        {
+            return BadRequest("Phone number or email address must be provided");
+        }
+
+        if(phoneNumber.Length > 25)
+        {
+            return BadRequest("Phone number too long");
+        }
+
+        if (emailAddress.Length > 100)
+        {
+            return BadRequest("Email address too long");
+        }
+
         Club? club = await _aggregateRepository.Get<Club, Guid>(clubId);
         if (club == null)
         {
@@ -102,23 +144,26 @@ public class ClubCommandController : Controller
 
     [HttpPost("api/club/{clubId}/location")]
     public async Task<IActionResult> AddClubLocationAsync([FromRoute] Guid clubId,
-        [FromQuery, BindRequired] int locationId,
-        [FromQuery, BindRequired] string locationName,
-        [FromQuery, BindRequired] string locationInformation,
-        [FromQuery, BindRequired] string addressLine1,
-        [FromQuery] string? addressLine2,
-        [FromQuery, BindRequired] string city,
-        [FromQuery, BindRequired] string postcode,
-        [FromQuery, BindRequired] string county)
+        [FromBody] AddClubLocationRequest request)
     {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
+        if (request.LocationInformation.Length > 250)
+        {
+            return BadRequest("Location information too long");
+        }
+
         Club? club = await _aggregateRepository.Get<Club, Guid>(clubId);
         if (club == null)
         {
             return NotFound();
         }
 
-        var address = Address.Create(addressLine1, addressLine2, city, postcode, county);
-        club.AddClubLocation(locationId, locationName, locationInformation, address);
+        var address = Address.Create(request.AddressLine1, request.AddressLine2, request.City, request.Postcode, request.County);
+        var locationId = club.AddClubLocation(request.LocationName, request.LocationInformation, address);
 
         await _aggregateRepository.Save(club);
 
@@ -133,6 +178,8 @@ public class ClubCommandController : Controller
         {
             return NotFound();
         }
+
+        //TODO ensure location is not in use by race
 
         club.RemoveClubLocation(locationId);
 
@@ -163,19 +210,20 @@ public class ClubCommandController : Controller
     [HttpPut("api/club/{clubId}/location/{locationId}/address")]
     public async Task<IActionResult> ChangeClubLocationAddressAsync([FromRoute] Guid clubId,
         [FromRoute] int locationId,
-        [FromQuery, BindRequired] string addressLine1,
-        [FromQuery] string? addressLine2,
-        [FromQuery, BindRequired] string city,
-        [FromQuery, BindRequired] string postcode,
-        [FromQuery, BindRequired] string county)
+        [FromBody] ChangeClubLocationAddressRequest request)
     {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
         Club? club = await _aggregateRepository.Get<Club, Guid>(clubId);
         if (club == null)
         {
             return NotFound();
         }
 
-        var address = Address.Create(addressLine1, addressLine2, city, postcode, county);
+        var address = Address.Create(request.AddressLine1, request.AddressLine2, request.City, request.Postcode, request.County);
         club.ChangeClubLocationAddress(locationId, address);
 
         await _aggregateRepository.Save(club);
@@ -186,15 +234,20 @@ public class ClubCommandController : Controller
     [HttpPut("api/club/{clubId}/location/{locationId}/information")]
     public async Task<IActionResult> ChangeClubLocationInformationAsync([FromRoute] Guid clubId,
         [FromRoute] int locationId,
-        [FromQuery, BindRequired] string newLocationInformation)
+        [FromBody] ChangeClubLocationInformationRequest request)
     {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
         Club? club = await _aggregateRepository.Get<Club, Guid>(clubId);
         if (club == null)
         {
             return NotFound();
         }
 
-        club.ChangeClubLocationInformation(locationId, newLocationInformation);
+        club.ChangeClubLocationInformation(locationId, request.LocationInformation);
 
         await _aggregateRepository.Save(club);
 
@@ -223,13 +276,32 @@ public class ClubCommandController : Controller
         [FromQuery, BindRequired] int minimumAge,
         [FromQuery, BindRequired] string validationPolicy)
     {
+
+        ValidationPolicy policy = ValidationPolicy.Create(validationPolicy);
+
         Club? club = await _aggregateRepository.Get<Club, Guid>(clubId);
         if (club == null)
         {
             return NotFound();
         }
 
-        club.SetClubMinimumAge(minimumAge, validationPolicy);
+        club.SetClubMinimumAge(minimumAge, policy);
+
+        await _aggregateRepository.Save(club);
+
+        return Ok();
+    }
+
+    [HttpDelete("api/club/{clubId}/minimumage")]
+    public async Task<IActionResult> RemoveClubMinimumAgeAsync([FromRoute] Guid clubId)
+    {
+        Club? club = await _aggregateRepository.Get<Club, Guid>(clubId);
+        if (club == null)
+        {
+            return NotFound();
+        }
+
+        club.RemoveClubMinimumAge();
 
         await _aggregateRepository.Save(club);
 
@@ -241,23 +313,23 @@ public class ClubCommandController : Controller
         [FromQuery, BindRequired] int maximumAge,
         [FromQuery, BindRequired] string validationPolicy)
     {
+        ValidationPolicy policy = ValidationPolicy.Create(validationPolicy);
+
         Club? club = await _aggregateRepository.Get<Club, Guid>(clubId);
         if (club == null)
         {
             return NotFound();
         }
 
-        club.SetClubMaximumAge(maximumAge, validationPolicy);
+        club.SetClubMaximumAge(maximumAge, policy);
 
         await _aggregateRepository.Save(club);
 
         return Ok();
     }
 
-    [HttpPut("api/club/{clubId}/insurancerequirement")]
-    public async Task<IActionResult> SetClubInsuranceRequirementAsync([FromRoute] Guid clubId,
-        [FromQuery, BindRequired] bool isRequired,
-        [FromQuery] string[]? acceptedInsuranceProviders)
+    [HttpDelete("api/club/{clubId}/maximumage")]
+    public async Task<IActionResult> RemoveClubMaximumAgeAsync([FromRoute] Guid clubId)
     {
         Club? club = await _aggregateRepository.Get<Club, Guid>(clubId);
         if (club == null)
@@ -265,16 +337,36 @@ public class ClubCommandController : Controller
             return NotFound();
         }
 
-        club.SetClubInsuranceRequirement(isRequired, acceptedInsuranceProviders ?? []);
+        club.RemoveClubMaximumAge();
 
         await _aggregateRepository.Save(club);
 
         return Ok();
     }
 
-    [HttpPut("api/club/{clubId}/governmentdocumentvalidationrequirement")]
-    public async Task<IActionResult> SetClubGovernmentDocumentValidationRequirementAsync([FromRoute] Guid clubId,
-        [FromQuery, BindRequired] bool isRequired)
+    [HttpPost("api/club/{clubId}/insuranceproviderrequirement")]
+    public async Task<IActionResult> AddClubInsuranceProviderRequirementAsync([FromRoute] Guid clubId,
+        [FromQuery, BindRequired] string insuranceProvider,
+        [FromQuery, BindRequired] string validationPolicy)
+    {
+        ValidationPolicy validation = ValidationPolicy.Create(validationPolicy);
+
+        Club? club = await _aggregateRepository.Get<Club, Guid>(clubId);
+        if (club == null)
+        {
+            return NotFound();
+        }
+
+        club.AddClubInsuranceProviderRequirement(insuranceProvider, validation);
+
+        await _aggregateRepository.Save(club);
+
+        return Created($"/api/club/{clubId}/insuranceproviderrequirement/{insuranceProvider}", new { InsuranceProvider = insuranceProvider });
+    }
+
+    [HttpDelete("api/club/{clubId}/insuranceproviderrequirement/{insuranceProvider}")]
+    public async Task<IActionResult> RemoveClubInsuranceProviderRequirementAsync([FromRoute] Guid clubId,
+        [FromRoute] string insuranceProvider)
     {
         Club? club = await _aggregateRepository.Get<Club, Guid>(clubId);
         if (club == null)
@@ -282,7 +374,44 @@ public class ClubCommandController : Controller
             return NotFound();
         }
 
-        club.SetClubGovernmentDocumentValidationRequirement(isRequired);
+        club.RemoveClubInsuranceProviderRequirement(insuranceProvider);
+
+        await _aggregateRepository.Save(club);
+
+        return Ok();
+    }
+
+    [HttpPost("api/club/{clubId}/governmentdocumentvalidationrequirement")]
+    public async Task<IActionResult> AddClubGovernmentDocumentValidationRequirementAsync([FromRoute] Guid clubId,
+        [FromQuery, BindRequired] string governmentDocument,
+        [FromQuery, BindRequired] string validationPolicy)
+    {
+        ValidationPolicy validation = ValidationPolicy.Create(validationPolicy);
+
+        Club? club = await _aggregateRepository.Get<Club, Guid>(clubId);
+        if (club == null)
+        {
+            return NotFound();
+        }
+
+        club.AddClubGovernmentDocumentValidationRequirement(governmentDocument, validation);
+
+        await _aggregateRepository.Save(club);
+
+        return Created($"/api/club/{clubId}/governmentdocumentvalidationrequirement/{governmentDocument}", new { GovernmentDocument = governmentDocument });
+    }
+
+    [HttpDelete("api/club/{clubId}/governmentdocumentvalidationrequirement/{governmentDocument}")]
+    public async Task<IActionResult> RemoveClubGovernmentDocumentValidationRequirementAsync([FromRoute] Guid clubId,
+        [FromRoute] string governmentDocument)
+    {
+        Club? club = await _aggregateRepository.Get<Club, Guid>(clubId);
+        if (club == null)
+        {
+            return NotFound();
+        }
+
+        club.RemoveClubGovernmentDocumentValidationRequirement(governmentDocument);
 
         await _aggregateRepository.Save(club);
 
@@ -382,13 +511,15 @@ public class ClubCommandController : Controller
         [FromQuery, BindRequired] int minimumAge,
         [FromQuery, BindRequired] string validationPolicy)
     {
+        ValidationPolicy validation = ValidationPolicy.Create(validationPolicy);
+
         Club? club = await _aggregateRepository.Get<Club, Guid>(clubId);
         if (club == null)
         {
             return NotFound();
         }
 
-        club.SetClubMembershipLevelAge(membershipLevelId, minimumAge, validationPolicy);
+        club.SetClubMembershipLevelAge(membershipLevelId, minimumAge, validation);
 
         await _aggregateRepository.Save(club);
 
@@ -401,13 +532,15 @@ public class ClubCommandController : Controller
         [FromQuery, BindRequired] int maximumAge,
         [FromQuery, BindRequired] string validationPolicy)
     {
+        ValidationPolicy validation = ValidationPolicy.Create(validationPolicy);
+
         Club? club = await _aggregateRepository.Get<Club, Guid>(clubId);
         if (club == null)
         {
             return NotFound();
         }
 
-        club.SetClubMembershipLevelMaximumAge(membershipLevelId, maximumAge, validationPolicy);
+        club.SetClubMembershipLevelMaximumAge(membershipLevelId, maximumAge, validation);
 
         await _aggregateRepository.Save(club);
 
@@ -539,7 +672,8 @@ public class ClubCommandController : Controller
         [FromRoute] Guid pilotId,
         [FromQuery, BindRequired] int membershipLevelId,
         [FromQuery, BindRequired] int paymentOptionId,
-        [FromQuery, BindRequired] Guid registrationId)
+        [FromQuery, BindRequired] Guid registrationId,
+        [FromQuery, BindRequired] DateTime validUntil)
     {
         Club? club = await _aggregateRepository.Get<Club, Guid>(clubId);
         if (club == null)
@@ -547,7 +681,7 @@ public class ClubCommandController : Controller
             return NotFound();
         }
 
-        club.ConfirmPilotClubMembership(membershipLevelId, paymentOptionId, pilotId, registrationId);
+        club.ConfirmPilotClubMembership(membershipLevelId, paymentOptionId, pilotId, registrationId, validUntil);
 
         await _aggregateRepository.Save(club);
 

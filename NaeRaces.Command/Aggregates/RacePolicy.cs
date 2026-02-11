@@ -1,4 +1,5 @@
 ﻿using EventDbLite.Aggregates;
+using NaeRaces.Command.ValueTypes;
 using NaeRaces.Events;
 using System;
 using System.Collections.Generic;
@@ -38,25 +39,25 @@ public class RacePolicy : AggregateRoot<Guid>
     private class MinimumAgeRequirement
     {
         public int MinimumAge { get; set; }
-        public string ValidationPolicy { get; set; } = string.Empty;
+        public ValidationPolicy ValidationPolicy { get; set; }
     }
 
     private class MaximumAgeRequirement
     {
         public int MaximumAge { get; set; }
-        public string ValidationPolicy { get; set; } = string.Empty;
+        public ValidationPolicy ValidationPolicy { get; set; }
     }
 
     private class InsuranceProviderRequirement
     {
         public string InsuranceProvider { get; set; } = string.Empty;
-        public string ValidationPolicy { get; set; } = string.Empty;
+        public ValidationPolicy ValidationPolicy { get; set; }
     }
 
     private class GovernmentDocumentRequirement
     {
         public string GovernmentDocument { get; set; } = string.Empty;
-        public string ValidationPolicy { get; set; } = string.Empty;
+        public ValidationPolicy ValidationPolicy { get; set; }
     }
 
     private class ClubRequirement
@@ -87,39 +88,39 @@ public class RacePolicy : AggregateRoot<Guid>
         Raise(new RacePolicyCreated(racePolicyId, clubId, name.Value, description));
     }
 
-    public int AddMinimumAgeRequirement(int minimumAge, string validationPolicy)
+    public int AddMinimumAgeRequirement(int minimumAge, ValidationPolicy validationPolicy)
     {
         ThrowIfIdNotSet();
         
         var statementId = _nextPolicyStatementId;
-        Raise(new RacePolicyMinimumAgeRequirementAdded(Id, statementId, minimumAge, validationPolicy));
+        Raise(new RacePolicyMinimumAgeRequirementAdded(Id, statementId, minimumAge, validationPolicy.Value));
         return statementId;
     }
 
-    public int AddMaximumAgeRequirement(int maximumAge, string validationPolicy)
+    public int AddMaximumAgeRequirement(int maximumAge, ValidationPolicy validationPolicy)
     {
         ThrowIfIdNotSet();
         
         var statementId = _nextPolicyStatementId;
-        Raise(new RacePolicyMaximumAgeRequirementAdded(Id, statementId, maximumAge, validationPolicy));
+        Raise(new RacePolicyMaximumAgeRequirementAdded(Id, statementId, maximumAge, validationPolicy.Value));
         return statementId;
     }
 
-    public int AddInsuranceProviderRequirement(string insuranceProvider, string validationPolicy)
+    public int AddInsuranceProviderRequirement(string insuranceProvider, ValidationPolicy validationPolicy)
     {
         ThrowIfIdNotSet();
         
         var statementId = _nextPolicyStatementId;
-        Raise(new RacePolicyInsuranceProviderRequirementAdded(Id, statementId, insuranceProvider, validationPolicy));
+        Raise(new RacePolicyInsuranceProviderRequirementAdded(Id, statementId, insuranceProvider, validationPolicy.Value));
         return statementId;
     }
 
-    public int AddGovernmentDocumentValidationRequirement(string governmentDocument, string validationPolicy)
+    public int AddGovernmentDocumentValidationRequirement(string governmentDocument, ValidationPolicy validationPolicy)
     {
         ThrowIfIdNotSet();
         
         var statementId = _nextPolicyStatementId;
-        Raise(new RacePolicyGovernmentDocumentValidationRequirementAdded(Id, statementId, governmentDocument, validationPolicy));
+        Raise(new RacePolicyGovernmentDocumentValidationRequirementAdded(Id, statementId, governmentDocument, validationPolicy.Value));
         return statementId;
     }
 
@@ -220,7 +221,7 @@ public class RacePolicy : AggregateRoot<Guid>
         _minimumAgeRequirements[e.PolicyStatementId] = new MinimumAgeRequirement
         {
             MinimumAge = e.MinimumAge,
-            ValidationPolicy = e.ValidationPolicy
+            ValidationPolicy = ValidationPolicy.Rehydrate(e.ValidationPolicy)
         };
         _statementTypes[e.PolicyStatementId] = StatementType.MinimumAge;
         
@@ -233,7 +234,7 @@ public class RacePolicy : AggregateRoot<Guid>
         _maximumAgeRequirements[e.PolicyStatementId] = new MaximumAgeRequirement
         {
             MaximumAge = e.MaximumAge,
-            ValidationPolicy = e.ValidationPolicy
+            ValidationPolicy = ValidationPolicy.Rehydrate(e.ValidationPolicy)
         };
         _statementTypes[e.PolicyStatementId] = StatementType.MaximumAge;
         
@@ -246,7 +247,7 @@ public class RacePolicy : AggregateRoot<Guid>
         _insuranceProviderRequirements[e.PolicyStatementId] = new InsuranceProviderRequirement
         {
             InsuranceProvider = e.InsuranceProvider,
-            ValidationPolicy = e.ValidationPolicy
+            ValidationPolicy = ValidationPolicy.Rehydrate(e.ValidationPolicy)
         };
         _statementTypes[e.PolicyStatementId] = StatementType.InsuranceProvider;
         
@@ -259,7 +260,7 @@ public class RacePolicy : AggregateRoot<Guid>
         _governmentDocumentRequirements[e.PolicyStatementId] = new GovernmentDocumentRequirement
         {
             GovernmentDocument = e.GovernmentDocument,
-            ValidationPolicy = e.ValidationPolicy
+            ValidationPolicy = ValidationPolicy.Rehydrate(e.ValidationPolicy)
         };
         _statementTypes[e.PolicyStatementId] = StatementType.GovernmentDocument;
         

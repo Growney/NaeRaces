@@ -3,10 +3,13 @@
     <Project Path="NaeRaces.BlazorWebApp/NaeRaces.BlazorWebApp.csproj" Id="299cf374-eb33-4bfa-a176-89d46435dcf5" />
     <Project Path="NaeRaces.Command/NaeRaces.Command.csproj" Id="1fdf9c2d-3c0e-4940-af5a-a7f3b145e05b" />
     <Project Path="NaeRaces.Events/NaeRaces.Events.csproj" Id="43badb08-18fe-4c5a-bd3c-6a99c4ad27cb" />
+    <Project Path="NaeRaces.Query.EntityFrameworkCore.SqlServer/NaeRaces.Query.EntityFrameworkCore.SqlServer.csproj" Id="c33181c1-bd4b-49e4-8abe-94ece3e7311f" />
+    <Project Path="NaeRaces.Query.EntityFrameworkCore/NaeRaces.Query.EntityFrameworkCore.csproj" Id="4942d7d5-2961-46ff-a58c-d1255410be60" />
     <Project Path="NaeRaces.Query/NaeRaces.Query.csproj" Id="d6dcf07b-bbcf-4ff7-b645-1a5bc76ad093" />
     <Project Path="NaeRaces.WebAPI/NaeRaces.WebAPI.csproj" Id="8bb43b89-e654-447f-bf11-adccd87f7825" />
   </Folder>
   <Folder Name="/src/lib/">
+    <Project Path="EventDbLite.Collections/EventDbLite.Collections.csproj" Id="0deb0e4e-e819-4bc5-87b2-4e0507d86f44" />
     <Project Path="EventDbLite/EventDb.Sqlite/EventDb.Sqlite.csproj" />
     <Project Path="EventDbLite/EventDbLite.Abstractions/EventDbLite.Abstractions.csproj" />
     <Project Path="EventDbLite/EventDbLite.Handlers/EventDbLite.Handlers.csproj" />

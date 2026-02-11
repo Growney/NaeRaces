@@ -24,6 +24,9 @@ public struct Code
         if(value.Length > 20)
             throw new ArgumentException("Code cannot be longer than 20 characters.", nameof(value));
 
+        if (value.Length < 3)
+            throw new ArgumentException("Code cannot be less than 3 characters");
+
         foreach(char c in value)
         {
             if (!char.IsLetterOrDigit(c))

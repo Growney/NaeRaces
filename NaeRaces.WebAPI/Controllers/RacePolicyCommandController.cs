@@ -21,6 +21,11 @@ public class RacePolicyCommandController : Controller
         [FromQuery, BindRequired] string name,
         [FromQuery, BindRequired] string description)
     {
+        if(racePolicyId == Guid.Empty)
+        {
+            return BadRequest("RacePolicyId cannot be empty.");
+        }
+
         Name nameValueType = Name.Create(name);
 
         RacePolicy newRacePolicy = _aggregateRepository.CreateNew<RacePolicy>(() => new RacePolicy(racePolicyId, clubId, nameValueType, description));
@@ -35,13 +40,16 @@ public class RacePolicyCommandController : Controller
         [FromQuery, BindRequired] int minimumAge,
         [FromQuery, BindRequired] string validationPolicy)
     {
+
+        ValidationPolicy policy = ValidationPolicy.Create(validationPolicy);
+
         RacePolicy? racePolicy = await _aggregateRepository.Get<RacePolicy, Guid>(racePolicyId);
         if (racePolicy == null)
         {
             return NotFound();
         }
 
-        int statementId = racePolicy.AddMinimumAgeRequirement(minimumAge, validationPolicy);
+        int statementId = racePolicy.AddMinimumAgeRequirement(minimumAge, policy);
 
         await _aggregateRepository.Save(racePolicy);
 
@@ -53,13 +61,15 @@ public class RacePolicyCommandController : Controller
         [FromQuery, BindRequired] int maximumAge,
         [FromQuery, BindRequired] string validationPolicy)
     {
+        ValidationPolicy policy = ValidationPolicy.Create(validationPolicy);
+
         RacePolicy? racePolicy = await _aggregateRepository.Get<RacePolicy, Guid>(racePolicyId);
         if (racePolicy == null)
         {
             return NotFound();
         }
 
-        int statementId = racePolicy.AddMaximumAgeRequirement(maximumAge, validationPolicy);
+        int statementId = racePolicy.AddMaximumAgeRequirement(maximumAge, policy);
 
         await _aggregateRepository.Save(racePolicy);
 
@@ -71,13 +81,15 @@ public class RacePolicyCommandController : Controller
         [FromQuery, BindRequired] string insuranceProvider,
         [FromQuery, BindRequired] string validationPolicy)
     {
+        ValidationPolicy policy = ValidationPolicy.Create(validationPolicy);
+
         RacePolicy? racePolicy = await _aggregateRepository.Get<RacePolicy, Guid>(racePolicyId);
         if (racePolicy == null)
         {
             return NotFound();
         }
 
-        int statementId = racePolicy.AddInsuranceProviderRequirement(insuranceProvider, validationPolicy);
+        int statementId = racePolicy.AddInsuranceProviderRequirement(insuranceProvider, policy);
 
         await _aggregateRepository.Save(racePolicy);
 
@@ -89,13 +101,15 @@ public class RacePolicyCommandController : Controller
         [FromQuery, BindRequired] string governmentDocument,
         [FromQuery, BindRequired] string validationPolicy)
     {
+        ValidationPolicy policy = ValidationPolicy.Create(validationPolicy);
+
         RacePolicy? racePolicy = await _aggregateRepository.Get<RacePolicy, Guid>(racePolicyId);
         if (racePolicy == null)
         {
             return NotFound();
         }
 
-        int statementId = racePolicy.AddGovernmentDocumentValidationRequirement(governmentDocument, validationPolicy);
+        int statementId = racePolicy.AddGovernmentDocumentValidationRequirement(governmentDocument, policy);
 
         await _aggregateRepository.Save(racePolicy);
 

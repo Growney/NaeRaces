@@ -18,6 +18,11 @@ public class RaceSeriesCommandController : Controller
     public async Task<IActionResult> PlanRaceSeriesAsync([FromQuery, BindRequired] Guid raceSeriesId,
         [FromQuery, BindRequired] string name)
     {
+        if(raceSeriesId == Guid.Empty)
+        {
+            return BadRequest("RaceSeriesId cannot be empty.");
+        }
+
         RaceSeries newRaceSeries = _aggregateRepository.CreateNew<RaceSeries>(() => new RaceSeries(raceSeriesId, name));
 
         await _aggregateRepository.Save(newRaceSeries);
