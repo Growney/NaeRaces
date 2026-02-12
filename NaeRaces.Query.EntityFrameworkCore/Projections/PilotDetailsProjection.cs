@@ -52,10 +52,20 @@ public class PilotDetailsProjection
 
     private async Task When(PilotNationalitySet e)
     {
-        PilotDetails? details = await _dbContext.PilotDetails.SingleOrDefaultAsync(x => x.Id == e.Pilot);
+        PilotDetails? details = await _dbContext.PilotDetails.SingleOrDefaultAsync(x => x.Id == e.PilotId);
         if (details != null)
         {
             details.Nationality = e.Nationality;
+        }
+        await _dbContext.SaveChangesAsync();
+    }
+
+    private async Task When(PilotDateOfBirthSet e)
+    {
+        PilotDetails? details = await _dbContext.PilotDetails.SingleOrDefaultAsync(x => x.Id == e.PilotId);
+        if (details != null)
+        {
+            details.DateOfBirth = e.DateOfBirth;
         }
         await _dbContext.SaveChangesAsync();
     }

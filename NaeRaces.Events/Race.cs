@@ -6,7 +6,7 @@ namespace NaeRaces.Events;
 
 public record RacePlanned(Guid RaceId, string Name, Guid ClubId, int LocationId);
 public record RaceDescriptionSet(Guid RaceId, string Description);
-public record TeamRacePlanned(Guid RaceId, string Name, int TeamSize);
+public record TeamRacePlanned(Guid RaceId, string Name, int TeamSize, Guid ClubId, int LocationId);
 
 public record RaceValidationPolicySet(Guid RaceId, Guid PolicyId, long PolicyVersion);
 public record RaceValidationPolicyMigratedToVersion(Guid RaceId, Guid PolicyId, long PolicyVersion);
@@ -48,11 +48,13 @@ public record TeamRaceMaximumTeamSizeSet(Guid RaceId, int MaximumTeamSize);
 public record TeamRaceMinimumTeamsSet(Guid RaceId, int MinimumTeams);
 public record TeamRaceMaximumTeamsSet(Guid RaceId, int MaximumTeams);
 
-public record TeamRosterRegisteredForRace(Guid RaceId, Guid TeamId, int RosterId, Guid RegistrationId, string currency, double basePrice, double discount);
-public record IndividualPilotRegisteredForRace(Guid RaceId, Guid PilotId, Guid RegistrationId, string currency, double basePrice, double discount);
+public record TeamRosterRegisteredForRace(Guid RaceId, Guid TeamId, int RosterId, Guid RegistrationId, string Currency, double BasePrice, double Discount);
+public record IndividualPilotRegisteredForRace(Guid RaceId, Guid PilotId, Guid RegistrationId, string Currency, double BasePrice, double Discount);
 
 public record RaceRegistrationConfirmed(Guid RaceId, Guid RegistrationId);
 public record RaceRegistrationCancelled(Guid RaceId, Guid RegistrationId);
 
 public record RaceTaggedWithGlobalTag(Guid RaceId, string Tag);
 public record RaceTaggedWithClubTag(Guid RaceId, Guid ClubId, string Tag);
+public record RaceGlobalTagRemoved(Guid RaceId, string Tag);
+public record RaceClubTagRemoved(Guid RaceId, Guid ClubId, string Tag);

@@ -27,7 +27,7 @@ public class Club : AggregateRoot<Guid>
     private readonly Dictionary<Guid, CommitteeMember> _committeeMembers = [];
     private readonly Dictionary<int, MembershipLevel> _membershipLevels = [];
     private readonly Dictionary<Guid, PilotMembership> _pilotMemberships = [];
-    private readonly Dictionary<string, string> _raceTags = [];
+    private readonly Dictionary<Tag, string> _raceTags = [];
 
     private class Location
     {
@@ -327,7 +327,7 @@ public class Club : AggregateRoot<Guid>
         Raise(new ClubMembershipLevelMaximumAgeSet(Id, membershipLevelId, maximumAge, validationPolicy.Value));
     }
 
-    public void AddClubMembershipLevelAnnualPaymentOption(int membershipLevelId, string name, string currency, decimal price)
+    public void AddClubMembershipLevelAnnualPaymentOption(int membershipLevelId, Name name, string currency, decimal price)
     {
         ThrowIfIdNotSet();
         if (!_membershipLevels.ContainsKey(membershipLevelId))
@@ -335,10 +335,10 @@ public class Club : AggregateRoot<Guid>
 
         var paymentOptionId = _membershipLevels[membershipLevelId].PaymentOptions.Any() ? _membershipLevels[membershipLevelId].PaymentOptions.Keys.Max() + 1 : 1;
 
-        Raise(new ClubMembershipLevelAnnualPaymentOptionAdded(Id, membershipLevelId, paymentOptionId, name, currency, price));
+        Raise(new ClubMembershipLevelAnnualPaymentOptionAdded(Id, membershipLevelId, paymentOptionId, name.Value, currency, price));
     }
 
-    public void AddClubMembershipLevelMonthlyPaymentOption(int membershipLevelId, string name, int dayOfMonthDue, int paymentInterval, string currency, decimal price)
+    public void AddClubMembershipLevelMonthlyPaymentOption(int membershipLevelId, Name name, int dayOfMonthDue, int paymentInterval, string currency, decimal price)
     {
         ThrowIfIdNotSet();
         if (!_membershipLevels.ContainsKey(membershipLevelId))
@@ -346,10 +346,10 @@ public class Club : AggregateRoot<Guid>
 
         var paymentOptionId = _membershipLevels[membershipLevelId].PaymentOptions.Any() ? _membershipLevels[membershipLevelId].PaymentOptions.Keys.Max() + 1 : 1;
 
-        Raise(new ClubMembershipLevelMonthlyPaymentOptionAdded(Id, membershipLevelId, paymentOptionId, name, dayOfMonthDue, paymentInterval, currency, price));
+        Raise(new ClubMembershipLevelMonthlyPaymentOptionAdded(Id, membershipLevelId, paymentOptionId, name.Value, dayOfMonthDue, paymentInterval, currency, price));
     }
 
-    public void AddClubMembershipLevelSubscriptionPaymentOption(int membershipLevelId, string name, int paymentInterval, string currency, decimal price)
+    public void AddClubMembershipLevelSubscriptionPaymentOption(int membershipLevelId, Name name, int paymentInterval, string currency, decimal price)
     {
         ThrowIfIdNotSet();
         if (!_membershipLevels.ContainsKey(membershipLevelId))
@@ -357,7 +357,7 @@ public class Club : AggregateRoot<Guid>
 
         var paymentOptionId = _membershipLevels[membershipLevelId].PaymentOptions.Any() ? _membershipLevels[membershipLevelId].PaymentOptions.Keys.Max() + 1 : 1;
 
-        Raise(new ClubMembershipLevelSubscriptionPaymentOptionAdded(Id, membershipLevelId, paymentOptionId, name, paymentInterval, currency, price));
+        Raise(new ClubMembershipLevelSubscriptionPaymentOptionAdded(Id, membershipLevelId, paymentOptionId, name.Value, paymentInterval, currency, price));
     }
 
     public void RemoveClubMembershipLevelPaymentOption(int membershipLevelId, int paymentOptionId)
@@ -371,7 +371,7 @@ public class Club : AggregateRoot<Guid>
         Raise(new ClubMembershipLevelPaymentOptionRemoved(Id, membershipLevelId, paymentOptionId));
     }
 
-    public void RenameClubMembershipLevelPaymentOption(int membershipLevelId, int paymentOptionId, string newName)
+    public void RenameClubMembershipLevelPaymentOption(int membershipLevelId, int paymentOptionId, Name newName)
     {
         ThrowIfIdNotSet();
         if (!_membershipLevels.ContainsKey(membershipLevelId))
@@ -379,7 +379,7 @@ public class Club : AggregateRoot<Guid>
         if (!_membershipLevels[membershipLevelId].PaymentOptions.ContainsKey(paymentOptionId))
             throw new InvalidOperationException($"Payment option {paymentOptionId} does not exist.");
 
-        Raise(new ClubMembershipLevelPaymentOptionRenamed(Id, membershipLevelId, paymentOptionId, newName));
+        Raise(new ClubMembershipLevelPaymentOptionRenamed(Id, membershipLevelId, paymentOptionId, newName.Value));
     }
 
     public void RegisterPilotForClubMembershipLevel(int membershipLevelId, int paymentOptionId, Guid pilotId, Guid registrationId)
@@ -427,22 +427,22 @@ public class Club : AggregateRoot<Guid>
         Raise(new PilotClubMembershipCancelled(Id, pilotId));
     }
 
-    public void AddClubRaceTag(string tag, string colour)
+    public void AddClubRaceTag(Tag tag, string colour)
     {
         ThrowIfIdNotSet();
         if (_raceTags.ContainsKey(tag))
             throw new InvalidOperationException($"Tag {tag} already exists.");
 
-        Raise(new ClubRaceTagAdded(Id, tag, colour));
+        Raise(new ClubRaceTagAdded(Id, tag.Value, colour));
     }
 
-    public void RemoveClubRaceTag(string tag)
+    public void RemoveClubRaceTag(Tag tag)
     {
         ThrowIfIdNotSet();
         if (!_raceTags.ContainsKey(tag))
             throw new InvalidOperationException($"Tag {tag} does not exist.");
 
-        Raise(new ClubRaceTagRemoved(Id, tag));
+        Raise(new ClubRaceTagRemoved(Id, tag.Value));
     }
 
     // Event handlers
@@ -651,11 +651,11 @@ public class Club : AggregateRoot<Guid>
 
     private void When(ClubRaceTagAdded e)
     {
-        _raceTags[e.Tag] = e.Colour;
+        _raceTags[Tag.Rehydrate(e.Tag)] = e.Colour;
     }
 
     private void When(ClubRaceTagRemoved e)
     {
-        _raceTags.Remove(e.Tag);
+        _raceTags.Remove(Tag.Rehydrate(e.Tag));
     }
 }

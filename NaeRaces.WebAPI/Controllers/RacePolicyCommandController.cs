@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using NaeRaces.Command.Aggregates;
 using NaeRaces.Command.ValueTypes;
+using NaeRaces.WebAPI.Models.Club;
+using NaeRaces.WebAPI.Models.RacePolicy;
 
 namespace NaeRaces.WebAPI.Controllers;
 
@@ -16,19 +18,21 @@ public class RacePolicyCommandController : Controller
     }
 
     [HttpPost("api/racepolicy")]
-    public async Task<IActionResult> CreateRacePolicyAsync([FromQuery, BindRequired] Guid racePolicyId,
-        [FromQuery, BindRequired] Guid clubId,
-        [FromQuery, BindRequired] string name,
-        [FromQuery, BindRequired] string description)
+    public async Task<IActionResult> CreateRacePolicyAsync([FromBody] CreateRacePolicyRequest request)
     {
-        if(racePolicyId == Guid.Empty)
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
+        if(request.RacePolicyId == Guid.Empty)
         {
             return BadRequest("RacePolicyId cannot be empty.");
         }
 
-        Name nameValueType = Name.Create(name);
+        Name nameValueType = Name.Create(request.Name);
 
-        RacePolicy newRacePolicy = _aggregateRepository.CreateNew<RacePolicy>(() => new RacePolicy(racePolicyId, clubId, nameValueType, description));
+        RacePolicy newRacePolicy = _aggregateRepository.CreateNew<RacePolicy>(() => new RacePolicy(request.RacePolicyId, request.ClubId, nameValueType, request.Description));
 
         await _aggregateRepository.Save(newRacePolicy);
 
@@ -37,11 +41,14 @@ public class RacePolicyCommandController : Controller
 
     [HttpPost("api/racepolicy/{racePolicyId}/requirement/minimumage")]
     public async Task<IActionResult> AddMinimumAgeRequirementAsync([FromRoute] Guid racePolicyId,
-        [FromQuery, BindRequired] int minimumAge,
-        [FromQuery, BindRequired] string validationPolicy)
+        [FromBody] AddMinimumAgeRequirementRequest request)
     {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
 
-        ValidationPolicy policy = ValidationPolicy.Create(validationPolicy);
+        ValidationPolicy policy = ValidationPolicy.Create(request.ValidationPolicy);
 
         RacePolicy? racePolicy = await _aggregateRepository.Get<RacePolicy, Guid>(racePolicyId);
         if (racePolicy == null)
@@ -49,7 +56,7 @@ public class RacePolicyCommandController : Controller
             return NotFound();
         }
 
-        int statementId = racePolicy.AddMinimumAgeRequirement(minimumAge, policy);
+        int statementId = racePolicy.AddMinimumAgeRequirement(request.MinimumAge, policy);
 
         await _aggregateRepository.Save(racePolicy);
 
@@ -58,10 +65,14 @@ public class RacePolicyCommandController : Controller
 
     [HttpPost("api/racepolicy/{racePolicyId}/requirement/maximumage")]
     public async Task<IActionResult> AddMaximumAgeRequirementAsync([FromRoute] Guid racePolicyId,
-        [FromQuery, BindRequired] int maximumAge,
-        [FromQuery, BindRequired] string validationPolicy)
+        [FromBody] AddMaximumAgeRequirementRequest request)
     {
-        ValidationPolicy policy = ValidationPolicy.Create(validationPolicy);
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
+        ValidationPolicy policy = ValidationPolicy.Create(request.ValidationPolicy);
 
         RacePolicy? racePolicy = await _aggregateRepository.Get<RacePolicy, Guid>(racePolicyId);
         if (racePolicy == null)
@@ -69,7 +80,7 @@ public class RacePolicyCommandController : Controller
             return NotFound();
         }
 
-        int statementId = racePolicy.AddMaximumAgeRequirement(maximumAge, policy);
+        int statementId = racePolicy.AddMaximumAgeRequirement(request.MaximumAge, policy);
 
         await _aggregateRepository.Save(racePolicy);
 
@@ -78,10 +89,14 @@ public class RacePolicyCommandController : Controller
 
     [HttpPost("api/racepolicy/{racePolicyId}/requirement/insuranceprovider")]
     public async Task<IActionResult> AddInsuranceProviderRequirementAsync([FromRoute] Guid racePolicyId,
-        [FromQuery, BindRequired] string insuranceProvider,
-        [FromQuery, BindRequired] string validationPolicy)
+        [FromBody] AddInsuranceProviderRequirementRequest request)
     {
-        ValidationPolicy policy = ValidationPolicy.Create(validationPolicy);
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
+        ValidationPolicy policy = ValidationPolicy.Create(request.ValidationPolicy);
 
         RacePolicy? racePolicy = await _aggregateRepository.Get<RacePolicy, Guid>(racePolicyId);
         if (racePolicy == null)
@@ -89,7 +104,7 @@ public class RacePolicyCommandController : Controller
             return NotFound();
         }
 
-        int statementId = racePolicy.AddInsuranceProviderRequirement(insuranceProvider, policy);
+        int statementId = racePolicy.AddInsuranceProviderRequirement(request.InsuranceProvider, policy);
 
         await _aggregateRepository.Save(racePolicy);
 
@@ -98,10 +113,14 @@ public class RacePolicyCommandController : Controller
 
     [HttpPost("api/racepolicy/{racePolicyId}/requirement/governmentdocument")]
     public async Task<IActionResult> AddGovernmentDocumentValidationRequirementAsync([FromRoute] Guid racePolicyId,
-        [FromQuery, BindRequired] string governmentDocument,
-        [FromQuery, BindRequired] string validationPolicy)
+        [FromBody] AddGovernmentDocumentValidationRequirementRequest request)
     {
-        ValidationPolicy policy = ValidationPolicy.Create(validationPolicy);
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
+        ValidationPolicy policy = ValidationPolicy.Create(request.ValidationPolicy);
 
         RacePolicy? racePolicy = await _aggregateRepository.Get<RacePolicy, Guid>(racePolicyId);
         if (racePolicy == null)
@@ -109,7 +128,7 @@ public class RacePolicyCommandController : Controller
             return NotFound();
         }
 
-        int statementId = racePolicy.AddGovernmentDocumentValidationRequirement(governmentDocument, policy);
+        int statementId = racePolicy.AddGovernmentDocumentValidationRequirement(request.GovernmentDocument, policy);
 
         await _aggregateRepository.Save(racePolicy);
 
@@ -118,15 +137,20 @@ public class RacePolicyCommandController : Controller
 
     [HttpPost("api/racepolicy/{racePolicyId}/requirement/club")]
     public async Task<IActionResult> AddClubRequirementAsync([FromRoute] Guid racePolicyId,
-        [FromQuery, BindRequired] Guid clubId)
+        [FromBody] AddClubRequirementRequest request)
     {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
         RacePolicy? racePolicy = await _aggregateRepository.Get<RacePolicy, Guid>(racePolicyId);
         if (racePolicy == null)
         {
             return NotFound();
         }
 
-        int statementId = racePolicy.AddClubRequirement(clubId);
+        int statementId = racePolicy.AddClubRequirement(request.ClubId);
 
         await _aggregateRepository.Save(racePolicy);
 
@@ -135,16 +159,20 @@ public class RacePolicyCommandController : Controller
 
     [HttpPost("api/racepolicy/{racePolicyId}/requirement/clubmembershiplevel")]
     public async Task<IActionResult> AddClubMembershipLevelRequirementAsync([FromRoute] Guid racePolicyId,
-        [FromQuery, BindRequired] Guid clubId,
-        [FromQuery, BindRequired] int membershipLevel)
+        [FromBody] AddClubMembershipLevelRequirementRequest request)
     {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
         RacePolicy? racePolicy = await _aggregateRepository.Get<RacePolicy, Guid>(racePolicyId);
         if (racePolicy == null)
         {
             return NotFound();
         }
 
-        int statementId = racePolicy.AddClubMembershipLevelRequirement(clubId, membershipLevel);
+        int statementId = racePolicy.AddClubMembershipLevelRequirement(request.ClubId, request.MembershipLevel);
 
         await _aggregateRepository.Save(racePolicy);
 
@@ -153,18 +181,20 @@ public class RacePolicyCommandController : Controller
 
     [HttpPost("api/racepolicy/{racePolicyId}/statement")]
     public async Task<IActionResult> AddPolicyStatementAsync([FromRoute] Guid racePolicyId,
-        [FromQuery, BindRequired] int leftHandStatementId,
-        [FromQuery, BindRequired] string operand,
-        [FromQuery, BindRequired] int rightHandStatementId,
-        [FromQuery, BindRequired] bool isWithinBrackets)
+        [FromBody] AddPolicyStatementRequest request)
     {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
         RacePolicy? racePolicy = await _aggregateRepository.Get<RacePolicy, Guid>(racePolicyId);
         if (racePolicy == null)
         {
             return NotFound();
         }
 
-        int statementId = racePolicy.AddPolicyStatement(leftHandStatementId, operand, rightHandStatementId, isWithinBrackets);
+        int statementId = racePolicy.AddPolicyStatement(request.LeftHandStatementId, request.Operand, request.RightHandStatementId, request.IsWithinBrackets);
 
         await _aggregateRepository.Save(racePolicy);
 
@@ -190,15 +220,20 @@ public class RacePolicyCommandController : Controller
 
     [HttpPut("api/racepolicy/{racePolicyId}/rootstatement")]
     public async Task<IActionResult> SetRootStatementAsync([FromRoute] Guid racePolicyId,
-        [FromQuery, BindRequired] int rootPolicyStatementId)
+        [FromBody] SetRootStatementRequest request)
     {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
         RacePolicy? racePolicy = await _aggregateRepository.Get<RacePolicy, Guid>(racePolicyId);
         if (racePolicy == null)
         {
             return NotFound();
         }
 
-        racePolicy.SetRootStatement(rootPolicyStatementId);
+        racePolicy.SetRootStatement(request.RootPolicyStatementId);
 
         await _aggregateRepository.Save(racePolicy);
 

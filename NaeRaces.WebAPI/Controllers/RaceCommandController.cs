@@ -3,32 +3,53 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using NaeRaces.Command.Aggregates;
 using NaeRaces.Command.ValueTypes;
+using NaeRaces.Query.Abstractions;
+using NaeRaces.Query.Models;
+using NaeRaces.WebAPI.Models.Race;
 
 namespace NaeRaces.WebAPI.Controllers;
 
 public class RaceCommandController : Controller
 {
     private readonly IAggregateRepository _aggregateRepository;
+    private readonly IClubDetailsQueryHandler _clubDetails;
+    private readonly IClubLocationQueryHandler _clubLocation;
+    private readonly IRacePolicyQueryHandler _racePolicy;
 
-    public RaceCommandController(IAggregateRepository aggregateRepository)
+    public RaceCommandController(IAggregateRepository aggregateRepository, IClubDetailsQueryHandler clubDetails, IClubLocationQueryHandler clubLocation, IRacePolicyQueryHandler racePolicy)
     {
         _aggregateRepository = aggregateRepository;
+        _clubDetails = clubDetails;
+        _clubLocation = clubLocation;
+        _racePolicy = racePolicy;
     }
 
     [HttpPost("api/race")]
-    public async Task<IActionResult> PlanRaceAsync([FromQuery, BindRequired] Guid raceId,
-        [FromQuery, BindRequired] string name,
-        [FromQuery, BindRequired] Guid clubId,
-        [FromQuery, BindRequired] int locationId)
+    public async Task<IActionResult> PlanRaceAsync([FromBody] PlanRaceRequest request)
     {
-        if(raceId == Guid.Empty)
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
+        if(request.RaceId == Guid.Empty)
         {
             return BadRequest("RaceId must be a non-empty GUID.");
         }
 
-        Name nameValueType = Name.Create(name);
+        if(!await _clubDetails.DoesClubExist(request.ClubId))
+        {
+            return BadRequest($"Club with ID {request.ClubId} does not exist.");
+        }
+        
+        if(!await _clubLocation.DoesLocationExist(request.ClubId, request.LocationId)) 
+        { 
+            return BadRequest($"Location with ID {request.LocationId} does not exist."); 
+        }
 
-        Race newRace = _aggregateRepository.CreateNew<Race>(() => new Race(raceId, nameValueType, clubId, locationId));
+        Name nameValueType = Name.Create(request.Name);
+
+        Race newRace = _aggregateRepository.CreateNew<Race>(() => new Race(request.RaceId, nameValueType, request.ClubId, request.LocationId));
 
         await _aggregateRepository.Save(newRace);
 
@@ -36,18 +57,31 @@ public class RaceCommandController : Controller
     }
 
     [HttpPost("api/race/team")]
-    public async Task<IActionResult> PlanTeamRaceAsync([FromQuery, BindRequired] Guid raceId,
-        [FromQuery, BindRequired] string name,
-        [FromQuery, BindRequired] int teamSize)
+    public async Task<IActionResult> PlanTeamRaceAsync([FromBody] PlanTeamRaceRequest request)
     {
-        if(raceId == Guid.Empty)
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
+        if(request.RaceId == Guid.Empty)
         {
             return BadRequest("RaceId must be a non-empty GUID.");
         }
 
-        Name nameValueType = Name.Create(name);
+        if (!await _clubDetails.DoesClubExist(request.ClubId))
+        {
+            return BadRequest($"Club with ID {request.ClubId} does not exist.");
+        }
 
-        Race newRace = _aggregateRepository.CreateNew<Race>(() => new Race(raceId, nameValueType, teamSize));
+        if (!await _clubLocation.DoesLocationExist(request.ClubId, request.LocationId))
+        {
+            return BadRequest($"Location with ID {request.LocationId} does not exist.");
+        }
+
+        Name nameValueType = Name.Create(request.Name);
+
+        Race newRace = _aggregateRepository.CreateNew<Race>(() => new Race(request.RaceId, nameValueType, request.TeamSize, request.ClubId, request.LocationId));
 
         await _aggregateRepository.Save(newRace);
 
@@ -56,15 +90,20 @@ public class RaceCommandController : Controller
 
     [HttpPut("api/race/{raceId}/description")]
     public async Task<IActionResult> SetRaceDescriptionAsync([FromRoute] Guid raceId,
-        [FromQuery, BindRequired] string description)
+        [FromBody] SetRaceDescriptionRequest request)
     {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
         Race? race = await _aggregateRepository.Get<Race, Guid>(raceId);
         if (race == null)
         {
             return NotFound();
         }
 
-        race.SetRaceDescription(description);
+        race.SetRaceDescription(request.Description);
 
         await _aggregateRepository.Save(race);
 
@@ -73,16 +112,32 @@ public class RaceCommandController : Controller
 
     [HttpPut("api/race/{raceId}/validationpolicy")]
     public async Task<IActionResult> SetRaceValidationPolicyAsync([FromRoute] Guid raceId,
-        [FromQuery, BindRequired] Guid validationPolicyId,
-        [FromQuery, BindRequired] long version)
+        [FromBody] SetRaceValidationPolicyRequest request)
     {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
         Race? race = await _aggregateRepository.Get<Race, Guid>(raceId);
         if (race == null)
         {
             return NotFound();
         }
 
-        race.SetRaceValidationPolicy(validationPolicyId, version);
+        if (race.ClubId == null)
+        {
+            return BadRequest("Race club not set. Cannot set validation policy without club context.");
+        }
+
+        RacePolicyDetails? policyDetails = await _racePolicy.GetPolicyDetails(request.ValidationPolicyId, race.ClubId.Value);
+
+        if (policyDetails == null)
+        {
+            return BadRequest($"Race validation policy with ID {request.ValidationPolicyId} does not exist.");
+        }
+
+        race.SetRaceValidationPolicy(request.ValidationPolicyId, policyDetails.LatestVersion);
 
         await _aggregateRepository.Save(race);
 
@@ -91,16 +146,20 @@ public class RaceCommandController : Controller
 
     [HttpPut("api/race/{raceId}/validationpolicy/migrate")]
     public async Task<IActionResult> MigrateRaceValidationPolicyAsync([FromRoute] Guid raceId,
-        [FromQuery, BindRequired] Guid validationPolicyId,
-        [FromQuery, BindRequired] long version)
+        [FromBody] MigrateRaceValidationPolicyRequest request)
     {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
         Race? race = await _aggregateRepository.Get<Race, Guid>(raceId);
         if (race == null)
         {
             return NotFound();
         }
 
-        race.MigrateRaceValidationPolicy(validationPolicyId, version);
+        race.MigrateRaceValidationPolicy(request.ValidationPolicyId, request.Version);
 
         await _aggregateRepository.Save(race);
 
@@ -125,16 +184,20 @@ public class RaceCommandController : Controller
 
     [HttpPost("api/race/{raceId}/date")]
     public async Task<IActionResult> ScheduleRaceDateAsync([FromRoute] Guid raceId,
-        [FromQuery, BindRequired] DateTime start,
-        [FromQuery, BindRequired] DateTime end)
+        [FromBody] ScheduleRaceDateRequest request)
     {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
         Race? race = await _aggregateRepository.Get<Race, Guid>(raceId);
         if (race == null)
         {
             return NotFound();
         }
 
-        race.ScheduleRaceDate(start, end);
+        race.ScheduleRaceDate(request.Start, request.End);
 
         await _aggregateRepository.Save(race);
 
@@ -144,16 +207,20 @@ public class RaceCommandController : Controller
     [HttpPut("api/race/{raceId}/date/{raceDateId}")]
     public async Task<IActionResult> RescheduleRaceDateAsync([FromRoute] Guid raceId,
         [FromRoute] int raceDateId,
-        [FromQuery, BindRequired] DateTime start,
-        [FromQuery, BindRequired] DateTime end)
+        [FromBody] ScheduleRaceDateRequest request)
     {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
         Race? race = await _aggregateRepository.Get<Race, Guid>(raceId);
         if (race == null)
         {
             return NotFound();
         }
 
-        race.RescheduleRaceDate(raceDateId, start, end);
+        race.RescheduleRaceDate(raceDateId, request.Start, request.End);
 
         await _aggregateRepository.Save(race);
 
@@ -178,16 +245,20 @@ public class RaceCommandController : Controller
 
     [HttpPut("api/race/{raceId}/cost")]
     public async Task<IActionResult> SetRaceCostAsync([FromRoute] Guid raceId,
-        [FromQuery, BindRequired] string currency,
-        [FromQuery, BindRequired] decimal cost)
+        [FromBody] SetRaceCostRequest request)
     {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
         Race? race = await _aggregateRepository.Get<Race, Guid>(raceId);
         if (race == null)
         {
             return NotFound();
         }
 
-        race.SetRaceCost(currency, cost);
+        race.SetRaceCost(request.Currency, request.Cost);
 
         await _aggregateRepository.Save(race);
 
@@ -196,15 +267,20 @@ public class RaceCommandController : Controller
 
     [HttpPut("api/race/{raceId}/paymentdeadline")]
     public async Task<IActionResult> ScheduleRacePaymentDeadlineAsync([FromRoute] Guid raceId,
-        [FromQuery, BindRequired] DateTime paymentDeadline)
+        [FromBody] ScheduleDateRequest request)
     {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
         Race? race = await _aggregateRepository.Get<Race, Guid>(raceId);
         if (race == null)
         {
             return NotFound();
         }
 
-        race.ScheduleRacePaymentDeadline(paymentDeadline);
+        race.ScheduleRacePaymentDeadline(request.Date);
 
         await _aggregateRepository.Save(race);
 
@@ -245,15 +321,20 @@ public class RaceCommandController : Controller
 
     [HttpPut("api/race/{raceId}/registrationopendate")]
     public async Task<IActionResult> ScheduleRaceRegistrationOpenDateAsync([FromRoute] Guid raceId,
-        [FromQuery, BindRequired] DateTime registrationOpenDate)
+        [FromBody] ScheduleDateRequest request)
     {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
         Race? race = await _aggregateRepository.Get<Race, Guid>(raceId);
         if (race == null)
         {
             return NotFound();
         }
 
-        race.ScheduleRaceRegistrationOpenDate(registrationOpenDate);
+        race.ScheduleRaceRegistrationOpenDate(request.Date);
 
         await _aggregateRepository.Save(race);
 
@@ -262,17 +343,20 @@ public class RaceCommandController : Controller
 
     [HttpPut("api/race/{raceId}/membershipleveldiscount")]
     public async Task<IActionResult> SetRaceClubMembershipLevelDiscountAsync([FromRoute] Guid raceId,
-        [FromQuery, BindRequired] Guid clubId,
-        [FromQuery, BindRequired] int membershipLevelId,
-        [FromQuery, BindRequired] decimal discount)
+        [FromBody] SetRaceClubMembershipLevelDiscountRequest request)
     {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
         Race? race = await _aggregateRepository.Get<Race, Guid>(raceId);
         if (race == null)
         {
             return NotFound();
         }
 
-        race.SetRaceClubMembershipLevelDiscount(clubId, membershipLevelId, discount);
+        race.SetRaceClubMembershipLevelDiscount(request.ClubId, request.MembershipLevelId, request.Discount);
 
         await _aggregateRepository.Save(race);
 
@@ -313,15 +397,20 @@ public class RaceCommandController : Controller
 
     [HttpPost("api/race/{raceId}/gonogo")]
     public async Task<IActionResult> ScheduleRaceGoNoGoAsync([FromRoute] Guid raceId,
-        [FromQuery, BindRequired] DateTime goNoGoDate)
+        [FromBody] ScheduleDateRequest request)
     {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
         Race? race = await _aggregateRepository.Get<Race, Guid>(raceId);
         if (race == null)
         {
             return NotFound();
         }
 
-        race.ScheduleRaceGoNoGo(goNoGoDate);
+        race.ScheduleRaceGoNoGo(request.Date);
 
         await _aggregateRepository.Save(race);
 
@@ -330,15 +419,20 @@ public class RaceCommandController : Controller
 
     [HttpPut("api/race/{raceId}/gonogo")]
     public async Task<IActionResult> RescheduleRaceGoNoGoAsync([FromRoute] Guid raceId,
-        [FromQuery, BindRequired] DateTime goNoGoDate)
+        [FromBody] ScheduleDateRequest request)
     {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
         Race? race = await _aggregateRepository.Get<Race, Guid>(raceId);
         if (race == null)
         {
             return NotFound();
         }
 
-        race.RescheduleRaceGoNoGo(goNoGoDate);
+        race.RescheduleRaceGoNoGo(request.Date);
 
         await _aggregateRepository.Save(race);
 
@@ -379,15 +473,20 @@ public class RaceCommandController : Controller
 
     [HttpPut("api/race/{raceId}/minimumattendees")]
     public async Task<IActionResult> SetRaceMinimumAttendeesAsync([FromRoute] Guid raceId,
-        [FromQuery, BindRequired] int minimumAttendees)
+        [FromBody] SetAttendeesRequest request)
     {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
         Race? race = await _aggregateRepository.Get<Race, Guid>(raceId);
         if (race == null)
         {
             return NotFound();
         }
 
-        race.SetRaceMinimumAttendees(minimumAttendees);
+        race.SetRaceMinimumAttendees(request.Attendees);
 
         await _aggregateRepository.Save(race);
 
@@ -396,15 +495,20 @@ public class RaceCommandController : Controller
 
     [HttpPut("api/race/{raceId}/maximumattendees")]
     public async Task<IActionResult> SetRaceMaximumAttendeesAsync([FromRoute] Guid raceId,
-        [FromQuery, BindRequired] int maximumAttendees)
+        [FromBody] SetAttendeesRequest request)
     {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
         Race? race = await _aggregateRepository.Get<Race, Guid>(raceId);
         if (race == null)
         {
             return NotFound();
         }
 
-        race.SetRaceMaximumAttendees(maximumAttendees);
+        race.SetRaceMaximumAttendees(request.Attendees);
 
         await _aggregateRepository.Save(race);
 
@@ -509,15 +613,20 @@ public class RaceCommandController : Controller
 
     [HttpPut("api/race/{raceId}/teamsize")]
     public async Task<IActionResult> SetTeamRaceTeamSizeAsync([FromRoute] Guid raceId,
-        [FromQuery, BindRequired] int teamSize)
+        [FromBody] SetTeamSizeRequest request)
     {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
         Race? race = await _aggregateRepository.Get<Race, Guid>(raceId);
         if (race == null)
         {
             return NotFound();
         }
 
-        race.SetTeamRaceTeamSize(teamSize);
+        race.SetTeamRaceTeamSize(request.TeamSize);
 
         await _aggregateRepository.Save(race);
 
@@ -526,15 +635,20 @@ public class RaceCommandController : Controller
 
     [HttpPut("api/race/{raceId}/minimumteamsize")]
     public async Task<IActionResult> SetTeamRaceMinimumTeamSizeAsync([FromRoute] Guid raceId,
-        [FromQuery, BindRequired] int minimumTeamSize)
+        [FromBody] SetTeamSizeRequest request)
     {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
         Race? race = await _aggregateRepository.Get<Race, Guid>(raceId);
         if (race == null)
         {
             return NotFound();
         }
 
-        race.SetTeamRaceMinimumTeamSize(minimumTeamSize);
+        race.SetTeamRaceMinimumTeamSize(request.TeamSize);
 
         await _aggregateRepository.Save(race);
 
@@ -543,15 +657,20 @@ public class RaceCommandController : Controller
 
     [HttpPut("api/race/{raceId}/maximumteamsize")]
     public async Task<IActionResult> SetTeamRaceMaximumTeamSizeAsync([FromRoute] Guid raceId,
-        [FromQuery, BindRequired] int maximumTeamSize)
+        [FromBody] SetTeamSizeRequest request)
     {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
         Race? race = await _aggregateRepository.Get<Race, Guid>(raceId);
         if (race == null)
         {
             return NotFound();
         }
 
-        race.SetTeamRaceMaximumTeamSize(maximumTeamSize);
+        race.SetTeamRaceMaximumTeamSize(request.TeamSize);
 
         await _aggregateRepository.Save(race);
 
@@ -560,15 +679,20 @@ public class RaceCommandController : Controller
 
     [HttpPut("api/race/{raceId}/minimumteams")]
     public async Task<IActionResult> SetTeamRaceMinimumTeamsAsync([FromRoute] Guid raceId,
-        [FromQuery, BindRequired] int minimumTeams)
+        [FromBody] SetTeamsRequest request)
     {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
         Race? race = await _aggregateRepository.Get<Race, Guid>(raceId);
         if (race == null)
         {
             return NotFound();
         }
 
-        race.SetTeamRaceMinimumTeams(minimumTeams);
+        race.SetTeamRaceMinimumTeams(request.Teams);
 
         await _aggregateRepository.Save(race);
 
@@ -577,15 +701,20 @@ public class RaceCommandController : Controller
 
     [HttpPut("api/race/{raceId}/maximumteams")]
     public async Task<IActionResult> SetTeamRaceMaximumTeamsAsync([FromRoute] Guid raceId,
-        [FromQuery, BindRequired] int maximumTeams)
+        [FromBody] SetTeamsRequest request)
     {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
         Race? race = await _aggregateRepository.Get<Race, Guid>(raceId);
         if (race == null)
         {
             return NotFound();
         }
 
-        race.SetTeamRaceMaximumTeams(maximumTeams);
+        race.SetTeamRaceMaximumTeams(request.Teams);
 
         await _aggregateRepository.Save(race);
 
@@ -594,45 +723,46 @@ public class RaceCommandController : Controller
 
     [HttpPost("api/race/{raceId}/registration/team")]
     public async Task<IActionResult> RegisterTeamRosterForRaceAsync([FromRoute] Guid raceId,
-        [FromQuery, BindRequired] Guid teamId,
-        [FromQuery, BindRequired] int rosterId,
-        [FromQuery, BindRequired] Guid registrationId,
-        [FromQuery, BindRequired] string currency,
-        [FromQuery, BindRequired] double basePrice,
-        [FromQuery, BindRequired] double discount)
+        [FromBody] RegisterTeamRosterForRaceRequest request)
     {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
         Race? race = await _aggregateRepository.Get<Race, Guid>(raceId);
         if (race == null)
         {
             return NotFound();
         }
 
-        race.RegisterTeamRosterForRace(teamId, rosterId, registrationId, currency, basePrice, discount);
+        race.RegisterTeamRosterForRace(request.TeamId, request.RosterId, request.RegistrationId, request.Currency, request.BasePrice, request.Discount);
 
         await _aggregateRepository.Save(race);
 
-        return Created($"/api/race/{raceId}/registration/{registrationId}", new { RegistrationId = registrationId });
+        return Created($"/api/race/{raceId}/registration/{request.RegistrationId}", new { RegistrationId = request.RegistrationId });
     }
 
     [HttpPost("api/race/{raceId}/registration/pilot")]
     public async Task<IActionResult> RegisterIndividualPilotForRaceAsync([FromRoute] Guid raceId,
-        [FromQuery, BindRequired] Guid pilotId,
-        [FromQuery, BindRequired] Guid registrationId,
-        [FromQuery, BindRequired] string currency,
-        [FromQuery, BindRequired] double basePrice,
-        [FromQuery, BindRequired] double discount)
+        [FromBody] RegisterIndividualPilotForRaceRequest request)
     {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
         Race? race = await _aggregateRepository.Get<Race, Guid>(raceId);
         if (race == null)
         {
             return NotFound();
         }
 
-        race.RegisterIndividualPilotForRace(pilotId, registrationId, currency, basePrice, discount);
+        race.RegisterIndividualPilotForRace(request.PilotId, request.RegistrationId, request.Currency, request.BasePrice, request.Discount);
 
         await _aggregateRepository.Save(race);
 
-        return Created($"/api/race/{raceId}/registration/{registrationId}", new { RegistrationId = registrationId });
+        return Created($"/api/race/{raceId}/registration/{request.RegistrationId}", new { RegistrationId = request.RegistrationId });
     }
 
     [HttpPut("api/race/{raceId}/registration/{registrationId}/confirm")]
@@ -671,36 +801,88 @@ public class RaceCommandController : Controller
 
     [HttpPost("api/race/{raceId}/tag/global")]
     public async Task<IActionResult> TagRaceWithGlobalTagAsync([FromRoute] Guid raceId,
-        [FromQuery, BindRequired] string tag)
+        [FromBody] TagRaceRequest request)
     {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
+        Tag tagValueType = Tag.Create(request.Tag);
+
         Race? race = await _aggregateRepository.Get<Race, Guid>(raceId);
         if (race == null)
         {
             return NotFound();
         }
 
-        race.TagRaceWithGlobalTag(tag);
+        race.TagRaceWithGlobalTag(tagValueType);
 
         await _aggregateRepository.Save(race);
 
-        return Created($"/api/race/{raceId}/tag/global/{tag}", new { Tag = tag });
+        return Created($"/api/race/{raceId}/tag/global/{request.Tag}", new { Tag = request.Tag });
     }
 
     [HttpPost("api/race/{raceId}/tag/club")]
     public async Task<IActionResult> TagRaceWithClubTagAsync([FromRoute] Guid raceId,
-        [FromQuery, BindRequired] Guid clubId,
-        [FromQuery, BindRequired] string tag)
+        [FromBody] TagRaceWithClubTagRequest request)
     {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
+        Tag tagValueType = Tag.Create(request.Tag);
+
         Race? race = await _aggregateRepository.Get<Race, Guid>(raceId);
         if (race == null)
         {
             return NotFound();
         }
 
-        race.TagRaceWithClubTag(clubId, tag);
+        race.TagRaceWithClubTag(request.ClubId, tagValueType);
 
         await _aggregateRepository.Save(race);
 
-        return Created($"/api/race/{raceId}/tag/club/{tag}", new { ClubId = clubId, Tag = tag });
+        return Created($"/api/race/{raceId}/tag/club/{request.Tag}", new { ClubId = request.ClubId, Tag = request.Tag });
+    }
+
+    [HttpDelete("api/race/{raceId}/tag/global/{tag}")]
+    public async Task<IActionResult> RemoveGlobalTagFromRaceAsync([FromRoute] Guid raceId,
+        [FromRoute] string tag)
+    {
+        Tag tagValueType = Tag.Create(tag);
+
+        Race? race = await _aggregateRepository.Get<Race, Guid>(raceId);
+        if (race == null)
+        {
+            return NotFound();
+        }
+
+        race.RemoveGlobalTagFromRace(tagValueType);
+
+        await _aggregateRepository.Save(race);
+
+        return Ok();
+    }
+
+    [HttpDelete("api/race/{raceId}/tag/club/{clubId}/{tag}")]
+    public async Task<IActionResult> RemoveClubTagFromRaceAsync([FromRoute] Guid raceId,
+        [FromRoute] Guid clubId,
+        [FromRoute] string tag)
+    {
+        Tag tagValueType = Tag.Create(tag);
+
+        Race? race = await _aggregateRepository.Get<Race, Guid>(raceId);
+        if (race == null)
+        {
+            return NotFound();
+        }
+
+        race.RemoveClubTagFromRace(clubId, tagValueType);
+
+        await _aggregateRepository.Save(race);
+
+        return Ok();
     }
 }

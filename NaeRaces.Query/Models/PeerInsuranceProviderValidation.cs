@@ -1,0 +1,7 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Text;
+
+namespace NaeRaces.Query.Models;
+
+public record PeerInsuranceProviderValidation(string Provider, Guid PeerPilotId, Guid PeerPilotClubId, bool IsOnClubCommittee, DateTime ValidUntil);

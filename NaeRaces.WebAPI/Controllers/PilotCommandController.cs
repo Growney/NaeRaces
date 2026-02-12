@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc.ModelBinding;
 using NaeRaces.Command.Aggregates;
 using NaeRaces.Command.ValueTypes;
 using NaeRaces.Query.Abstractions;
+using NaeRaces.WebAPI.Models.Pilot;
 using System.ComponentModel.DataAnnotations;
 using System.Runtime.CompilerServices;
 
@@ -21,17 +22,21 @@ public class PilotCommandController : Controller
     }
 
     [HttpPost("api/pilot")]
-    public async Task<IActionResult> RegisterPilotAsync([FromQuery, BindRequired] Guid pilotId,
-        [FromQuery, BindRequired] string callSign)
+    public async Task<IActionResult> RegisterPilotAsync([FromBody] RegisterPilotRequest request)
     {
-        if(pilotId == Guid.Empty)
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
+        if(request.PilotId == Guid.Empty)
         {
             return BadRequest("Pilot id must be set");
         }
 
-        CallSign callSignValueType = CallSign.Create(callSign);
+        CallSign callSignValueType = CallSign.Create(request.CallSign);
 
-        Pilot newPilot = _aggregateRepository.CreateNew<Pilot>(() => new Pilot(pilotId, callSignValueType));
+        Pilot newPilot = _aggregateRepository.CreateNew<Pilot>(() => new Pilot(request.PilotId, callSignValueType));
 
         await _aggregateRepository.Save(newPilot);
 
@@ -40,15 +45,20 @@ public class PilotCommandController : Controller
 
     [HttpPut("api/pilot/{pilotId}/callsign")]
     public async Task<IActionResult> ChangePilotCallSignAsync([FromRoute] Guid pilotId,
-        [FromQuery, BindRequired] string newCallSign)
+        [FromBody] ChangePilotCallSignRequest request)
     {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
         Pilot? pilot = await _aggregateRepository.Get<Pilot, Guid>(pilotId);
         if (pilot == null)
         {
             return NotFound();
         }
 
-        CallSign callSignValueType = CallSign.Create(newCallSign);
+        CallSign callSignValueType = CallSign.Create(request.NewCallSign);
 
         pilot.ChangePilotCallSign(callSignValueType);
 
@@ -59,20 +69,20 @@ public class PilotCommandController : Controller
 
     [HttpPut("api/pilot/{pilotId}/nationality")]
     public async Task<IActionResult> SetPilotNationalityAsync([FromRoute] Guid pilotId,
-        [FromQuery, BindRequired] string nationality)
+        [FromBody] SetPilotNationalityRequest request)
     {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
         Pilot? pilot = await _aggregateRepository.Get<Pilot, Guid>(pilotId);
         if (pilot == null)
         {
             return NotFound();
         }
 
-        if(nationality.Length > 50)
-        {
-            return BadRequest("Nationality Too Long");
-        }
-
-        pilot.SetPilotNationality(nationality);
+        pilot.SetPilotNationality(request.Nationality);
 
         await _aggregateRepository.Save(pilot);
 
@@ -80,20 +90,20 @@ public class PilotCommandController : Controller
     }
     [HttpPut("api/pilot/{pilotId}/name")]
     public async Task<IActionResult> SetPilotNameAsync([FromRoute] Guid pilotId,
-        [FromQuery, BindRequired] string name)
+        [FromBody] SetPilotNameRequest request)
     {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
         Pilot? pilot = await _aggregateRepository.Get<Pilot, Guid>(pilotId);
         if (pilot == null)
         {
             return NotFound();
         }
 
-        if (name.Length > 150)
-        {
-            return BadRequest("Name too Long");
-        }
-
-        pilot.SetPilotName(name);
+        pilot.SetPilotName(request.Name);
 
         await _aggregateRepository.Save(pilot);
 
@@ -101,15 +111,20 @@ public class PilotCommandController : Controller
     }
     [HttpPut("api/pilot/{pilotId}/dateofbirth")]
     public async Task<IActionResult> SetPilotDateOfBirthAsync([FromRoute] Guid pilotId,
-        [FromQuery, BindRequired] DateTime dateOfBirth)
+        [FromBody] SetPilotDateOfBirthRequest request)
     {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
         Pilot? pilot = await _aggregateRepository.Get<Pilot, Guid>(pilotId);
         if (pilot == null)
         {
             return NotFound();
         }
 
-        pilot.SetPilotDateOfBirth(dateOfBirth);
+        pilot.SetPilotDateOfBirth(request.DateOfBirth);
 
         await _aggregateRepository.Save(pilot);
 
@@ -118,26 +133,24 @@ public class PilotCommandController : Controller
 
     [HttpPost("api/pilot/{pilotId}/governmentdocumentvalidation")]
     public async Task<IActionResult> PeerValidatePilotGovernmentDocumentationAsync([FromRoute] Guid pilotId,
-        [FromQuery, BindRequired] string governmentDocument,
-        [FromQuery, BindRequired] DateTime validUntil,
-        [FromQuery, BindRequired] Guid validatedByPilotId)
+        [FromBody] PeerValidatePilotGovernmentDocumentationRequest request)
     {
-        if(string.IsNullOrWhiteSpace(governmentDocument))
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
+        if(string.IsNullOrWhiteSpace(request.GovernmentDocument))
         {
             return BadRequest("Government document must be provided");
         }
 
-        if(governmentDocument.Length > 50)
-        {
-            return BadRequest("Government document value too long");
-        }
-
-        if (validUntil < DateTime.UtcNow)
+        if (request.ValidUntil < DateTime.UtcNow)
         {
             return BadRequest("Invalid 'validUntil' date");
         }
 
-        if(validatedByPilotId == pilotId)
+        if(request.ValidatedByPilotId == pilotId)
         {
             return BadRequest("Pilot cannot validate themselves");
         }
@@ -149,9 +162,9 @@ public class PilotCommandController : Controller
         }
 
         bool hasAtLeastOneValidatingClubMembership = false;
-        await foreach(var clubMembership in _clubMemberQueryHandler.GetPilotMembershipDetails(validatedByPilotId))
+        await foreach(var clubMembership in _clubMemberQueryHandler.GetPilotMembershipDetails(request.ValidatedByPilotId))
         {
-            pilot.PeerValidatePilotGovernmentDocumentation(governmentDocument, validUntil, clubMembership.ClubId, pilotId, clubMembership.IsOnCommittee);
+            pilot.PeerValidatePilotGovernmentDocumentation(request.GovernmentDocument, request.ValidUntil, clubMembership.ClubId, pilotId, clubMembership.IsOnCommittee);
             hasAtLeastOneValidatingClubMembership = true;
         }
 
@@ -167,26 +180,24 @@ public class PilotCommandController : Controller
 
     [HttpPost("api/pilot/{pilotId}/insurancevalidation")]
     public async Task<IActionResult> PeerValidatePilotInsuranceAsync([FromRoute] Guid pilotId,
-        [FromQuery, BindRequired] string insuranceProvider,
-        [FromQuery, BindRequired] DateTime validUntil,
-        [FromQuery, BindRequired] Guid validatedByPilotId)
+        [FromBody] PeerValidatePilotInsuranceRequest request)
     {
-        if (string.IsNullOrWhiteSpace(insuranceProvider))
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
+        if (string.IsNullOrWhiteSpace(request.InsuranceProvider))
         {
             return BadRequest("Insurance provider must be provided");
         }
 
-        if (insuranceProvider.Length > 50)
-        {
-            return BadRequest("Insurance provider value too long");
-        }
-
-        if (validUntil < DateTime.UtcNow)
+        if (request.ValidUntil < DateTime.UtcNow)
         {
             return BadRequest("Invalid 'validUntil' date");
         }
 
-        if (validatedByPilotId == pilotId)
+        if (request.ValidatedByPilotId == pilotId)
         {
             return BadRequest("Pilot cannot validate themselves");
         }
@@ -198,9 +209,9 @@ public class PilotCommandController : Controller
         }
 
         bool hasAtLeastOneValidatingClubMembership = false;
-        await foreach (var clubMembership in _clubMemberQueryHandler.GetPilotMembershipDetails(validatedByPilotId))
+        await foreach (var clubMembership in _clubMemberQueryHandler.GetPilotMembershipDetails(request.ValidatedByPilotId))
         {
-            pilot.PeerValidatePilotInsurance(insuranceProvider, validUntil, clubMembership.ClubId, pilotId, clubMembership.IsOnCommittee);
+            pilot.PeerValidatePilotInsurance(request.InsuranceProvider, request.ValidUntil, clubMembership.ClubId, pilotId, clubMembership.IsOnCommittee);
             hasAtLeastOneValidatingClubMembership = true;
         }
 
@@ -216,9 +227,14 @@ public class PilotCommandController : Controller
 
     [HttpPost("api/pilot/{pilotId}/dateofbirthvalidation")]
     public async Task<IActionResult> PeerValidatePilotDateOfBirthAsync([FromRoute] Guid pilotId,
-        [FromQuery, BindRequired] Guid validatedByPilotId)
+        [FromBody] PeerValidatePilotDateOfBirthRequest request)
     {
-        if(validatedByPilotId == pilotId)
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
+        if(request.ValidatedByPilotId == pilotId)
         {
             return BadRequest("Pilot cannot validate themselves");
         }
@@ -230,7 +246,7 @@ public class PilotCommandController : Controller
         }
 
         bool hasAtLeastOneValidatingClubMembership = false;
-        await foreach (var clubMembership in _clubMemberQueryHandler.GetPilotMembershipDetails(validatedByPilotId))
+        await foreach (var clubMembership in _clubMemberQueryHandler.GetPilotMembershipDetails(request.ValidatedByPilotId))
         {
             pilot.PeerValidatePilotDateOfBirth(clubMembership.ClubId, pilotId, clubMembership.IsOnCommittee);
             hasAtLeastOneValidatingClubMembership = true;

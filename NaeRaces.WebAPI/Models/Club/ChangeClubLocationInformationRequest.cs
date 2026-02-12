@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace NaeRaces.WebAPI.Models;
+namespace NaeRaces.WebAPI.Models.Club;
 
 public class ChangeClubLocationInformationRequest
 {

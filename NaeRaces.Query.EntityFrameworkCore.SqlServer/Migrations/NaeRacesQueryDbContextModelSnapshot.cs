@@ -42,6 +42,49 @@ namespace NaeRaces.Query.EntityFrameworkCore.SqlServer.Migrations
                     b.ToTable("ClubDetails");
                 });
 
+            modelBuilder.Entity("NaeRaces.Query.EntityFrameworkCore.Models.ClubLocation", b =>
+                {
+                    b.Property<Guid>("ClubId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("LocationId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("AddressLine1")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("AddressLine2")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("City")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("County")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsHomeLocation")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("LocationInformation")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Name")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Postcode")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int?>("TimezoneOffsetMinutes")
+                        .HasColumnType("int");
+
+                    b.Property<bool?>("UseDaylightSavings")
+                        .HasColumnType("bit");
+
+                    b.HasKey("ClubId", "LocationId");
+
+                    b.ToTable("ClubLocations");
+                });
+
             modelBuilder.Entity("NaeRaces.Query.EntityFrameworkCore.Models.ClubMember", b =>
                 {
                     b.Property<Guid>("Id")
@@ -94,6 +137,28 @@ namespace NaeRaces.Query.EntityFrameworkCore.SqlServer.Migrations
                     b.ToTable("ClubUniquenessDetails");
                 });
 
+            modelBuilder.Entity("NaeRaces.Query.EntityFrameworkCore.Models.PilotAgeValidation", b =>
+                {
+                    b.Property<Guid>("PilotId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("ValidatedByPilotId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("ValidatedByClubId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("IsOnClubCommittee")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime>("ValidatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("PilotId", "ValidatedByPilotId", "ValidatedByClubId");
+
+                    b.ToTable("PilotAgeValidations");
+                });
+
             modelBuilder.Entity("NaeRaces.Query.EntityFrameworkCore.Models.PilotDetails", b =>
                 {
                     b.Property<Guid>("Id")
@@ -102,6 +167,9 @@ namespace NaeRaces.Query.EntityFrameworkCore.SqlServer.Migrations
 
                     b.Property<string>("Callsign")
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("DateOfBirth")
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("Name")
                         .HasColumnType("nvarchar(max)");
@@ -112,6 +180,132 @@ namespace NaeRaces.Query.EntityFrameworkCore.SqlServer.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("PilotDetails");
+                });
+
+            modelBuilder.Entity("NaeRaces.Query.EntityFrameworkCore.Models.PilotGovernmentDocumentValidation", b =>
+                {
+                    b.Property<Guid>("PilotId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("GovernmentDocument")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<Guid>("ValidatedByPilotId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("ValidatedByClubId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("IsOnClubCommittee")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime>("ValidUntil")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("ValidatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("PilotId", "GovernmentDocument", "ValidatedByPilotId", "ValidatedByClubId");
+
+                    b.ToTable("PilotGovernmentDocumentValidations");
+                });
+
+            modelBuilder.Entity("NaeRaces.Query.EntityFrameworkCore.Models.PilotInsuranceProviderValidation", b =>
+                {
+                    b.Property<Guid>("PilotId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("InsuranceProvider")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<Guid>("ValidatedByPilotId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("ValidatedByClubId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("IsOnClubCommittee")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime>("ValidUntil")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("ValidatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("PilotId", "InsuranceProvider", "ValidatedByPilotId", "ValidatedByClubId");
+
+                    b.ToTable("PilotInsuranceProviderValidations");
+                });
+
+            modelBuilder.Entity("NaeRaces.Query.EntityFrameworkCore.Models.RaceDetails", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("ClubId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("FirstRaceDateStart")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsCancelled")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDetailsPublished")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsPublished")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsTeamRace")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime>("LastRaceDateEnd")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("LocationId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("NumberOfRaceDates")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("RaceDetails");
+                });
+
+            modelBuilder.Entity("NaeRaces.Query.EntityFrameworkCore.Models.RacePolicyDetails", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("ClubId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<long>("LatestVersion")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("RacePolicyDetails");
                 });
 
             modelBuilder.Entity("NaeRaces.Query.EntityFrameworkCore.Models.ReactionPosition", b =>

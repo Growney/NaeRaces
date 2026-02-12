@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using NaeRaces.Command.Aggregates;
+using NaeRaces.WebAPI.Models.Team;
 
 namespace NaeRaces.WebAPI.Controllers;
 
@@ -15,16 +16,19 @@ public class TeamCommandController : Controller
     }
 
     [HttpPost("api/team")]
-    public async Task<IActionResult> FormTeamAsync([FromQuery, BindRequired] Guid teamId,
-        [FromQuery, BindRequired] string name,
-        [FromQuery, BindRequired] Guid captainPilotId)
+    public async Task<IActionResult> FormTeamAsync([FromBody] FormTeamRequest request)
     {
-        if(teamId == Guid.Empty)
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
+        if(request.TeamId == Guid.Empty)
         {
             return BadRequest("TeamId cannot be empty.");
         }
 
-        Team newTeam = _aggregateRepository.CreateNew<Team>(() => new Team(teamId, name, captainPilotId));
+        Team newTeam = _aggregateRepository.CreateNew<Team>(() => new Team(request.TeamId, request.Name, request.CaptainPilotId));
 
         await _aggregateRepository.Save(newTeam);
 
@@ -33,19 +37,24 @@ public class TeamCommandController : Controller
 
     [HttpPost("api/team/{teamId}/pilot")]
     public async Task<IActionResult> AddPilotToTeamAsync([FromRoute] Guid teamId,
-        [FromQuery, BindRequired] Guid pilotId)
+        [FromBody] AddPilotToTeamRequest request)
     {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
         Team? team = await _aggregateRepository.Get<Team, Guid>(teamId);
         if (team == null)
         {
             return NotFound();
         }
 
-        team.AddPilotToTeam(pilotId);
+        team.AddPilotToTeam(request.PilotId);
 
         await _aggregateRepository.Save(team);
 
-        return Created($"/api/team/{teamId}/pilot/{pilotId}", new { PilotId = pilotId });
+        return Created($"/api/team/{teamId}/pilot/{request.PilotId}", new { PilotId = request.PilotId });
     }
 
     [HttpDelete("api/team/{teamId}/pilot/{pilotId}")]
@@ -67,54 +76,66 @@ public class TeamCommandController : Controller
 
     [HttpPost("api/team/{teamId}/roster")]
     public async Task<IActionResult> PlanTeamRaceRosterAsync([FromRoute] Guid teamId,
-        [FromQuery, BindRequired] int rosterId,
-        [FromQuery, BindRequired] Guid raceId)
+        [FromBody] PlanTeamRaceRosterRequest request)
     {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
         Team? team = await _aggregateRepository.Get<Team, Guid>(teamId);
         if (team == null)
         {
             return NotFound();
         }
 
-        team.PlanTeamRaceRoster(rosterId, raceId);
+        team.PlanTeamRaceRoster(request.RosterId, request.RaceId);
 
         await _aggregateRepository.Save(team);
 
-        return Created($"/api/team/{teamId}/roster/{rosterId}", new { RosterId = rosterId });
+        return Created($"/api/team/{teamId}/roster/{request.RosterId}", new { RosterId = request.RosterId });
     }
 
     [HttpPost("api/team/{teamId}/roster/{rosterId}/pilot")]
     public async Task<IActionResult> AddPilotToTeamRosterAsync([FromRoute] Guid teamId,
         [FromRoute] int rosterId,
-        [FromQuery, BindRequired] Guid pilotId)
+        [FromBody] AddPilotToTeamRosterRequest request)
     {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
         Team? team = await _aggregateRepository.Get<Team, Guid>(teamId);
         if (team == null)
         {
             return NotFound();
         }
 
-        team.AddPilotToTeamRoster(rosterId, pilotId);
+        team.AddPilotToTeamRoster(rosterId, request.PilotId);
 
         await _aggregateRepository.Save(team);
 
-        return Created($"/api/team/{teamId}/roster/{rosterId}/pilot/{pilotId}", new { PilotId = pilotId });
+        return Created($"/api/team/{teamId}/roster/{rosterId}/pilot/{request.PilotId}", new { PilotId = request.PilotId });
     }
 
     [HttpPut("api/team/{teamId}/roster/{rosterId}/substitute")]
     public async Task<IActionResult> SubstituteRosterPilotAsync([FromRoute] Guid teamId,
         [FromRoute] int rosterId,
-        [FromQuery, BindRequired] Guid raceId,
-        [FromQuery, BindRequired] Guid originalPilotId,
-        [FromQuery, BindRequired] Guid substitutePilotId)
+        [FromBody] SubstituteRosterPilotRequest request)
     {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
         Team? team = await _aggregateRepository.Get<Team, Guid>(teamId);
         if (team == null)
         {
             return NotFound();
         }
 
-        team.SubstituteRosterPilot(rosterId, raceId, originalPilotId, substitutePilotId);
+        team.SubstituteRosterPilot(rosterId, request.RaceId, request.OriginalPilotId, request.SubstitutePilotId);
 
         await _aggregateRepository.Save(team);
 

@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using NaeRaces.Command.Aggregates;
+using NaeRaces.WebAPI.Models.RaceSeries;
 
 namespace NaeRaces.WebAPI.Controllers;
 
@@ -15,15 +16,19 @@ public class RaceSeriesCommandController : Controller
     }
 
     [HttpPost("api/raceseries")]
-    public async Task<IActionResult> PlanRaceSeriesAsync([FromQuery, BindRequired] Guid raceSeriesId,
-        [FromQuery, BindRequired] string name)
+    public async Task<IActionResult> PlanRaceSeriesAsync([FromBody] PlanRaceSeriesRequest request)
     {
-        if(raceSeriesId == Guid.Empty)
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
+        if(request.RaceSeriesId == Guid.Empty)
         {
             return BadRequest("RaceSeriesId cannot be empty.");
         }
 
-        RaceSeries newRaceSeries = _aggregateRepository.CreateNew<RaceSeries>(() => new RaceSeries(raceSeriesId, name));
+        RaceSeries newRaceSeries = _aggregateRepository.CreateNew<RaceSeries>(() => new RaceSeries(request.RaceSeriesId, request.Name));
 
         await _aggregateRepository.Save(newRaceSeries);
 
@@ -32,19 +37,24 @@ public class RaceSeriesCommandController : Controller
 
     [HttpPost("api/raceseries/{raceSeriesId}/race")]
     public async Task<IActionResult> AddRaceToSeriesAsync([FromRoute] Guid raceSeriesId,
-        [FromQuery, BindRequired] Guid raceId)
+        [FromBody] AddRaceToSeriesRequest request)
     {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
         RaceSeries? raceSeries = await _aggregateRepository.Get<RaceSeries, Guid>(raceSeriesId);
         if (raceSeries == null)
         {
             return NotFound();
         }
 
-        raceSeries.AddRaceToSeries(raceId);
+        raceSeries.AddRaceToSeries(request.RaceId);
 
         await _aggregateRepository.Save(raceSeries);
 
-        return Created($"/api/raceseries/{raceSeriesId}/race/{raceId}", new { RaceId = raceId });
+        return Created($"/api/raceseries/{raceSeriesId}/race/{request.RaceId}", new { RaceId = request.RaceId });
     }
 
     [HttpDelete("api/raceseries/{raceSeriesId}/race/{raceId}")]

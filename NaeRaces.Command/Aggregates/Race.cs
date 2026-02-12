@@ -1,4 +1,5 @@
 ﻿using EventDbLite.Aggregates;
+using NaeRaces.Command.ValueTypes;
 using NaeRaces.Events;
 using System;
 using System.Collections.Generic;
@@ -9,9 +10,10 @@ namespace NaeRaces.Command.Aggregates;
 
 public class Race : AggregateRoot<Guid>
 {
+    public Guid? ClubId { get; private set; }
+
     private ValueTypes.Name? _name;
     private string? _description;
-    private Guid? _clubId;
     private ValidationPolicy? _validationPolicy;
     private int? _locationId;
     private bool _isTeamRace;
@@ -37,8 +39,8 @@ public class Race : AggregateRoot<Guid>
     private int? _minimumTeams;
     private int? _maximumTeams;
     private readonly Dictionary<Guid, Registration> _registrations = [];
-    private readonly HashSet<string> _globalTags = [];
-    private readonly Dictionary<Guid, HashSet<string>> _clubTags = [];
+    private readonly HashSet<Tag> _globalTags = [];
+    private readonly Dictionary<Guid, HashSet<Tag>> _clubTags = [];
     private class ValidationPolicy
     {
         public Guid ValidationPolicyId { get; init; }
@@ -88,9 +90,9 @@ public class Race : AggregateRoot<Guid>
         Raise(new RaceDescriptionSet(Id, description));
     }
 
-    public Race(Guid raceId, ValueTypes.Name name, int teamSize)
+    public Race(Guid raceId, ValueTypes.Name name, int teamSize, Guid clubId, int locationId)
     {
-        Raise(new TeamRacePlanned(raceId, name.Value, teamSize));
+        Raise(new TeamRacePlanned(raceId, name.Value, teamSize, clubId, locationId));
     }
 
     public void SetRaceValidationPolicy(Guid validationPolicyId, long version)
@@ -136,7 +138,7 @@ public class Race : AggregateRoot<Guid>
         if (start >= end)
             throw new ArgumentException("Start date must be before end date.");
 
-        if(_raceDates.Values.Any(d => start < d.End && end > d.Start && !d.Cancelled))
+        if (_raceDates.Values.Any(d => start < d.End && end > d.Start && !d.Cancelled))
             throw new InvalidOperationException("Race date conflicts with existing dates.");
 
         var raceDateId = _raceDates.Count > 0 ? _raceDates.Keys.Max() + 1 : 1;
@@ -148,19 +150,19 @@ public class Race : AggregateRoot<Guid>
     {
         ThrowIfIdNotSet();
 
-        if(_published)
+        if (_published)
             throw new InvalidOperationException("Cannot reschedule dates of a published race.");
 
         if (!_raceDates.ContainsKey(raceDateId))
             throw new InvalidOperationException($"Race date {raceDateId} does not exist.");
 
-        if(start >= end)
+        if (start >= end)
             throw new ArgumentException("Start date must be before end date.");
 
-        if(_raceDates.Where(d => d.Key != raceDateId).Any(d => start < d.Value.End && end > d.Value.Start && !d.Value.Cancelled))
+        if (_raceDates.Where(d => d.Key != raceDateId).Any(d => start < d.Value.End && end > d.Value.Start && !d.Value.Cancelled))
             throw new InvalidOperationException("Rescheduled race date conflicts with existing dates.");
 
-        if(_registrationOpenDate.HasValue && _registrationOpenDate.Value >= start)
+        if (_registrationOpenDate.HasValue && _registrationOpenDate.Value >= start)
             throw new InvalidOperationException("Rescheduled race date must be after registration open");
 
         Raise(new RaceDateRescheduled(Id, raceDateId, start, end));
@@ -169,21 +171,21 @@ public class Race : AggregateRoot<Guid>
     public void SetRaceCost(string currency, decimal cost)
     {
         ThrowIfIdNotSet();
-        
-        if(_published)
+
+        if (_published)
             throw new InvalidOperationException("Cannot change cost of a published race.");
 
         if (cost < 0)
             throw new ArgumentException("Cost cannot be negative.");
 
-        if(_costs.TryGetValue(currency, out var existingCost) && existingCost == cost)
+        if (_costs.TryGetValue(currency, out var existingCost) && existingCost == cost)
             return;
-        
+
         var currentCost = _costs.ContainsKey(currency) ? _costs[currency] : 0m;
 
-        if(currentCost < cost)
+        if (currentCost < cost)
             Raise(new RaceCostIncreased(Id, currency, cost));
-        else if(currentCost > cost)
+        else if (currentCost > cost)
             Raise(new RaceCostReduced(Id, currency, cost));
         else
             Raise(new RaceCostSet(Id, currency, cost));
@@ -193,7 +195,7 @@ public class Race : AggregateRoot<Guid>
     {
         ThrowIfIdNotSet();
 
-        if(_published)
+        if (_published)
             throw new InvalidOperationException("Cannot change payment deadline of a published race.");
 
         Raise(new RacePaymentDeadlineScheduled(Id, paymentDeadline));
@@ -203,7 +205,7 @@ public class Race : AggregateRoot<Guid>
     {
         ThrowIfIdNotSet();
 
-        if(_published) 
+        if (_published)
             throw new InvalidOperationException("Cannot permit unpaid registration for a published race.");
 
         if (_permitsUnpaidRegistration)
@@ -216,7 +218,7 @@ public class Race : AggregateRoot<Guid>
     {
         ThrowIfIdNotSet();
 
-        if (_published) 
+        if (_published)
             throw new InvalidOperationException("Cannot prohibit unpaid registration for a published race.");
 
         if (!_permitsUnpaidRegistration)
@@ -235,9 +237,9 @@ public class Race : AggregateRoot<Guid>
         if (_raceDates.Values.Any(d => !d.Cancelled && registrationOpenDate >= d.Start))
             throw new InvalidOperationException("Registration open date must be before all race start dates.");
 
-        if(_registrationOpenDate.HasValue && _registrationOpenDate.Value == registrationOpenDate)
+        if (_registrationOpenDate.HasValue && _registrationOpenDate.Value == registrationOpenDate)
             return;
-            
+
 
         Raise(new RaceRegistrationOpenDateScheduled(Id, registrationOpenDate));
     }
@@ -319,7 +321,7 @@ public class Race : AggregateRoot<Guid>
     {
         ThrowIfIdNotSet();
 
-        if(_published)
+        if (_published)
             throw new InvalidOperationException("Cannot change minimum attendees of a published race.");
 
         Raise(new RaceMinimumAttendeesSet(Id, minimumAttendees));
@@ -329,7 +331,7 @@ public class Race : AggregateRoot<Guid>
     {
         ThrowIfIdNotSet();
 
-        if(_published)
+        if (_published)
             throw new InvalidOperationException("Cannot change maximum attendees of a published race.");
 
         Raise(new RaceMaximumAttendeesSet(Id, maximumAttendees));
@@ -516,22 +518,37 @@ public class Race : AggregateRoot<Guid>
         Raise(new RaceRegistrationCancelled(Id, registrationId));
     }
 
-    public void TagRaceWithGlobalTag(string tag)
+    public void TagRaceWithGlobalTag(Tag tag)
     {
         ThrowIfIdNotSet();
         if (_globalTags.Contains(tag))
             throw new InvalidOperationException($"Global tag {tag} already exists.");
 
-        Raise(new RaceTaggedWithGlobalTag(Id, tag));
+        Raise(new RaceTaggedWithGlobalTag(Id, tag.Value));
     }
 
-    public void TagRaceWithClubTag(Guid clubId, string tag)
+    public void TagRaceWithClubTag(Guid clubId, Tag tag)
     {
         ThrowIfIdNotSet();
         if (_clubTags.TryGetValue(clubId, out var tags) && tags.Contains(tag))
             throw new InvalidOperationException($"Club tag {tag} for club {clubId} already exists.");
 
-        Raise(new RaceTaggedWithClubTag(Id, clubId, tag));
+        Raise(new RaceTaggedWithClubTag(Id, clubId, tag.Value));
+    }
+
+    public void RemoveGlobalTagFromRace(Tag tag)
+    { 
+        ThrowIfIdNotSet(); 
+        if (!_globalTags.Contains(tag)) 
+            throw new InvalidOperationException($"Global tag {tag} does not exist."); 
+        Raise(new RaceGlobalTagRemoved(Id, tag.Value)); 
+    }
+    public void RemoveClubTagFromRace(Guid clubId, Tag tag) 
+    { 
+        ThrowIfIdNotSet(); 
+        if (!_clubTags.ContainsKey(clubId) || !_clubTags[clubId].Contains(tag)) 
+            throw new InvalidOperationException($"Club tag {tag} for club {clubId} does not exist."); 
+        Raise(new RaceClubTagRemoved(Id, clubId, tag.Value)); 
     }
 
     // Event handlers
@@ -539,7 +556,7 @@ public class Race : AggregateRoot<Guid>
     {
         Id = e.RaceId;
         _name = ValueTypes.Name.Rehydrate(e.Name);
-        _clubId = e.ClubId;
+        ClubId = e.ClubId;
         _locationId = e.LocationId;
         _isTeamRace = false;
     }
@@ -721,9 +738,9 @@ public class Race : AggregateRoot<Guid>
             IsTeamRegistration = true,
             TeamId = e.TeamId,
             RosterId = e.RosterId,
-            Currency = e.currency,
-            BasePrice = e.basePrice,
-            Discount = e.discount,
+            Currency = e.Currency,
+            BasePrice = e.BasePrice,
+            Discount = e.Discount,
             IsConfirmed = false
         };
     }
@@ -735,9 +752,9 @@ public class Race : AggregateRoot<Guid>
             RegistrationId = e.RegistrationId,
             IsTeamRegistration = false,
             PilotId = e.PilotId,
-            Currency = e.currency,
-            BasePrice = e.basePrice,
-            Discount = e.discount,
+            Currency = e.Currency,
+            BasePrice = e.BasePrice,
+            Discount = e.Discount,
             IsConfirmed = false
         };
     }
@@ -754,7 +771,7 @@ public class Race : AggregateRoot<Guid>
 
     private void When(RaceTaggedWithGlobalTag e)
     {
-        _globalTags.Add(e.Tag);
+        _globalTags.Add(Tag.Rehydrate(e.Tag));
     }
 
     private void When(RaceTaggedWithClubTag e)
@@ -763,6 +780,19 @@ public class Race : AggregateRoot<Guid>
         {
             _clubTags[e.ClubId] = [];
         }
-        _clubTags[e.ClubId].Add(e.Tag);
+        _clubTags[e.ClubId].Add(Tag.Rehydrate(e.Tag));
+    }
+
+    private void When(RaceGlobalTagRemoved e)
+    {
+        _globalTags.Remove(Tag.Rehydrate(e.Tag));
+    }
+
+    private void When(RaceClubTagRemoved e)
+    {
+        if (_clubTags.ContainsKey(e.ClubId))
+        {
+            _clubTags[e.ClubId].Remove(Tag.Rehydrate(e.Tag));
+        }
     }
 }

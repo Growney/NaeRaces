@@ -1,9 +1,15 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace NaeRaces.WebAPI.Models;
+namespace NaeRaces.WebAPI.Models.Club;
 
-public class ChangeClubLocationAddressRequest
+public class AddClubLocationRequest
 {
+    [Required]
+    public string LocationName { get; set; } = string.Empty;
+
+    [Required]
+    public string LocationInformation { get; set; } = string.Empty;
+
     [Required]
     public string AddressLine1 { get; set; } = string.Empty;
 
