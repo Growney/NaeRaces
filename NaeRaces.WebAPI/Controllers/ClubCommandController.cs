@@ -12,16 +12,12 @@ namespace NaeRaces.WebAPI.Controllers;
 public class ClubCommandController : Controller
 {
     private readonly IAggregateRepository _aggregateRepository;
-    private readonly IClubUniquenessQueryHandler _clubUniquenessQueryHandler;
-    private readonly IPilotDetailsQueryHandler _pilotDetailsQueryHandler;
-    private readonly IClubLocationQueryHandler _clubLocationQueryHandler;
+    private readonly INaeRacesQueryContext _queryContext;
 
-    public ClubCommandController(IAggregateRepository aggregateRepository, IClubUniquenessQueryHandler clubUniquenessQueryHandler, IPilotDetailsQueryHandler pilotDetailsQueryHandler, IClubLocationQueryHandler clubLocationQueryHandler)
+    public ClubCommandController(IAggregateRepository aggregateRepository, INaeRacesQueryContext queryContext)
     {
         _aggregateRepository = aggregateRepository;
-        _clubUniquenessQueryHandler = clubUniquenessQueryHandler;
-        _pilotDetailsQueryHandler = pilotDetailsQueryHandler;
-        _clubLocationQueryHandler = clubLocationQueryHandler;
+        _queryContext = queryContext;
     }
 
     [HttpPost("api/club")]
@@ -40,12 +36,12 @@ public class ClubCommandController : Controller
         Code codeValueType = Code.Create(request.Code);
         Name nameValueType = Name.Create(request.Name);
 
-        if (!await _pilotDetailsQueryHandler.DoesPilotExist(request.FounderPilotId))
+        if (!await _queryContext.PilotDetails.DoesPilotExist(request.FounderPilotId))
         {
             return BadRequest("Founder pilot not found");
         }
 
-        if (await _clubUniquenessQueryHandler.DoesClubCodeExist(request.Code) || await _clubUniquenessQueryHandler.DoesClubNameExist(request.Code))
+        if (await _queryContext.ClubUniqueness.DoesClubCodeExist(request.Code) || await _queryContext.ClubUniqueness.DoesClubNameExist(request.Code))
         {
             return Conflict("A club with the same code or name already exists.");
         }
@@ -69,7 +65,7 @@ public class ClubCommandController : Controller
         Code codeValueType = Code.Create(request.Code);
         Name nameValueType = Name.Create(request.Name);
 
-        if (await _clubUniquenessQueryHandler.DoesClubCodeExist(request.Code) || await _clubUniquenessQueryHandler.DoesClubNameExist(request.Code))
+        if (await _queryContext.ClubUniqueness.DoesClubCodeExist(request.Code) || await _queryContext.ClubUniqueness.DoesClubNameExist(request.Code))
         {
             return Conflict("A club with the same code or name already exists.");
         }
@@ -179,7 +175,7 @@ public class ClubCommandController : Controller
             return NotFound();
         }
 
-        if(await _clubLocationQueryHandler.IsLocationInUse(clubId, locationId))
+        if(await _queryContext.ClubLocation.IsLocationInUse(clubId, locationId))
         {
             return BadRequest("Cannot remove location as it is used by a race.");
         }
@@ -725,7 +721,7 @@ public class ClubCommandController : Controller
             return BadRequest(ModelState);
         }
 
-        if(!await _pilotDetailsQueryHandler.DoesPilotExist(request.PilotId))
+        if(!await _queryContext.PilotDetails.DoesPilotExist(request.PilotId))
         { 
             return BadRequest("Pilot not found"); 
         }

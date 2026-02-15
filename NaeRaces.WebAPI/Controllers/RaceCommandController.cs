@@ -12,16 +12,12 @@ namespace NaeRaces.WebAPI.Controllers;
 public class RaceCommandController : Controller
 {
     private readonly IAggregateRepository _aggregateRepository;
-    private readonly IClubDetailsQueryHandler _clubDetails;
-    private readonly IClubLocationQueryHandler _clubLocation;
-    private readonly IRacePolicyQueryHandler _racePolicy;
+    private readonly INaeRacesQueryContext _queryContext;
 
-    public RaceCommandController(IAggregateRepository aggregateRepository, IClubDetailsQueryHandler clubDetails, IClubLocationQueryHandler clubLocation, IRacePolicyQueryHandler racePolicy)
+    public RaceCommandController(IAggregateRepository aggregateRepository, INaeRacesQueryContext queryContext)
     {
         _aggregateRepository = aggregateRepository;
-        _clubDetails = clubDetails;
-        _clubLocation = clubLocation;
-        _racePolicy = racePolicy;
+        _queryContext = queryContext;
     }
 
     [HttpPost("api/race")]
@@ -37,12 +33,12 @@ public class RaceCommandController : Controller
             return BadRequest("RaceId must be a non-empty GUID.");
         }
 
-        if(!await _clubDetails.DoesClubExist(request.ClubId))
+        if(!await _queryContext.ClubDetails.DoesClubExist(request.ClubId))
         {
             return BadRequest($"Club with ID {request.ClubId} does not exist.");
         }
         
-        if(!await _clubLocation.DoesLocationExist(request.ClubId, request.LocationId)) 
+        if(!await _queryContext.ClubLocation.DoesLocationExist(request.ClubId, request.LocationId)) 
         { 
             return BadRequest($"Location with ID {request.LocationId} does not exist."); 
         }
@@ -69,12 +65,12 @@ public class RaceCommandController : Controller
             return BadRequest("RaceId must be a non-empty GUID.");
         }
 
-        if (!await _clubDetails.DoesClubExist(request.ClubId))
+        if (!await _queryContext.ClubDetails.DoesClubExist(request.ClubId))
         {
             return BadRequest($"Club with ID {request.ClubId} does not exist.");
         }
 
-        if (!await _clubLocation.DoesLocationExist(request.ClubId, request.LocationId))
+        if (!await _queryContext.ClubLocation.DoesLocationExist(request.ClubId, request.LocationId))
         {
             return BadRequest($"Location with ID {request.LocationId} does not exist.");
         }
@@ -130,7 +126,7 @@ public class RaceCommandController : Controller
             return BadRequest("Race club not set. Cannot set validation policy without club context.");
         }
 
-        RacePolicyDetails? policyDetails = await _racePolicy.GetPolicyDetails(request.ValidationPolicyId, race.ClubId.Value);
+        RacePolicyDetails? policyDetails = await _queryContext.RacePolicy.GetPolicyDetails(request.ValidationPolicyId, race.ClubId.Value);
 
         if (policyDetails == null)
         {
@@ -357,7 +353,7 @@ public class RaceCommandController : Controller
             return BadRequest("Race club not set. Cannot set early registration policy without club context.");
         }
 
-        RacePolicyDetails? policyDetails = await _racePolicy.GetPolicyDetails(request.RacePolicyId.Value, race.ClubId.Value);
+        RacePolicyDetails? policyDetails = await _queryContext.RacePolicy.GetPolicyDetails(request.RacePolicyId.Value, race.ClubId.Value);
 
         if (policyDetails == null)
         {
@@ -418,7 +414,7 @@ public class RaceCommandController : Controller
             return BadRequest("Race club not set. Cannot set early registration policy without club context.");
         }
 
-        RacePolicyDetails? policyDetails = await _racePolicy.GetPolicyDetails(request.RacePolicyId, race.ClubId.Value);
+        RacePolicyDetails? policyDetails = await _queryContext.RacePolicy.GetPolicyDetails(request.RacePolicyId, race.ClubId.Value);
 
         if (policyDetails == null)
         {
@@ -469,7 +465,7 @@ public class RaceCommandController : Controller
             return BadRequest("Race club not set. Cannot add discount without club context.");
         }
 
-        RacePolicyDetails? policyDetails = await _racePolicy.GetPolicyDetails(request.RacePolicyId, race.ClubId.Value);
+        RacePolicyDetails? policyDetails = await _queryContext.RacePolicy.GetPolicyDetails(request.RacePolicyId, race.ClubId.Value);
 
         if (policyDetails == null)
         {
@@ -873,6 +869,30 @@ public class RaceCommandController : Controller
             return NotFound();
         }
 
+        foreach (Guid pilotId in request.PilotIds)
+        {
+            if (!await _queryContext.TeamMember.IsPilotMemberOfTeam(request.TeamId, pilotId))
+            {
+                return BadRequest($"Pilot with ID {pilotId} is not a member of team with ID {request.TeamId}.");
+            }
+        }
+
+        var currentDate = DateTime.UtcNow;
+        
+        foreach (Guid pilotId in request.PilotIds)
+        {
+            var registrationDetails = await _queryContext.PilotRegistrationDetails.GetPilotRegistrationDetails(
+                pilotId, 
+                raceId, 
+                request.Currency, 
+                currentDate);
+
+            if (registrationDetails != null && !registrationDetails.MeetsValidation)
+            {
+                return BadRequest($"Pilot with ID {pilotId} does not meet race validation requirements: {registrationDetails.ValidationError}");
+            }
+        }
+
         race.RegisterTeamRosterForRace(request.TeamId, request.PilotIds, request.RegistrationId);
 
         await _aggregateRepository.Save(race);
@@ -893,6 +913,19 @@ public class RaceCommandController : Controller
         if (race == null)
         {
             return NotFound();
+        }
+
+        var currentDate = DateTime.UtcNow;
+
+        var registrationDetails = await _queryContext.PilotRegistrationDetails.GetPilotRegistrationDetails(
+            request.PilotId,
+            raceId,
+            request.Currency,
+            currentDate);
+
+        if (registrationDetails != null && !registrationDetails.MeetsValidation)
+        {
+            return BadRequest($"Pilot with ID {request.PilotId} does not meet race validation requirements: {registrationDetails.ValidationError}");
         }
 
         race.RegisterIndividualPilotForRace(request.PilotId, request.RegistrationId);

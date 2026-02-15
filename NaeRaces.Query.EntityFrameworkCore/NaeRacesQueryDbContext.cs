@@ -22,4 +22,13 @@ public class NaeRacesQueryDbContext : DbContext
     public DbSet<PilotAgeValidation> PilotAgeValidations => Set<PilotAgeValidation>();
     public DbSet<PilotGovernmentDocumentValidation> PilotGovernmentDocumentValidations => Set<PilotGovernmentDocumentValidation>();
     public DbSet<PilotInsuranceProviderValidation> PilotInsuranceProviderValidations => Set<PilotInsuranceProviderValidation>();
+    public DbSet<TeamMember> TeamMembers => Set<TeamMember>();
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        base.OnModelCreating(modelBuilder);
+
+        modelBuilder.Entity<TeamMember>()
+            .HasKey(tm => new { tm.TeamId, tm.PilotId });
+    }
 }

@@ -12,5 +12,8 @@ public class RegisterTeamRosterForRaceRequest
 
     [Required]
     public Guid RegistrationId { get; set; }
+
+    [Required]
+    public string Currency { get; set; } = string.Empty;
 }
 

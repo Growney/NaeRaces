@@ -13,12 +13,12 @@ namespace NaeRaces.WebAPI.Controllers;
 public class PilotCommandController : Controller
 {
     private readonly IAggregateRepository _aggregateRepository;
-    private readonly IClubMemberQueryHandler _clubMemberQueryHandler;
+    private readonly INaeRacesQueryContext _queryContext;
 
-    public PilotCommandController(IAggregateRepository aggregateRepository, IClubMemberQueryHandler clubMemberQueryHandler)
+    public PilotCommandController(IAggregateRepository aggregateRepository, INaeRacesQueryContext queryContext)
     {
         _aggregateRepository = aggregateRepository;
-        _clubMemberQueryHandler = clubMemberQueryHandler;
+        _queryContext = queryContext;
     }
 
     [HttpPost("api/pilot")]
@@ -162,7 +162,7 @@ public class PilotCommandController : Controller
         }
 
         bool hasAtLeastOneValidatingClubMembership = false;
-        await foreach(var clubMembership in _clubMemberQueryHandler.GetPilotMembershipDetails(request.ValidatedByPilotId))
+        await foreach(var clubMembership in _queryContext.ClubMember.GetPilotMembershipDetails(request.ValidatedByPilotId))
         {
             pilot.PeerValidatePilotGovernmentDocumentation(request.GovernmentDocument, request.ValidUntil, clubMembership.ClubId, pilotId, clubMembership.IsOnCommittee);
             hasAtLeastOneValidatingClubMembership = true;
@@ -209,7 +209,7 @@ public class PilotCommandController : Controller
         }
 
         bool hasAtLeastOneValidatingClubMembership = false;
-        await foreach (var clubMembership in _clubMemberQueryHandler.GetPilotMembershipDetails(request.ValidatedByPilotId))
+        await foreach (var clubMembership in _queryContext.ClubMember.GetPilotMembershipDetails(request.ValidatedByPilotId))
         {
             pilot.PeerValidatePilotInsurance(request.InsuranceProvider, request.ValidUntil, clubMembership.ClubId, pilotId, clubMembership.IsOnCommittee);
             hasAtLeastOneValidatingClubMembership = true;
@@ -246,7 +246,7 @@ public class PilotCommandController : Controller
         }
 
         bool hasAtLeastOneValidatingClubMembership = false;
-        await foreach (var clubMembership in _clubMemberQueryHandler.GetPilotMembershipDetails(request.ValidatedByPilotId))
+        await foreach (var clubMembership in _queryContext.ClubMember.GetPilotMembershipDetails(request.ValidatedByPilotId))
         {
             pilot.PeerValidatePilotDateOfBirth(clubMembership.ClubId, pilotId, clubMembership.IsOnCommittee);
             hasAtLeastOneValidatingClubMembership = true;

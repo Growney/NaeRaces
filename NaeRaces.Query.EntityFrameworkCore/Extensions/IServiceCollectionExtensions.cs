@@ -16,6 +16,15 @@ public static class IServiceCollectionExtensions
         services.AddScoped<IPilotDetailsQueryHandler, PilotDetailsQueryHandler>();
         services.AddScoped<IClubDetailsQueryHandler, ClubDetailsQueryHandler>();
         services.AddScoped<IClubMemberQueryHandler, ClubMemberQueryHandler>();
+        services.AddScoped<ITeamMemberQueryHandler, TeamMemberQueryHandler>();
+        services.AddScoped<IClubLocationQueryHandler, ClubLocationQueryHandler>();
+        services.AddScoped<IPilotValidationQueryHandler, PilotValidationQueryHandler>();
+        services.AddScoped<IRaceDetailsQueryHandler, RaceDetailsQueryHandler>();
+        services.AddScoped<IRacePolicyQueryHandler, RacePolicyQueryHandler>();
+        services.AddScoped<IPilotPolicyValidationQueryHandler, PilotPolicyValidationQueryHandler>();
+        services.AddScoped<IPilotRegistrationDetailsQueryHandler, PilotRegistrationDetailsQueryHandler>();
+
+        services.AddScoped<INaeRacesQueryContext, NaeRacesQueryContext>();
 
         return services;
 
