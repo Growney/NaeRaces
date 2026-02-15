@@ -287,32 +287,22 @@ public class RaceCommandController : Controller
         return Ok();
     }
 
-    [HttpPut("api/race/{raceId}/permitunpaidregistration")]
-    public async Task<IActionResult> PermitUnpaidRegistrationAsync([FromRoute] Guid raceId)
+    [HttpPut("api/race/{raceId}/unconfirmedslotconsumption")]
+    public async Task<IActionResult> SetUnconfirmedSlotConsumptionPolicyAsync([FromRoute] Guid raceId,
+        [FromBody] SetUnconfirmedSlotConsumptionPolicyRequest request)
     {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
         Race? race = await _aggregateRepository.Get<Race, Guid>(raceId);
         if (race == null)
         {
             return NotFound();
         }
 
-        race.PermitUnpaidRegistration();
-
-        await _aggregateRepository.Save(race);
-
-        return Ok();
-    }
-
-    [HttpPut("api/race/{raceId}/prohibitunpaidregistration")]
-    public async Task<IActionResult> ProhibitUnpaidRegistrationAsync([FromRoute] Guid raceId)
-    {
-        Race? race = await _aggregateRepository.Get<Race, Guid>(raceId);
-        if (race == null)
-        {
-            return NotFound();
-        }
-
-        race.ProhibitUnpaidRegistration();
+        race.SetUnconfirmedSlotConsumptionPolicy(request.IsAllowed);
 
         await _aggregateRepository.Save(race);
 
@@ -356,30 +346,28 @@ public class RaceCommandController : Controller
             return NotFound();
         }
 
-        // If a policy is provided, validate it exists and get details
-        RacePolicyDetails? policyDetails = null;
-        if (request.RacePolicyId.HasValue)
+        // Policy is required for early registration
+        if (!request.RacePolicyId.HasValue)
         {
-            if (race.ClubId == null)
-            {
-                return BadRequest("Race club not set. Cannot set early registration policy without club context.");
-            }
-
-            policyDetails = await _racePolicy.GetPolicyDetails(request.RacePolicyId.Value, race.ClubId.Value);
-
-            if (policyDetails == null)
-            {
-                return BadRequest($"Race policy with ID {request.RacePolicyId.Value} does not exist.");
-            }
+            return BadRequest("Race policy is required for early registration.");
         }
 
-        int earlyRegistrationId = race.ScheduleEarlyRegistrationOpenDate(request.RegistrationOpenDate);
-
-        // If a policy was provided, set it with the latest version
-        if (policyDetails != null)
+        if (race.ClubId == null)
         {
-            race.SetEarlyRegistrationPolicy(earlyRegistrationId, policyDetails.Id, policyDetails.LatestVersion);
+            return BadRequest("Race club not set. Cannot set early registration policy without club context.");
         }
+
+        RacePolicyDetails? policyDetails = await _racePolicy.GetPolicyDetails(request.RacePolicyId.Value, race.ClubId.Value);
+
+        if (policyDetails == null)
+        {
+            return BadRequest($"Race policy with ID {request.RacePolicyId.Value} does not exist.");
+        }
+
+        int earlyRegistrationId = race.ScheduleEarlyRegistrationOpenDate(
+            request.RegistrationOpenDate, 
+            policyDetails.Id, 
+            policyDetails.LatestVersion);
 
         await _aggregateRepository.Save(race);
 
@@ -885,7 +873,7 @@ public class RaceCommandController : Controller
             return NotFound();
         }
 
-        race.RegisterTeamRosterForRace(request.TeamId, request.RosterId, request.RegistrationId, request.Currency, request.BasePrice, request.Discount);
+        race.RegisterTeamRosterForRace(request.TeamId, request.PilotIds, request.RegistrationId);
 
         await _aggregateRepository.Save(race);
 
@@ -907,7 +895,7 @@ public class RaceCommandController : Controller
             return NotFound();
         }
 
-        race.RegisterIndividualPilotForRace(request.PilotId, request.RegistrationId, request.Currency, request.BasePrice, request.Discount);
+        race.RegisterIndividualPilotForRace(request.PilotId, request.RegistrationId);
 
         await _aggregateRepository.Save(race);
 

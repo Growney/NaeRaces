@@ -135,7 +135,7 @@ public class TeamCommandController : Controller
             return NotFound();
         }
 
-        team.SubstituteRosterPilot(rosterId, request.RaceId, request.OriginalPilotId, request.SubstitutePilotId);
+        team.SubstituteRosterPilot(rosterId, request.OriginalPilotId, request.SubstitutePilotId);
 
         await _aggregateRepository.Save(team);
 

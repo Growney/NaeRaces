@@ -7,5 +7,7 @@ public class ScheduleEarlyRegistrationOpenDateRequest
     [Required]
     public DateTime RegistrationOpenDate { get; set; }
 
+    [Required]
     public Guid? RacePolicyId { get; set; }
 }
+

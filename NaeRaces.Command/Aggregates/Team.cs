@@ -72,7 +72,7 @@ public class Team : AggregateRoot<Guid>
         Raise(new PilotJoinedTeamRoster(Id, rosterId, pilotId));
     }
 
-    public void SubstituteRosterPilot(int rosterId, Guid raceId, Guid originalPilotId, Guid substitutePilotId)
+    public void SubstituteRosterPilot(int rosterId, Guid originalPilotId, Guid substitutePilotId)
     {
         ThrowIfIdNotSet();
         if (!_rosters.ContainsKey(rosterId))
@@ -82,7 +82,7 @@ public class Team : AggregateRoot<Guid>
         if (!_pilots.Contains(substitutePilotId))
             throw new InvalidOperationException($"Substitute pilot {substitutePilotId} is not in the team.");
 
-        Raise(new RosterPilotSubstituted(Id, rosterId, raceId, originalPilotId, substitutePilotId));
+        Raise(new RosterPilotSubstituted(Id, rosterId, originalPilotId, substitutePilotId));
     }
 
     public void RemovePilotFromRoster(int rosterId, Guid pilotId)

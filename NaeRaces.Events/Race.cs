@@ -19,7 +19,6 @@ public record RaceCostIncreased(Guid RaceId, string Currency, decimal Cost);
 public record RaceCostReduced(Guid RaceId, string Currency, decimal Cost);
 public record RacePaymentDeadlineScheduled(Guid RaceId, DateTime PaymentDeadline);
 public record RaceUnconfirmedSlotConsumptionPolicySet(Guid RaceId, bool IsAllowed);
-public record RaceProhibitsUnpaidUnconfirmedSlotConsumption(Guid RaceId);
 public record RaceRegistrationOpenDateScheduled(Guid RaceId, DateTime RegistrationOpenDate);
 public record RaceRegistrationOpenDateRescheduled(Guid RaceId, DateTime RegistrationOpenDate);
 public record RaceEarlyRegistrationOpenDateScheduled(Guid RaceId, int EarlyRegistrationId, DateTime RegistrationOpenDate, Guid RacePolicyId, long PolicyVersion);
