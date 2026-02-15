@@ -5,4 +5,4 @@ using System.Text;
 
 namespace NaeRaces.Query.Models;
 
-public record PeerAgeValidation(Guid PeerPilotId, Guid PeerPilotClubId, bool IsOnClubCommittee) : IPeerValidation;
+public record RacePolicyStatementTree(Guid RacePolicyId, Guid ClubId, IRacePolicyStatement Statement);

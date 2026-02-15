@@ -341,9 +341,9 @@ public class RaceCommandController : Controller
         return Ok();
     }
 
-    [HttpPut("api/race/{raceId}/membershipleveldiscount")]
-    public async Task<IActionResult> SetRaceClubMembershipLevelDiscountAsync([FromRoute] Guid raceId,
-        [FromBody] SetRaceClubMembershipLevelDiscountRequest request)
+    [HttpPost("api/race/{raceId}/earlyregistration")]
+    public async Task<IActionResult> ScheduleEarlyRegistrationOpenDateAsync([FromRoute] Guid raceId,
+        [FromBody] ScheduleEarlyRegistrationOpenDateRequest request)
     {
         if (!ModelState.IsValid)
         {
@@ -356,7 +356,156 @@ public class RaceCommandController : Controller
             return NotFound();
         }
 
-        race.SetRaceClubMembershipLevelDiscount(request.ClubId, request.MembershipLevelId, request.Discount);
+        // If a policy is provided, validate it exists and get details
+        RacePolicyDetails? policyDetails = null;
+        if (request.RacePolicyId.HasValue)
+        {
+            if (race.ClubId == null)
+            {
+                return BadRequest("Race club not set. Cannot set early registration policy without club context.");
+            }
+
+            policyDetails = await _racePolicy.GetPolicyDetails(request.RacePolicyId.Value, race.ClubId.Value);
+
+            if (policyDetails == null)
+            {
+                return BadRequest($"Race policy with ID {request.RacePolicyId.Value} does not exist.");
+            }
+        }
+
+        int earlyRegistrationId = race.ScheduleEarlyRegistrationOpenDate(request.RegistrationOpenDate);
+
+        // If a policy was provided, set it with the latest version
+        if (policyDetails != null)
+        {
+            race.SetEarlyRegistrationPolicy(earlyRegistrationId, policyDetails.Id, policyDetails.LatestVersion);
+        }
+
+        await _aggregateRepository.Save(race);
+
+        return Created($"/api/race/{raceId}/earlyregistration/{earlyRegistrationId}", new { EarlyRegistrationId = earlyRegistrationId });
+    }
+
+    [HttpPut("api/race/{raceId}/earlyregistration/{earlyRegistrationId}")]
+    public async Task<IActionResult> RescheduleEarlyRegistrationOpenDateAsync([FromRoute] Guid raceId,
+        [FromRoute] int earlyRegistrationId,
+        [FromBody] RescheduleEarlyRegistrationOpenDateRequest request)
+    {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
+        Race? race = await _aggregateRepository.Get<Race, Guid>(raceId);
+        if (race == null)
+        {
+            return NotFound();
+        }
+
+        race.RescheduleEarlyRegistrationOpenDate(earlyRegistrationId, request.RegistrationOpenDate);
+
+        await _aggregateRepository.Save(race);
+
+        return Ok();
+    }
+
+    [HttpPut("api/race/{raceId}/earlyregistration/{earlyRegistrationId}/policy")]
+    public async Task<IActionResult> SetEarlyRegistrationPolicyAsync([FromRoute] Guid raceId,
+        [FromRoute] int earlyRegistrationId,
+        [FromBody] SetEarlyRegistrationPolicyRequest request)
+    {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
+        Race? race = await _aggregateRepository.Get<Race, Guid>(raceId);
+        if (race == null)
+        {
+            return NotFound();
+        }
+
+        if (race.ClubId == null)
+        {
+            return BadRequest("Race club not set. Cannot set early registration policy without club context.");
+        }
+
+        RacePolicyDetails? policyDetails = await _racePolicy.GetPolicyDetails(request.RacePolicyId, race.ClubId.Value);
+
+        if (policyDetails == null)
+        {
+            return BadRequest($"Race policy with ID {request.RacePolicyId} does not exist.");
+        }
+
+        race.SetEarlyRegistrationPolicy(earlyRegistrationId, request.RacePolicyId, policyDetails.LatestVersion);
+
+        await _aggregateRepository.Save(race);
+
+        return Ok();
+    }
+
+    [HttpDelete("api/race/{raceId}/earlyregistration/{earlyRegistrationId}/policy")]
+    public async Task<IActionResult> RemoveEarlyRegistrationPolicyAsync([FromRoute] Guid raceId,
+        [FromRoute] int earlyRegistrationId)
+    {
+        Race? race = await _aggregateRepository.Get<Race, Guid>(raceId);
+        if (race == null)
+        {
+            return NotFound();
+        }
+
+        race.RemoveEarlyRegistrationPolicy(earlyRegistrationId);
+
+        await _aggregateRepository.Save(race);
+
+        return Ok();
+    }
+
+    [HttpPost("api/race/{raceId}/discount")]
+    public async Task<IActionResult> AddRaceDiscountAsync([FromRoute] Guid raceId,
+        [FromBody] AddRaceDiscountRequest request)
+    {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
+        Race? race = await _aggregateRepository.Get<Race, Guid>(raceId);
+        if (race == null)
+        {
+            return NotFound();
+        }
+
+        if (race.ClubId == null)
+        {
+            return BadRequest("Race club not set. Cannot add discount without club context.");
+        }
+
+        RacePolicyDetails? policyDetails = await _racePolicy.GetPolicyDetails(request.RacePolicyId, race.ClubId.Value);
+
+        if (policyDetails == null)
+        {
+            return BadRequest($"Race policy with ID {request.RacePolicyId} does not exist.");
+        }
+
+        int discountId = race.AddRaceDiscount(request.RacePolicyId, policyDetails.LatestVersion, request.Currency, request.Discount);
+
+        await _aggregateRepository.Save(race);
+
+        return Created($"/api/race/{raceId}/discount/{discountId}", new { DiscountId = discountId });
+    }
+
+    [HttpDelete("api/race/{raceId}/discount/{discountId}")]
+    public async Task<IActionResult> RemoveRaceDiscountAsync([FromRoute] Guid raceId,
+        [FromRoute] int discountId)
+    {
+        Race? race = await _aggregateRepository.Get<Race, Guid>(raceId);
+        if (race == null)
+        {
+            return NotFound();
+        }
+
+        race.RemoveRaceDiscount(discountId);
 
         await _aggregateRepository.Save(race);
 

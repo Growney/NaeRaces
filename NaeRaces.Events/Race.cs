@@ -12,17 +12,22 @@ public record RaceValidationPolicySet(Guid RaceId, Guid PolicyId, long PolicyVer
 public record RaceValidationPolicyMigratedToVersion(Guid RaceId, Guid PolicyId, long PolicyVersion);
 public record RaceValidationPolicyRemoved(Guid RaceId);
 
-public record RaceDateScheduled(Guid RaceId,int RaceDateId, DateTime Start, DateTime End);
+public record RaceDateScheduled(Guid RaceId, int RaceDateId, DateTime Start, DateTime End);
 public record RaceDateRescheduled(Guid RaceId, int RaceDateId, DateTime Start, DateTime End);
 public record RaceCostSet(Guid RaceId, string Currency, decimal Cost);
 public record RaceCostIncreased(Guid RaceId, string Currency, decimal Cost);
 public record RaceCostReduced(Guid RaceId, string Currency, decimal Cost);
 public record RacePaymentDeadlineScheduled(Guid RaceId, DateTime PaymentDeadline);
-public record RacePermitsUnpaidRegistration(Guid RaceId);
-public record RaceProhibitsUnpaidRegistration(Guid RaceId);
+public record RaceUnconfirmedSlotConsumptionPolicySet(Guid RaceId, bool IsAllowed);
+public record RaceProhibitsUnpaidUnconfirmedSlotConsumption(Guid RaceId);
 public record RaceRegistrationOpenDateScheduled(Guid RaceId, DateTime RegistrationOpenDate);
-public record RaceClubMembershipLevelDiscountSet(Guid Guid, Guid ClubId, int MembershipLevelId, decimal Discount);
-public record RaceClubMembershipDiscountSet(Guid RaceId, Guid ClubId, decimal Discount);
+public record RaceRegistrationOpenDateRescheduled(Guid RaceId, DateTime RegistrationOpenDate);
+public record RaceEarlyRegistrationOpenDateScheduled(Guid RaceId, int EarlyRegistrationId, DateTime RegistrationOpenDate, Guid RacePolicyId, long PolicyVersion);
+public record RaceEarlyRegistrationOpenDateRescheduled(Guid RaceId, int EarlyRegistrationId, DateTime RegistrationOpenDate);
+public record RaceEarlyRegistrationPolicyChanged(Guid RaceId, int EarlyRegistrationId, Guid RacePolicyId, long PolicyVersion);
+public record RaceEarlyRegistrationPolicyRemoved(Guid RaceId, int EarlyRegistrationId);
+public record RaceDiscountAdded(Guid RaceId, int RaceDiscountId, Guid RacePolicyId, long PolicyVersion, string Currency, decimal Discount);
+public record RaceDiscountAddedRemoved(Guid RaceId, int RaceDiscountId, Guid RacePolicyId, long PolicyVersion, string Currency, decimal Discount);
 public record RaceDetailsPublished(Guid RaceId);
 public record RacePublished(Guid RaceId);
 
@@ -48,8 +53,8 @@ public record TeamRaceMaximumTeamSizeSet(Guid RaceId, int MaximumTeamSize);
 public record TeamRaceMinimumTeamsSet(Guid RaceId, int MinimumTeams);
 public record TeamRaceMaximumTeamsSet(Guid RaceId, int MaximumTeams);
 
-public record TeamRosterRegisteredForRace(Guid RaceId, Guid TeamId, int RosterId, Guid RegistrationId, string Currency, double BasePrice, double Discount);
-public record IndividualPilotRegisteredForRace(Guid RaceId, Guid PilotId, Guid RegistrationId, string Currency, double BasePrice, double Discount);
+public record TeamRosterRegisteredForRace(Guid RaceId, Guid TeamId, int RosterId, IEnumerable<Guid> PilotIds, Guid RegistrationId);
+public record IndividualPilotRegisteredForRace(Guid RaceId, Guid PilotId, Guid RegistrationId);
 
 public record RaceRegistrationConfirmed(Guid RaceId, Guid RegistrationId);
 public record RaceRegistrationCancelled(Guid RaceId, Guid RegistrationId);

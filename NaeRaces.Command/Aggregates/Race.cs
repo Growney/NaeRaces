@@ -21,9 +21,10 @@ public class Race : AggregateRoot<Guid>
     private readonly Dictionary<int, RaceDate> _raceDates = [];
     private readonly Dictionary<string, decimal> _costs = [];
     private DateTime? _paymentDeadline;
-    private bool _permitsUnpaidRegistration;
+    private bool _unconfirmedSlotConsumptionIsAllowed;
     private DateTime? _registrationOpenDate;
-    private readonly Dictionary<(Guid ClubId, int MembershipLevelId), decimal> _membershipDiscounts = [];
+    private readonly Dictionary<int, EarlyRegistration> _earlyRegistrations = [];
+    private readonly Dictionary<int, Discount> _discounts = [];
     private bool _detailsPublished;
     private bool _published;
     private DateTime? _goNoGoDate;
@@ -60,16 +61,28 @@ public class Race : AggregateRoot<Guid>
         public bool AllowAnyMember { get; set; }
     }
 
+    private class EarlyRegistration
+    {
+        public DateTime OpenDate { get; set; }
+        public Guid? RacePolicyId { get; set; }
+        public long? PolicyVersion { get; set; }
+    }
+
+    private class Discount
+    {
+        public Guid RacePolicyId { get; set; }
+        public long PolicyVersion { get; set; }
+        public string Currency { get; set; } = string.Empty;
+        public decimal DiscountAmount { get; set; }
+    }
+
     private class Registration
     {
         public Guid RegistrationId { get; set; }
         public bool IsTeamRegistration { get; set; }
         public Guid? TeamId { get; set; }
         public int? RosterId { get; set; }
-        public Guid? PilotId { get; set; }
-        public string Currency { get; set; } = string.Empty;
-        public double BasePrice { get; set; }
-        public double Discount { get; set; }
+        public IEnumerable<Guid> PilotIds { get; set; } = Enumerable.Empty<Guid>();
         public bool IsConfirmed { get; set; }
     }
     public Race()
@@ -201,30 +214,17 @@ public class Race : AggregateRoot<Guid>
         Raise(new RacePaymentDeadlineScheduled(Id, paymentDeadline));
     }
 
-    public void PermitUnpaidRegistration()
+    public void SetUnconfirmedSlotConsumptionPolicy(bool isAllowed)
     {
         ThrowIfIdNotSet();
 
         if (_published)
             throw new InvalidOperationException("Cannot permit unpaid registration for a published race.");
 
-        if (_permitsUnpaidRegistration)
+        if (_unconfirmedSlotConsumptionIsAllowed == isAllowed)
             return;
 
-        Raise(new RacePermitsUnpaidRegistration(Id));
-    }
-
-    public void ProhibitUnpaidRegistration()
-    {
-        ThrowIfIdNotSet();
-
-        if (_published)
-            throw new InvalidOperationException("Cannot prohibit unpaid registration for a published race.");
-
-        if (!_permitsUnpaidRegistration)
-            return;
-
-        Raise(new RaceProhibitsUnpaidRegistration(Id));
+        Raise(new RaceUnconfirmedSlotConsumptionPolicySet(Id, isAllowed));
     }
 
     public void ScheduleRaceRegistrationOpenDate(DateTime registrationOpenDate)
@@ -237,21 +237,148 @@ public class Race : AggregateRoot<Guid>
         if (_raceDates.Values.Any(d => !d.Cancelled && registrationOpenDate >= d.Start))
             throw new InvalidOperationException("Registration open date must be before all race start dates.");
 
+        if (_earlyRegistrations.Values.Any(er => registrationOpenDate <= er.OpenDate))
+            throw new InvalidOperationException("Registration open date must be after all early registration dates.");
+
         if (_registrationOpenDate.HasValue && _registrationOpenDate.Value == registrationOpenDate)
             return;
-
 
         Raise(new RaceRegistrationOpenDateScheduled(Id, registrationOpenDate));
     }
 
-    public void SetRaceClubMembershipLevelDiscount(Guid clubId, int membershipLevelId, decimal discount)
+    public void RescheduleRaceRegistrationOpenDate(DateTime registrationOpenDate)
     {
         ThrowIfIdNotSet();
 
         if (_published)
-            throw new InvalidOperationException("Cannot change membership level discounts of a published race.");
+            throw new InvalidOperationException("Cannot change registration open date of a published race.");
 
-        Raise(new RaceClubMembershipLevelDiscountSet(Id, clubId, membershipLevelId, discount));
+        if (!_registrationOpenDate.HasValue)
+            throw new InvalidOperationException("Registration open date has not been scheduled.");
+
+        if (_raceDates.Values.Any(d => !d.Cancelled && registrationOpenDate >= d.Start))
+            throw new InvalidOperationException("Registration open date must be before all race start dates.");
+
+        if (_earlyRegistrations.Values.Any(er => registrationOpenDate <= er.OpenDate))
+            throw new InvalidOperationException("Registration open date must be after all early registration dates.");
+
+        if (_registrationOpenDate.Value == registrationOpenDate)
+            return;
+
+        Raise(new RaceRegistrationOpenDateRescheduled(Id, registrationOpenDate));
+    }
+
+    public int ScheduleEarlyRegistrationOpenDate(DateTime registrationOpenDate, Guid racePolicyId, long policyVersion)
+    {
+        ThrowIfIdNotSet();
+
+        if (_published)
+            throw new InvalidOperationException("Cannot change early registration open date of a published race.");
+
+        if (!_registrationOpenDate.HasValue)
+            throw new InvalidOperationException("Standard registration open date must be scheduled before early registration.");
+
+        if (registrationOpenDate >= _registrationOpenDate.Value)
+            throw new InvalidOperationException("Early registration open date must be before standard registration open date.");
+
+        if (_raceDates.Values.Any(d => !d.Cancelled && registrationOpenDate >= d.Start))
+            throw new InvalidOperationException("Early registration open date must be before all race start dates.");
+
+        var earlyRegistrationId = _earlyRegistrations.Count > 0 ? _earlyRegistrations.Keys.Max() + 1 : 1;
+
+        Raise(new RaceEarlyRegistrationOpenDateScheduled(Id, earlyRegistrationId, registrationOpenDate, racePolicyId, policyVersion));
+
+        return earlyRegistrationId;
+    }
+
+    public void RescheduleEarlyRegistrationOpenDate(int earlyRegistrationId, DateTime registrationOpenDate)
+    {
+        ThrowIfIdNotSet();
+
+        if (_published)
+            throw new InvalidOperationException("Cannot change early registration open date of a published race.");
+
+        if (!_earlyRegistrations.ContainsKey(earlyRegistrationId))
+            throw new InvalidOperationException($"Early registration {earlyRegistrationId} does not exist.");
+
+        if (!_registrationOpenDate.HasValue)
+            throw new InvalidOperationException("Standard registration open date must be scheduled.");
+
+        if (registrationOpenDate >= _registrationOpenDate.Value)
+            throw new InvalidOperationException("Early registration open date must be before standard registration open date.");
+
+        if (_raceDates.Values.Any(d => !d.Cancelled && registrationOpenDate >= d.Start))
+            throw new InvalidOperationException("Early registration open date must be before all race start dates.");
+
+        if (_earlyRegistrations[earlyRegistrationId].OpenDate == registrationOpenDate)
+            return;
+
+        Raise(new RaceEarlyRegistrationOpenDateRescheduled(Id, earlyRegistrationId, registrationOpenDate));
+    }
+
+    public void SetEarlyRegistrationPolicy(int earlyRegistrationId, Guid racePolicyId, long policyVersion)
+    {
+        ThrowIfIdNotSet();
+
+        if (_published)
+            throw new InvalidOperationException("Cannot change early registration policy of a published race.");
+
+        if (!_earlyRegistrations.ContainsKey(earlyRegistrationId))
+            throw new InvalidOperationException($"Early registration {earlyRegistrationId} does not exist.");
+
+        var earlyReg = _earlyRegistrations[earlyRegistrationId];
+        if (earlyReg.RacePolicyId == racePolicyId && earlyReg.PolicyVersion == policyVersion)
+            return;
+
+        Raise(new RaceEarlyRegistrationPolicyChanged(Id, earlyRegistrationId, racePolicyId, policyVersion));
+    }
+
+    public void RemoveEarlyRegistrationPolicy(int earlyRegistrationId)
+    {
+        ThrowIfIdNotSet();
+
+        if (_published)
+            throw new InvalidOperationException("Cannot remove early registration policy of a published race.");
+
+        if (!_earlyRegistrations.ContainsKey(earlyRegistrationId))
+            throw new InvalidOperationException($"Early registration {earlyRegistrationId} does not exist.");
+
+        var earlyReg = _earlyRegistrations[earlyRegistrationId];
+        if (!earlyReg.RacePolicyId.HasValue)
+            return;
+
+        Raise(new RaceEarlyRegistrationPolicyRemoved(Id, earlyRegistrationId));
+    }
+
+    public int AddRaceDiscount(Guid racePolicyId, long policyVersion, string currency, decimal discount)
+    {
+        ThrowIfIdNotSet();
+
+        if (_published)
+            throw new InvalidOperationException("Cannot add discounts to a published race.");
+
+        if (discount <= 0)
+            throw new ArgumentException("Discount must be between 0 and 1.");
+
+        var discountId = _discounts.Count > 0 ? _discounts.Keys.Max() + 1 : 1;
+
+        Raise(new RaceDiscountAdded(Id, discountId, racePolicyId, policyVersion, currency, discount));
+
+        return discountId;
+    }
+
+    public void RemoveRaceDiscount(int discountId)
+    {
+        ThrowIfIdNotSet();
+
+        if (_published)
+            throw new InvalidOperationException("Cannot remove discounts from a published race.");
+
+        if (!_discounts.ContainsKey(discountId))
+            throw new InvalidOperationException($"Discount {discountId} does not exist.");
+
+        var discount = _discounts[discountId];
+        Raise(new RaceDiscountAddedRemoved(Id, discountId, discount.RacePolicyId, discount.PolicyVersion, discount.Currency, discount.DiscountAmount));
     }
 
     public void PublishRaceDetails()
@@ -479,23 +606,66 @@ public class Race : AggregateRoot<Guid>
 
         Raise(new TeamRaceMaximumTeamsSet(Id, maximumTeams));
     }
-
-    public void RegisterTeamRosterForRace(Guid teamId, int rosterId, Guid registrationId, string currency, double basePrice, double discount)
+    public void RegisterTeamRosterForRace(Guid teamId, IEnumerable<Guid> pilotIds, Guid registrationId)
     {
         ThrowIfIdNotSet();
+
         if (_registrations.ContainsKey(registrationId))
             throw new InvalidOperationException($"Registration {registrationId} already exists.");
+        if (!_teamAttendancePermitted)
+            throw new InvalidOperationException("Team attendance is not permitted for this race");
 
-        Raise(new TeamRosterRegisteredForRace(Id, teamId, rosterId, registrationId, currency, basePrice, discount));
+        IEnumerable<Guid> existingPilotIds = _registrations.Values.SelectMany(r => r.PilotIds);
+
+        if (pilotIds.Any(pid => existingPilotIds.Contains(pid)))
+            throw new InvalidOperationException("One or more pilots in the roster are already registered");
+
+        if (_registrations.Values.Any(r => r.IsTeamRegistration && r.TeamId == teamId))
+            throw new InvalidOperationException($"Team {teamId} already has a roster registered for this race");
+
+        // Count registrations based on slot consumption policy
+        var registrationsToCount = _unconfirmedSlotConsumptionIsAllowed 
+            ? _registrations.Values 
+            : _registrations.Values.Where(r => r.IsConfirmed);
+
+        int registeredTeamCount = registrationsToCount.Count(r => r.IsTeamRegistration);
+
+        if (_maximumTeams.HasValue && registeredTeamCount >= _maximumTeams.Value)
+            throw new InvalidOperationException("Maximum number of teams already registered for this race");
+
+        int registeredPilotsCount = registrationsToCount.SelectMany(r => r.PilotIds).Count();
+
+        if (_maximumAttendees.HasValue && registeredPilotsCount + pilotIds.Count() > _maximumAttendees.Value)
+            throw new InvalidOperationException("Registering this roster would exceed the maximum number of attendees");
+
+        int rosterId = (_registrations.Values.Where(r => r.IsTeamRegistration && r.TeamId == teamId).Select(r => r.RosterId).DefaultIfEmpty(0).Max() + 1) ?? 0;    
+
+        Raise(new TeamRosterRegisteredForRace(Id, teamId, rosterId, pilotIds, registrationId));
     }
 
-    public void RegisterIndividualPilotForRace(Guid pilotId, Guid registrationId, string currency, double basePrice, double discount)
+    public void RegisterIndividualPilotForRace(Guid pilotId, Guid registrationId)
     {
         ThrowIfIdNotSet();
         if (_registrations.ContainsKey(registrationId))
             throw new InvalidOperationException($"Registration {registrationId} already exists.");
 
-        Raise(new IndividualPilotRegisteredForRace(Id, pilotId, registrationId, currency, basePrice, discount));
+        if (!_individualPilotAttendancePermitted)
+            throw new InvalidOperationException("Individual pilot attendance is not permitted for this race and cannot be registered.");
+
+        if (_registrations.Values.Any(r => r.PilotIds.Contains(pilotId)))
+            throw new InvalidOperationException("Pilot has already been registered");
+
+        // Count registrations based on slot consumption policy
+        var registrationsToCount = _unconfirmedSlotConsumptionIsAllowed 
+            ? _registrations.Values 
+            : _registrations.Values.Where(r => r.IsConfirmed);
+
+        int registeredPilotsCount = registrationsToCount.SelectMany(r => r.PilotIds).Count();
+        
+        if (_maximumAttendees.HasValue && registeredPilotsCount >= _maximumAttendees.Value)
+            throw new InvalidOperationException("Maximum number of attendees already registered for this race");
+
+        Raise(new IndividualPilotRegisteredForRace(Id, registrationId, pilotId));
     }
 
     public void ConfirmRaceRegistration(Guid registrationId)
@@ -537,18 +707,18 @@ public class Race : AggregateRoot<Guid>
     }
 
     public void RemoveGlobalTagFromRace(Tag tag)
-    { 
-        ThrowIfIdNotSet(); 
-        if (!_globalTags.Contains(tag)) 
-            throw new InvalidOperationException($"Global tag {tag} does not exist."); 
-        Raise(new RaceGlobalTagRemoved(Id, tag.Value)); 
+    {
+        ThrowIfIdNotSet();
+        if (!_globalTags.Contains(tag))
+            throw new InvalidOperationException($"Global tag {tag} does not exist.");
+        Raise(new RaceGlobalTagRemoved(Id, tag.Value));
     }
-    public void RemoveClubTagFromRace(Guid clubId, Tag tag) 
-    { 
-        ThrowIfIdNotSet(); 
-        if (!_clubTags.ContainsKey(clubId) || !_clubTags[clubId].Contains(tag)) 
-            throw new InvalidOperationException($"Club tag {tag} for club {clubId} does not exist."); 
-        Raise(new RaceClubTagRemoved(Id, clubId, tag.Value)); 
+    public void RemoveClubTagFromRace(Guid clubId, Tag tag)
+    {
+        ThrowIfIdNotSet();
+        if (!_clubTags.ContainsKey(clubId) || !_clubTags[clubId].Contains(tag))
+            throw new InvalidOperationException($"Club tag {tag} for club {clubId} does not exist.");
+        Raise(new RaceClubTagRemoved(Id, clubId, tag.Value));
     }
 
     // Event handlers
@@ -610,14 +780,9 @@ public class Race : AggregateRoot<Guid>
         _paymentDeadline = e.PaymentDeadline;
     }
 
-    private void When(RacePermitsUnpaidRegistration e)
+    private void When(RaceUnconfirmedSlotConsumptionPolicySet e)
     {
-        _permitsUnpaidRegistration = true;
-    }
-
-    private void When(RaceProhibitsUnpaidRegistration e)
-    {
-        _permitsUnpaidRegistration = false;
+        _unconfirmedSlotConsumptionIsAllowed = e.IsAllowed;
     }
 
     private void When(RaceRegistrationOpenDateScheduled e)
@@ -625,9 +790,52 @@ public class Race : AggregateRoot<Guid>
         _registrationOpenDate = e.RegistrationOpenDate;
     }
 
-    private void When(RaceClubMembershipLevelDiscountSet e)
+    private void When(RaceRegistrationOpenDateRescheduled e)
     {
-        _membershipDiscounts[(e.ClubId, e.MembershipLevelId)] = e.Discount;
+        _registrationOpenDate = e.RegistrationOpenDate;
+    }
+
+    private void When(RaceEarlyRegistrationOpenDateScheduled e)
+    {
+        _earlyRegistrations[e.EarlyRegistrationId] = new EarlyRegistration
+        {
+            OpenDate = e.RegistrationOpenDate,
+            PolicyVersion = e.PolicyVersion,
+            RacePolicyId = e.RacePolicyId
+        };
+    }
+
+    private void When(RaceEarlyRegistrationOpenDateRescheduled e)
+    {
+        _earlyRegistrations[e.EarlyRegistrationId].OpenDate = e.RegistrationOpenDate;
+    }
+
+    private void When(RaceEarlyRegistrationPolicyChanged e)
+    {
+        _earlyRegistrations[e.EarlyRegistrationId].RacePolicyId = e.RacePolicyId;
+        _earlyRegistrations[e.EarlyRegistrationId].PolicyVersion = e.PolicyVersion;
+    }
+
+    private void When(RaceEarlyRegistrationPolicyRemoved e)
+    {
+        _earlyRegistrations[e.EarlyRegistrationId].RacePolicyId = null;
+        _earlyRegistrations[e.EarlyRegistrationId].PolicyVersion = null;
+    }
+
+    private void When(RaceDiscountAdded e)
+    {
+        _discounts[e.RaceDiscountId] = new Discount
+        {
+            RacePolicyId = e.RacePolicyId,
+            PolicyVersion = e.PolicyVersion,
+            Currency = e.Currency,
+            DiscountAmount = e.Discount
+        };
+    }
+
+    private void When(RaceDiscountAddedRemoved e)
+    {
+        _discounts.Remove(e.RaceDiscountId);
     }
 
     private void When(RaceDetailsPublished e)
@@ -730,6 +938,16 @@ public class Race : AggregateRoot<Guid>
         _maximumTeams = e.MaximumTeams;
     }
 
+    private void When(IndividualPilotRegisteredForRace e)
+    {
+        _registrations[e.RegistrationId] = new Registration
+        {
+            RegistrationId = e.RegistrationId,
+            IsTeamRegistration = false,
+            PilotIds = [e.PilotId],
+            IsConfirmed = false
+        };
+    }
     private void When(TeamRosterRegisteredForRace e)
     {
         _registrations[e.RegistrationId] = new Registration
@@ -738,23 +956,7 @@ public class Race : AggregateRoot<Guid>
             IsTeamRegistration = true,
             TeamId = e.TeamId,
             RosterId = e.RosterId,
-            Currency = e.Currency,
-            BasePrice = e.BasePrice,
-            Discount = e.Discount,
-            IsConfirmed = false
-        };
-    }
-
-    private void When(IndividualPilotRegisteredForRace e)
-    {
-        _registrations[e.RegistrationId] = new Registration
-        {
-            RegistrationId = e.RegistrationId,
-            IsTeamRegistration = false,
-            PilotId = e.PilotId,
-            Currency = e.Currency,
-            BasePrice = e.BasePrice,
-            Discount = e.Discount,
+            PilotIds = e.PilotIds,
             IsConfirmed = false
         };
     }

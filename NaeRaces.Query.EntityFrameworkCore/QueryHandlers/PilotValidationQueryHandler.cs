@@ -58,12 +58,31 @@ public class PilotValidationQueryHandler : IPilotValidationQueryHandler
             ))
             .ToListAsync();
 
+        var governmentDocuments = governmentDocumentValidations
+            .Select(v => v.Document)
+            .Distinct()
+            .ToList();
+
+        var insuranceProviders = insuranceProviderValidations
+            .Select(v => v.Provider)
+            .Distinct()
+            .ToList();
+
+        var pilotClubs = await _dbContext.ClubMembers
+            .AsNoTracking()
+            .Where(cm => cm.PilotId == pilotId && cm.IsRegistrationConfirmed && cm.MembershipLevelId.HasValue)
+            .Select(cm => new PilotClub(cm.ClubId, cm.MembershipLevelId!.Value))
+            .ToListAsync();
+
         return new PilotValidationDetails(
             pilotId,
             pilotDetails?.DateOfBirth,
+            governmentDocuments,
+            insuranceProviders,
             ageValidations,
             governmentDocumentValidations,
-            insuranceProviderValidations
+            insuranceProviderValidations,
+            pilotClubs
         );
     }
 }
