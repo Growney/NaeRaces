@@ -8,6 +8,7 @@ public class NaeRacesQueryContext : INaeRacesQueryContext
         IClubDetailsQueryHandler clubDetails,
         IClubLocationQueryHandler clubLocation,
         IClubMemberQueryHandler clubMember,
+        IClubMembershipLevelQueryHandler clubMembershipLevel,
         IClubUniquenessQueryHandler clubUniqueness,
         IPilotDetailsQueryHandler pilotDetails,
         IPilotValidationQueryHandler pilotValidation,
@@ -19,6 +20,7 @@ public class NaeRacesQueryContext : INaeRacesQueryContext
         ClubDetails = clubDetails;
         ClubLocation = clubLocation;
         ClubMember = clubMember;
+        ClubMembershipLevel = clubMembershipLevel;
         ClubUniqueness = clubUniqueness;
         PilotDetails = pilotDetails;
         PilotValidation = pilotValidation;
@@ -31,6 +33,7 @@ public class NaeRacesQueryContext : INaeRacesQueryContext
     public IClubDetailsQueryHandler ClubDetails { get; }
     public IClubLocationQueryHandler ClubLocation { get; }
     public IClubMemberQueryHandler ClubMember { get; }
+    public IClubMembershipLevelQueryHandler ClubMembershipLevel { get; }
     public IClubUniquenessQueryHandler ClubUniqueness { get; }
     public IPilotDetailsQueryHandler PilotDetails { get; }
     public IPilotValidationQueryHandler PilotValidation { get; }

@@ -16,6 +16,7 @@ public static class IServiceCollectionExtensions
         services.AddScoped<IPilotDetailsQueryHandler, PilotDetailsQueryHandler>();
         services.AddScoped<IClubDetailsQueryHandler, ClubDetailsQueryHandler>();
         services.AddScoped<IClubMemberQueryHandler, ClubMemberQueryHandler>();
+        services.AddScoped<IClubMembershipLevelQueryHandler, ClubMembershipLevelQueryHandler>();
         services.AddScoped<ITeamMemberQueryHandler, TeamMemberQueryHandler>();
         services.AddScoped<IClubLocationQueryHandler, ClubLocationQueryHandler>();
         services.AddScoped<IPilotValidationQueryHandler, PilotValidationQueryHandler>();
@@ -38,6 +39,7 @@ public static class IServiceCollectionExtensions
         services.AddConstantReactionClass<ClubUniquenessProjection>();
         services.AddConstantReactionClass<ClubDetailsProjection>();
         services.AddConstantReactionClass<ClubMembershipProjection>();
+        services.AddConstantReactionClass<ClubMembershipLevelProjection>();
 
         return services;
     }

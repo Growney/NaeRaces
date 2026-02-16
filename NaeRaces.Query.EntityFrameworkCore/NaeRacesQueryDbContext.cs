@@ -23,6 +23,7 @@ public class NaeRacesQueryDbContext : DbContext
     public DbSet<PilotGovernmentDocumentValidation> PilotGovernmentDocumentValidations => Set<PilotGovernmentDocumentValidation>();
     public DbSet<PilotInsuranceProviderValidation> PilotInsuranceProviderValidations => Set<PilotInsuranceProviderValidation>();
     public DbSet<TeamMember> TeamMembers => Set<TeamMember>();
+    public DbSet<ClubMembershipLevel> ClubMembershipLevels => Set<ClubMembershipLevel>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -30,5 +31,16 @@ public class NaeRacesQueryDbContext : DbContext
 
         modelBuilder.Entity<TeamMember>()
             .HasKey(tm => new { tm.TeamId, tm.PilotId });
+
+        modelBuilder.Entity<ClubMembershipLevel>()
+            .HasKey(cml => new { cml.ClubId, cml.MembershipLevelId });
+
+        modelBuilder.Entity<ClubMembershipLevelPaymentOption>()
+            .HasKey(po => new { po.ClubId, po.MembershipLevelId, po.PaymentOptionId });
+
+        modelBuilder.Entity<ClubMembershipLevelPaymentOption>()
+            .HasOne(po => po.MembershipLevel)
+            .WithMany(cml => cml.PaymentOptions)
+            .HasForeignKey(po => new { po.ClubId, po.MembershipLevelId });
     }
 }
