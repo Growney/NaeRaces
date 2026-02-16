@@ -8,6 +8,6 @@ public class ScheduleEarlyRegistrationOpenDateRequest
     public DateTime RegistrationOpenDate { get; set; }
 
     [Required]
-    public Guid? RacePolicyId { get; set; }
+    public Guid? PilotPolicyId { get; set; }
 }
 

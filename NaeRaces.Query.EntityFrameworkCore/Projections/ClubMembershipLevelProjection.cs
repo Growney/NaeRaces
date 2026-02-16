@@ -66,7 +66,7 @@ public class ClubMembershipLevelProjection
 
         if (level != null)
         {
-            level.RacePolicyId = e.RacePolicyId;
+            level.PilotPolicyId = e.PilotPolicyId;
             level.PolicyVersion = e.PolicyVersion;
         }
 
@@ -80,7 +80,7 @@ public class ClubMembershipLevelProjection
 
         if (level != null)
         {
-            level.RacePolicyId = null;
+            level.PilotPolicyId = null;
             level.PolicyVersion = null;
         }
 

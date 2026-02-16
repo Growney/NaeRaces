@@ -24,6 +24,8 @@ public class NaeRacesQueryDbContext : DbContext
     public DbSet<PilotInsuranceProviderValidation> PilotInsuranceProviderValidations => Set<PilotInsuranceProviderValidation>();
     public DbSet<TeamMember> TeamMembers => Set<TeamMember>();
     public DbSet<ClubMembershipLevel> ClubMembershipLevels => Set<ClubMembershipLevel>();
+    public DbSet<RaceCost> RaceCosts => Set<RaceCost>();
+    public DbSet<RaceRegistrationDates> RaceRegistrationDates => Set<RaceRegistrationDates>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

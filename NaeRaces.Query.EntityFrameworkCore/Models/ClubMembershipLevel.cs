@@ -9,7 +9,7 @@ public class ClubMembershipLevel
     public Guid ClubId { get; set; }
     public int MembershipLevelId { get; set; }
     public string? Name { get; set; }
-    public Guid? RacePolicyId { get; set; }
+    public Guid? PilotPolicyId { get; set; }
     public long? PolicyVersion { get; set; }
 
     public ICollection<ClubMembershipLevelPaymentOption> PaymentOptions { get; set; } = new List<ClubMembershipLevelPaymentOption>();

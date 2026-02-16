@@ -5,7 +5,7 @@ namespace NaeRaces.WebAPI.Models.Race;
 public class AddRaceDiscountRequest
 {
     [Required]
-    public Guid RacePolicyId { get; set; }
+    public Guid PilotPolicyId { get; set; }
 
     [Required]
     public string Currency { get; set; } = string.Empty;

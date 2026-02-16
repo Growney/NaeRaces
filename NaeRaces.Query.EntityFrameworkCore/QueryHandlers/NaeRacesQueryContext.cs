@@ -12,8 +12,11 @@ public class NaeRacesQueryContext : INaeRacesQueryContext
         IClubUniquenessQueryHandler clubUniqueness,
         IPilotDetailsQueryHandler pilotDetails,
         IPilotValidationQueryHandler pilotValidation,
+        IPilotPolicyValidationQueryHandler pilotPolicyValidation,
         IPilotRegistrationDetailsQueryHandler pilotRegistrationDetails,
         IRaceDetailsQueryHandler raceDetails,
+        IRaceCostQueryHandler raceCost,
+        IRaceRegistrationDatesQueryHandler raceRegistrationDates,
         IPilotSelectionPolicyQueryHandler pilotSelectionPolicy,
         ITeamMemberQueryHandler teamMember)
     {
@@ -24,8 +27,11 @@ public class NaeRacesQueryContext : INaeRacesQueryContext
         ClubUniqueness = clubUniqueness;
         PilotDetails = pilotDetails;
         PilotValidation = pilotValidation;
+        PilotPolicyValidation = pilotPolicyValidation;
         PilotRegistrationDetails = pilotRegistrationDetails;
         RaceDetails = raceDetails;
+        RaceCost = raceCost;
+        RaceRegistrationDates = raceRegistrationDates;
         PilotSelectionPolicy = pilotSelectionPolicy;
         TeamMember = teamMember;
     }
@@ -37,8 +43,11 @@ public class NaeRacesQueryContext : INaeRacesQueryContext
     public IClubUniquenessQueryHandler ClubUniqueness { get; }
     public IPilotDetailsQueryHandler PilotDetails { get; }
     public IPilotValidationQueryHandler PilotValidation { get; }
+    public IPilotPolicyValidationQueryHandler PilotPolicyValidation { get; }
     public IPilotRegistrationDetailsQueryHandler PilotRegistrationDetails { get; }
     public IRaceDetailsQueryHandler RaceDetails { get; }
+    public IRaceCostQueryHandler RaceCost { get; }
+    public IRaceRegistrationDatesQueryHandler RaceRegistrationDates { get; }
     public IPilotSelectionPolicyQueryHandler PilotSelectionPolicy { get; }
     public ITeamMemberQueryHandler TeamMember { get; }
 }

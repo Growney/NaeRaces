@@ -343,7 +343,7 @@ public class RaceCommandController : Controller
         }
 
         // Policy is required for early registration
-        if (!request.RacePolicyId.HasValue)
+        if (!request.PilotPolicyId.HasValue)
         {
             return BadRequest("Pilot selection policy is required for early registration.");
         }
@@ -353,11 +353,11 @@ public class RaceCommandController : Controller
             return BadRequest("Race club not set. Cannot set early registration policy without club context.");
         }
 
-        PilotSelectionPolicyDetails? policyDetails = await _queryContext.PilotSelectionPolicy.GetPolicyDetails(request.RacePolicyId.Value, race.ClubId.Value);
+        PilotSelectionPolicyDetails? policyDetails = await _queryContext.PilotSelectionPolicy.GetPolicyDetails(request.PilotPolicyId.Value, race.ClubId.Value);
 
         if (policyDetails == null)
         {
-            return BadRequest($"Pilot selection policy with ID {request.RacePolicyId.Value} does not exist.");
+            return BadRequest($"Pilot selection policy with ID {request.PilotPolicyId.Value} does not exist.");
         }
 
         int earlyRegistrationId = race.ScheduleEarlyRegistrationOpenDate(
@@ -414,14 +414,14 @@ public class RaceCommandController : Controller
             return BadRequest("Race club not set. Cannot set early registration policy without club context.");
         }
 
-        PilotSelectionPolicyDetails? policyDetails = await _queryContext.PilotSelectionPolicy.GetPolicyDetails(request.RacePolicyId, race.ClubId.Value);
+        PilotSelectionPolicyDetails? policyDetails = await _queryContext.PilotSelectionPolicy.GetPolicyDetails(request.PilotPolicyId, race.ClubId.Value);
 
         if (policyDetails == null)
         {
-            return BadRequest($"Pilot selection policy with ID {request.RacePolicyId} does not exist.");
+            return BadRequest($"Pilot selection policy with ID {request.PilotPolicyId} does not exist.");
         }
 
-        race.SetEarlyRegistrationPolicy(earlyRegistrationId, request.RacePolicyId, policyDetails.LatestVersion);
+        race.SetEarlyRegistrationPolicy(earlyRegistrationId, request.PilotPolicyId, policyDetails.LatestVersion);
 
         await _aggregateRepository.Save(race);
 
@@ -465,14 +465,14 @@ public class RaceCommandController : Controller
             return BadRequest("Race club not set. Cannot add discount without club context.");
         }
 
-        PilotSelectionPolicyDetails? policyDetails = await _queryContext.PilotSelectionPolicy.GetPolicyDetails(request.RacePolicyId, race.ClubId.Value);
+        PilotSelectionPolicyDetails? policyDetails = await _queryContext.PilotSelectionPolicy.GetPolicyDetails(request.PilotPolicyId, race.ClubId.Value);
 
         if (policyDetails == null)
         {
-            return BadRequest($"Pilot selection policy with ID {request.RacePolicyId} does not exist.");
+            return BadRequest($"Pilot selection policy with ID {request.PilotPolicyId} does not exist.");
         }
 
-        int discountId = race.AddRaceDiscount(request.RacePolicyId, policyDetails.LatestVersion, request.Currency, request.Discount);
+        int discountId = race.AddRaceDiscount(request.PilotPolicyId, policyDetails.LatestVersion, request.Currency, request.Discount);
 
         await _aggregateRepository.Save(race);
 
@@ -909,12 +909,7 @@ public class RaceCommandController : Controller
             return BadRequest(ModelState);
         }
 
-        Race? race = await _aggregateRepository.Get<Race, Guid>(raceId);
-        if (race == null)
-        {
-            return NotFound();
-        }
-
+     
         var currentDate = DateTime.UtcNow;
 
         var registrationDetails = await _queryContext.PilotRegistrationDetails.GetPilotRegistrationDetails(
@@ -926,6 +921,11 @@ public class RaceCommandController : Controller
         if (registrationDetails != null && !registrationDetails.MeetsValidation)
         {
             return BadRequest($"Pilot with ID {request.PilotId} does not meet race validation requirements: {registrationDetails.ValidationError}");
+        }
+        Race? race = await _aggregateRepository.Get<Race, Guid>(raceId);
+        if (race == null)
+        {
+            return NotFound();
         }
 
         race.RegisterIndividualPilotForRace(request.PilotId, request.RegistrationId);

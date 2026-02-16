@@ -4,7 +4,7 @@ using System.ComponentModel.DataAnnotations;
 namespace NaeRaces.Query.EntityFrameworkCore.Models;
 
 [PrimaryKey(nameof(PolicyId), nameof(StatementId))]
-public class RacePolicyStatement
+public class PilotPolicyStatement
 {
     public Guid PolicyId { get; set; }
     public int StatementId { get; set; }

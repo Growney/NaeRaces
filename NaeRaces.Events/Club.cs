@@ -21,7 +21,7 @@ public record ClubCommitteeMemberRemoved(Guid ClubId, Guid PilotId);
 public record ClubMembershipLevelAdded(Guid ClubId, int MembershipLevelId, string Name);
 public record ClubMembershipLevelRemoved(Guid ClubId, int MembershipLevelId);
 public record ClubMembershipLevelRenamed(Guid ClubId, int MembershipLevelId, string NewName);
-public record ClubMembershipLevelPolicySet(Guid ClubId, int MembershipLevelId, Guid RacePolicyId, long PolicyVersion);
+public record ClubMembershipLevelPolicySet(Guid ClubId, int MembershipLevelId, Guid PilotPolicyId, long PolicyVersion);
 public record ClubMembershipLevelPolicyCleared(Guid ClubId, int MembershipLevelId);
 public record ClubMembershipLevelAnnualPaymentOptionAdded(Guid ClubId, int MembershipLevelId, int PaymentOptionId, string Name,string Currency, decimal Price);
 public record ClubMembershipLevelMonthlyPaymentOptionAdded(Guid ClubId, int MembershipLevelId, int PaymentOptionId, string Name, int DayOfMonthDue, int PaymentInterval,string Currency, decimal Price);

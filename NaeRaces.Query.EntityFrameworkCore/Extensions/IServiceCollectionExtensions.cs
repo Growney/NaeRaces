@@ -21,6 +21,8 @@ public static class IServiceCollectionExtensions
         services.AddScoped<IClubLocationQueryHandler, ClubLocationQueryHandler>();
         services.AddScoped<IPilotValidationQueryHandler, PilotValidationQueryHandler>();
         services.AddScoped<IRaceDetailsQueryHandler, RaceDetailsQueryHandler>();
+        services.AddScoped<IRaceCostQueryHandler, RaceCostQueryHandler>();
+        services.AddScoped<IRaceRegistrationDatesQueryHandler, RaceRegistrationDatesQueryHandler>();
         services.AddScoped<IPilotSelectionPolicyQueryHandler, PilotSelectionPolicyQueryHandler>();
         services.AddScoped<IPilotPolicyValidationQueryHandler, PilotPolicyValidationQueryHandler>();
         services.AddScoped<IPilotRegistrationDetailsQueryHandler, PilotRegistrationDetailsQueryHandler>();
@@ -40,6 +42,7 @@ public static class IServiceCollectionExtensions
         services.AddConstantReactionClass<ClubDetailsProjection>();
         services.AddConstantReactionClass<ClubMembershipProjection>();
         services.AddConstantReactionClass<ClubMembershipLevelProjection>();
+        services.AddConstantReactionClass<RaceCostProjection>();
 
         return services;
     }

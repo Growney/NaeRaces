@@ -64,13 +64,13 @@ public class Race : AggregateRoot<Guid>
     private class EarlyRegistration
     {
         public DateTime OpenDate { get; set; }
-        public Guid? RacePolicyId { get; set; }
+        public Guid? PilotPolicyId { get; set; }
         public long? PolicyVersion { get; set; }
     }
 
     private class Discount
     {
-        public Guid RacePolicyId { get; set; }
+        public Guid PilotPolicyId { get; set; }
         public long PolicyVersion { get; set; }
         public string Currency { get; set; } = string.Empty;
         public decimal DiscountAmount { get; set; }
@@ -268,7 +268,7 @@ public class Race : AggregateRoot<Guid>
         Raise(new RaceRegistrationOpenDateRescheduled(Id, registrationOpenDate));
     }
 
-    public int ScheduleEarlyRegistrationOpenDate(DateTime registrationOpenDate, Guid racePolicyId, long policyVersion)
+    public int ScheduleEarlyRegistrationOpenDate(DateTime registrationOpenDate, Guid pilotPolicyId, long policyVersion)
     {
         ThrowIfIdNotSet();
 
@@ -286,7 +286,7 @@ public class Race : AggregateRoot<Guid>
 
         var earlyRegistrationId = _earlyRegistrations.Count > 0 ? _earlyRegistrations.Keys.Max() + 1 : 1;
 
-        Raise(new RaceEarlyRegistrationOpenDateScheduled(Id, earlyRegistrationId, registrationOpenDate, racePolicyId, policyVersion));
+        Raise(new RaceEarlyRegistrationOpenDateScheduled(Id, earlyRegistrationId, registrationOpenDate, pilotPolicyId, policyVersion));
 
         return earlyRegistrationId;
     }
@@ -316,7 +316,7 @@ public class Race : AggregateRoot<Guid>
         Raise(new RaceEarlyRegistrationOpenDateRescheduled(Id, earlyRegistrationId, registrationOpenDate));
     }
 
-    public void SetEarlyRegistrationPolicy(int earlyRegistrationId, Guid racePolicyId, long policyVersion)
+    public void SetEarlyRegistrationPolicy(int earlyRegistrationId, Guid pilotPolicyId, long policyVersion)
     {
         ThrowIfIdNotSet();
 
@@ -327,10 +327,10 @@ public class Race : AggregateRoot<Guid>
             throw new InvalidOperationException($"Early registration {earlyRegistrationId} does not exist.");
 
         var earlyReg = _earlyRegistrations[earlyRegistrationId];
-        if (earlyReg.RacePolicyId == racePolicyId && earlyReg.PolicyVersion == policyVersion)
+        if (earlyReg.PilotPolicyId == pilotPolicyId && earlyReg.PolicyVersion == policyVersion)
             return;
 
-        Raise(new RaceEarlyRegistrationPolicyChanged(Id, earlyRegistrationId, racePolicyId, policyVersion));
+        Raise(new RaceEarlyRegistrationPolicyChanged(Id, earlyRegistrationId, pilotPolicyId, policyVersion));
     }
 
     public void RemoveEarlyRegistrationPolicy(int earlyRegistrationId)
@@ -344,13 +344,13 @@ public class Race : AggregateRoot<Guid>
             throw new InvalidOperationException($"Early registration {earlyRegistrationId} does not exist.");
 
         var earlyReg = _earlyRegistrations[earlyRegistrationId];
-        if (!earlyReg.RacePolicyId.HasValue)
+        if (!earlyReg.PilotPolicyId.HasValue)
             return;
 
         Raise(new RaceEarlyRegistrationPolicyRemoved(Id, earlyRegistrationId));
     }
 
-    public int AddRaceDiscount(Guid racePolicyId, long policyVersion, string currency, decimal discount)
+    public int AddRaceDiscount(Guid pilotPolicyId, long policyVersion, string currency, decimal discount)
     {
         ThrowIfIdNotSet();
 
@@ -362,7 +362,7 @@ public class Race : AggregateRoot<Guid>
 
         var discountId = _discounts.Count > 0 ? _discounts.Keys.Max() + 1 : 1;
 
-        Raise(new RaceDiscountAdded(Id, discountId, racePolicyId, policyVersion, currency, discount));
+        Raise(new RaceDiscountAdded(Id, discountId, pilotPolicyId, policyVersion, currency, discount));
 
         return discountId;
     }
@@ -378,7 +378,7 @@ public class Race : AggregateRoot<Guid>
             throw new InvalidOperationException($"Discount {discountId} does not exist.");
 
         var discount = _discounts[discountId];
-        Raise(new RaceDiscountAddedRemoved(Id, discountId, discount.RacePolicyId, discount.PolicyVersion, discount.Currency, discount.DiscountAmount));
+        Raise(new RaceDiscountAddedRemoved(Id, discountId, discount.PilotPolicyId, discount.PolicyVersion, discount.Currency, discount.DiscountAmount));
     }
 
     public void PublishRaceDetails()
@@ -801,7 +801,7 @@ public class Race : AggregateRoot<Guid>
         {
             OpenDate = e.RegistrationOpenDate,
             PolicyVersion = e.PolicyVersion,
-            RacePolicyId = e.RacePolicyId
+            PilotPolicyId = e.PilotPolicyId
         };
     }
 
@@ -812,13 +812,13 @@ public class Race : AggregateRoot<Guid>
 
     private void When(RaceEarlyRegistrationPolicyChanged e)
     {
-        _earlyRegistrations[e.EarlyRegistrationId].RacePolicyId = e.RacePolicyId;
+        _earlyRegistrations[e.EarlyRegistrationId].PilotPolicyId = e.PilotPolicyId;
         _earlyRegistrations[e.EarlyRegistrationId].PolicyVersion = e.PolicyVersion;
     }
 
     private void When(RaceEarlyRegistrationPolicyRemoved e)
     {
-        _earlyRegistrations[e.EarlyRegistrationId].RacePolicyId = null;
+        _earlyRegistrations[e.EarlyRegistrationId].PilotPolicyId = null;
         _earlyRegistrations[e.EarlyRegistrationId].PolicyVersion = null;
     }
 
@@ -826,7 +826,7 @@ public class Race : AggregateRoot<Guid>
     {
         _discounts[e.RaceDiscountId] = new Discount
         {
-            RacePolicyId = e.RacePolicyId,
+            PilotPolicyId = e.PilotPolicyId,
             PolicyVersion = e.PolicyVersion,
             Currency = e.Currency,
             DiscountAmount = e.Discount

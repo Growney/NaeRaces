@@ -40,7 +40,7 @@ public class ClubMembershipLevelQueryHandler : IClubMembershipLevelQueryHandler
             dbLevel.ClubId,
             dbLevel.MembershipLevelId,
             dbLevel.Name ?? string.Empty,
-            dbLevel.RacePolicyId,
+            dbLevel.PilotPolicyId,
             dbLevel.PolicyVersion,
             paymentOptions
         );
@@ -54,7 +54,7 @@ public class ClubMembershipLevelQueryHandler : IClubMembershipLevelQueryHandler
                 dbLevel.ClubId,
                 dbLevel.MembershipLevelId,
                 dbLevel.Name ?? string.Empty,
-                dbLevel.RacePolicyId,
+                dbLevel.PilotPolicyId,
                 dbLevel.PolicyVersion,
                 dbLevel.PaymentOptions.Select(po => new ClubMembershipLevelPaymentOption(
                     po.PaymentOptionId,

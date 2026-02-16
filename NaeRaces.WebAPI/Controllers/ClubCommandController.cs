@@ -569,6 +569,22 @@ public class ClubCommandController : Controller
             return BadRequest("Pilot not found"); 
         }
 
+        var membershipLevel = await _queryContext.ClubMembershipLevel.GetClubMembershipLevel(clubId, request.MembershipLevelId);
+        if (membershipLevel == null)
+        {
+            return BadRequest("Membership level not found");
+        }
+
+        if (membershipLevel.PilotPolicyId.HasValue && membershipLevel.PolicyVersion.HasValue)
+        {
+            var policyValidationResult = await _queryContext.PilotPolicyValidation.ValidatePilotAgainstPolicy(request.PilotId, membershipLevel.PilotPolicyId.Value, membershipLevel.PolicyVersion.Value, DateTime.UtcNow);
+    
+            if (policyValidationResult != null)
+            {
+                return BadRequest($"Pilot does not meet the requirements for this membership level: {policyValidationResult}");
+            }
+        }
+
         Club? club = await _aggregateRepository.Get<Club, Guid>(clubId);
         if (club == null)
         {
@@ -599,6 +615,34 @@ public class ClubCommandController : Controller
         }
 
         club.ConfirmPilotClubMembership(request.MembershipLevelId, request.PaymentOptionId, pilotId, request.RegistrationId, request.ValidUntil);
+
+        await _aggregateRepository.Save(club);
+
+        return Ok();
+    }
+
+    [HttpPut("api/club/{clubId}/pilotmembership/{pilotId}/manualconfirm")]
+    public async Task<IActionResult> ManuallyConfirmPilotClubMembershipAsync([FromRoute] Guid clubId,
+        [FromRoute] Guid pilotId,
+        [FromBody] ManuallyConfirmPilotClubMembershipRequest request)
+    {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
+        if (!await _queryContext.PilotDetails.DoesPilotExist(request.ConfirmedByPilotId))
+        {
+            return BadRequest("Confirming pilot not found");
+        }
+
+        Club? club = await _aggregateRepository.Get<Club, Guid>(clubId);
+        if (club == null)
+        {
+            return NotFound();
+        }
+
+        club.ManuallyConfirmPilotClubMembership(request.MembershipLevelId, request.PaymentOptionId, pilotId, request.RegistrationId, request.ConfirmedByPilotId, request.ValidUntil);
 
         await _aggregateRepository.Save(club);
 

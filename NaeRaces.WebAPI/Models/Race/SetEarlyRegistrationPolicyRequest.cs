@@ -5,5 +5,5 @@ namespace NaeRaces.WebAPI.Models.Race;
 public class SetEarlyRegistrationPolicyRequest
 {
     [Required]
-    public Guid RacePolicyId { get; set; }
+    public Guid PilotPolicyId { get; set; }
 }

@@ -45,8 +45,8 @@ public class Club : AggregateRoot<Guid>
     private class MembershipLevel
     {
         public Name Name { get; set; }
-        public Guid? RacePolicyId { get; set; }
-        public long? RacePolicyVersion { get; set; }
+        public Guid? PilotPolicyId { get; set; }
+        public long? PilotPolicyVersion { get; set; }
         public Dictionary<int, PaymentOption> PaymentOptions { get; set; } = [];
     }
 
@@ -216,7 +216,7 @@ public class Club : AggregateRoot<Guid>
         Raise(new ClubMembershipLevelRenamed(Id, membershipLevelId, newName.Value));
     }
 
-    public void SetClubMembershipLevelPolicy(int membershipLevelId, Guid racePolicyId, long policyVersion)
+    public void SetClubMembershipLevelPolicy(int membershipLevelId, Guid pilotPolicyId, long policyVersion)
     {
         ThrowIfIdNotSet();
         if (!_membershipLevels.ContainsKey(membershipLevelId))
@@ -224,10 +224,10 @@ public class Club : AggregateRoot<Guid>
 
         var existingPolicy = _membershipLevels[membershipLevelId];
 
-        if (existingPolicy.RacePolicyId == racePolicyId && existingPolicy.RacePolicyVersion == policyVersion)
+        if (existingPolicy.PilotPolicyId == pilotPolicyId && existingPolicy.PilotPolicyVersion == policyVersion)
             return;
 
-        Raise(new ClubMembershipLevelPolicySet(Id, membershipLevelId, racePolicyId, policyVersion));
+        Raise(new ClubMembershipLevelPolicySet(Id, membershipLevelId, pilotPolicyId, policyVersion));
     }
 
     public void ClearClubMembershipLevelPolicy(int membershipLevelId)
@@ -238,7 +238,7 @@ public class Club : AggregateRoot<Guid>
 
         var existingPolicy = _membershipLevels[membershipLevelId];
 
-        if (existingPolicy.RacePolicyId == null && existingPolicy.RacePolicyVersion == null)
+        if (existingPolicy.PilotPolicyId == null && existingPolicy.PilotPolicyVersion == null)
             return;
 
         Raise(new ClubMembershipLevelPolicyCleared(Id, membershipLevelId));
@@ -456,15 +456,15 @@ public class Club : AggregateRoot<Guid>
 
     private void When(ClubMembershipLevelPolicySet e)
     {
-        _membershipLevels[e.MembershipLevelId].RacePolicyId = e.RacePolicyId;
-        _membershipLevels[e.MembershipLevelId].RacePolicyVersion = e.PolicyVersion;
+        _membershipLevels[e.MembershipLevelId].PilotPolicyId = e.PilotPolicyId;
+        _membershipLevels[e.MembershipLevelId].PilotPolicyVersion = e.PolicyVersion;
 
     }
 
     private void When(ClubMembershipLevelPolicyCleared e)
     {
-        _membershipLevels[e.MembershipLevelId].RacePolicyId = null;
-        _membershipLevels[e.MembershipLevelId].RacePolicyVersion = null;
+        _membershipLevels[e.MembershipLevelId].PilotPolicyId = null;
+        _membershipLevels[e.MembershipLevelId].PilotPolicyVersion = null;
     }
 
     private void When(ClubMembershipLevelAnnualPaymentOptionAdded e)
