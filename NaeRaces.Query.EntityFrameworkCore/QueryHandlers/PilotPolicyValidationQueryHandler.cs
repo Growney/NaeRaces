@@ -24,8 +24,8 @@ public class PilotPolicyValidationQueryHandler : IPilotPolicyValidationQueryHand
     {
         var pilotValidationDetails = await _pilotValidationQueryHandler.GetPilotValidationDetails(pilotId);
 
-        var streamName = GetRacePolicyStreamName(policyId);
-        var policy = await _projectionProvider.Load<RacePolicy>(streamName, StreamPosition.WithVersion(policyVersion));
+        var streamName = GetPilotSelectionPolicyStreamName(policyId);
+        var policy = await _projectionProvider.Load<PilotSelectionPolicy>(streamName, StreamPosition.WithVersion(policyVersion));
 
         if (policy.StatementTree == null)
         {
@@ -35,5 +35,5 @@ public class PilotPolicyValidationQueryHandler : IPilotPolicyValidationQueryHand
         return policy.StatementTree.Statement.IsValidForPilot(pilotValidationDetails, onDate);
     }
 
-    private static string GetRacePolicyStreamName(Guid policyId) => $"RacePolicy-{policyId}";
+    private static string GetPilotSelectionPolicyStreamName(Guid policyId) => $"PilotSelectionPolicy-{policyId}";
 }

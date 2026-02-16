@@ -126,11 +126,11 @@ public class RaceCommandController : Controller
             return BadRequest("Race club not set. Cannot set validation policy without club context.");
         }
 
-        RacePolicyDetails? policyDetails = await _queryContext.RacePolicy.GetPolicyDetails(request.ValidationPolicyId, race.ClubId.Value);
+        PilotSelectionPolicyDetails? policyDetails = await _queryContext.PilotSelectionPolicy.GetPolicyDetails(request.ValidationPolicyId, race.ClubId.Value);
 
         if (policyDetails == null)
         {
-            return BadRequest($"Race validation policy with ID {request.ValidationPolicyId} does not exist.");
+            return BadRequest($"Pilot selection policy with ID {request.ValidationPolicyId} does not exist.");
         }
 
         race.SetRaceValidationPolicy(request.ValidationPolicyId, policyDetails.LatestVersion);
@@ -345,7 +345,7 @@ public class RaceCommandController : Controller
         // Policy is required for early registration
         if (!request.RacePolicyId.HasValue)
         {
-            return BadRequest("Race policy is required for early registration.");
+            return BadRequest("Pilot selection policy is required for early registration.");
         }
 
         if (race.ClubId == null)
@@ -353,11 +353,11 @@ public class RaceCommandController : Controller
             return BadRequest("Race club not set. Cannot set early registration policy without club context.");
         }
 
-        RacePolicyDetails? policyDetails = await _queryContext.RacePolicy.GetPolicyDetails(request.RacePolicyId.Value, race.ClubId.Value);
+        PilotSelectionPolicyDetails? policyDetails = await _queryContext.PilotSelectionPolicy.GetPolicyDetails(request.RacePolicyId.Value, race.ClubId.Value);
 
         if (policyDetails == null)
         {
-            return BadRequest($"Race policy with ID {request.RacePolicyId.Value} does not exist.");
+            return BadRequest($"Pilot selection policy with ID {request.RacePolicyId.Value} does not exist.");
         }
 
         int earlyRegistrationId = race.ScheduleEarlyRegistrationOpenDate(
@@ -414,11 +414,11 @@ public class RaceCommandController : Controller
             return BadRequest("Race club not set. Cannot set early registration policy without club context.");
         }
 
-        RacePolicyDetails? policyDetails = await _queryContext.RacePolicy.GetPolicyDetails(request.RacePolicyId, race.ClubId.Value);
+        PilotSelectionPolicyDetails? policyDetails = await _queryContext.PilotSelectionPolicy.GetPolicyDetails(request.RacePolicyId, race.ClubId.Value);
 
         if (policyDetails == null)
         {
-            return BadRequest($"Race policy with ID {request.RacePolicyId} does not exist.");
+            return BadRequest($"Pilot selection policy with ID {request.RacePolicyId} does not exist.");
         }
 
         race.SetEarlyRegistrationPolicy(earlyRegistrationId, request.RacePolicyId, policyDetails.LatestVersion);
@@ -465,11 +465,11 @@ public class RaceCommandController : Controller
             return BadRequest("Race club not set. Cannot add discount without club context.");
         }
 
-        RacePolicyDetails? policyDetails = await _queryContext.RacePolicy.GetPolicyDetails(request.RacePolicyId, race.ClubId.Value);
+        PilotSelectionPolicyDetails? policyDetails = await _queryContext.PilotSelectionPolicy.GetPolicyDetails(request.RacePolicyId, race.ClubId.Value);
 
         if (policyDetails == null)
         {
-            return BadRequest($"Race policy with ID {request.RacePolicyId} does not exist.");
+            return BadRequest($"Pilot selection policy with ID {request.RacePolicyId} does not exist.");
         }
 
         int discountId = race.AddRaceDiscount(request.RacePolicyId, policyDetails.LatestVersion, request.Currency, request.Discount);

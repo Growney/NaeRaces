@@ -20,7 +20,7 @@ public static class IServiceCollectionExtensions
         services.AddScoped<IClubLocationQueryHandler, ClubLocationQueryHandler>();
         services.AddScoped<IPilotValidationQueryHandler, PilotValidationQueryHandler>();
         services.AddScoped<IRaceDetailsQueryHandler, RaceDetailsQueryHandler>();
-        services.AddScoped<IRacePolicyQueryHandler, RacePolicyQueryHandler>();
+        services.AddScoped<IPilotSelectionPolicyQueryHandler, PilotSelectionPolicyQueryHandler>();
         services.AddScoped<IPilotPolicyValidationQueryHandler, PilotPolicyValidationQueryHandler>();
         services.AddScoped<IPilotRegistrationDetailsQueryHandler, PilotRegistrationDetailsQueryHandler>();
 

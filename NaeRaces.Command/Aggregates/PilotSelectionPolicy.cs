@@ -1,4 +1,4 @@
-﻿using EventDbLite.Aggregates;
+using EventDbLite.Aggregates;
 using NaeRaces.Command.ValueTypes;
 using NaeRaces.Events;
 using System;
@@ -8,7 +8,7 @@ using System.Text;
 
 namespace NaeRaces.Command.Aggregates;
 
-public class RacePolicy : AggregateRoot<Guid>
+public class PilotSelectionPolicy : AggregateRoot<Guid>
 {
     private ValueTypes.Name? _name;
     private string? _description;
@@ -79,13 +79,13 @@ public class RacePolicy : AggregateRoot<Guid>
         public bool IsWithinBrackets { get; set; }
     }
 
-    public RacePolicy()
+    public PilotSelectionPolicy()
     {
 
     }
-    public RacePolicy(Guid racePolicyId, Guid clubId, ValueTypes.Name name, string description)
+    public PilotSelectionPolicy(Guid pilotSelectionPolicyId, Guid clubId, ValueTypes.Name name, string description)
     {
-        Raise(new RacePolicyCreated(racePolicyId, clubId, name.Value, description));
+        Raise(new PilotSelectionPolicyCreated(pilotSelectionPolicyId, clubId, name.Value, description));
     }
 
     public int AddMinimumAgeRequirement(int minimumAge, ValidationPolicy validationPolicy)
@@ -93,7 +93,7 @@ public class RacePolicy : AggregateRoot<Guid>
         ThrowIfIdNotSet();
         
         var statementId = _nextPolicyStatementId;
-        Raise(new RacePolicyMinimumAgeRequirementAdded(Id, statementId, minimumAge, validationPolicy.Value));
+        Raise(new PilotSelectionPolicyMinimumAgeRequirementAdded(Id, statementId, minimumAge, validationPolicy.Value));
         return statementId;
     }
 
@@ -102,7 +102,7 @@ public class RacePolicy : AggregateRoot<Guid>
         ThrowIfIdNotSet();
         
         var statementId = _nextPolicyStatementId;
-        Raise(new RacePolicyMaximumAgeRequirementAdded(Id, statementId, maximumAge, validationPolicy.Value));
+        Raise(new PilotSelectionPolicyMaximumAgeRequirementAdded(Id, statementId, maximumAge, validationPolicy.Value));
         return statementId;
     }
 
@@ -111,7 +111,7 @@ public class RacePolicy : AggregateRoot<Guid>
         ThrowIfIdNotSet();
         
         var statementId = _nextPolicyStatementId;
-        Raise(new RacePolicyInsuranceProviderRequirementAdded(Id, statementId, insuranceProvider, validationPolicy.Value));
+        Raise(new PilotSelectionPolicyInsuranceProviderRequirementAdded(Id, statementId, insuranceProvider, validationPolicy.Value));
         return statementId;
     }
 
@@ -120,7 +120,7 @@ public class RacePolicy : AggregateRoot<Guid>
         ThrowIfIdNotSet();
         
         var statementId = _nextPolicyStatementId;
-        Raise(new RacePolicyGovernmentDocumentValidationRequirementAdded(Id, statementId, governmentDocument, validationPolicy.Value));
+        Raise(new PilotSelectionPolicyGovernmentDocumentValidationRequirementAdded(Id, statementId, governmentDocument, validationPolicy.Value));
         return statementId;
     }
 
@@ -129,7 +129,7 @@ public class RacePolicy : AggregateRoot<Guid>
         ThrowIfIdNotSet();
         
         var statementId = _nextPolicyStatementId;
-        Raise(new RacePolicyClubRequirementAdded(Id, statementId, clubId));
+        Raise(new PilotSelectionPolicyClubRequirementAdded(Id, statementId, clubId));
         return statementId;
     }
 
@@ -138,7 +138,7 @@ public class RacePolicy : AggregateRoot<Guid>
         ThrowIfIdNotSet();
         
         var statementId = _nextPolicyStatementId;
-        Raise(new RacePolicyClubMembershipLevelRequirementAdded(Id, statementId, clubId, membershipLevel));
+        Raise(new PilotSelectionPolicyClubMembershipLevelRequirementAdded(Id, statementId, clubId, membershipLevel));
         return statementId;
     }
 
@@ -155,7 +155,7 @@ public class RacePolicy : AggregateRoot<Guid>
         ValidateStatementBranchForNoRecursion(rightHandStatementId, leftHandStatementId);
 
         var statementId = _nextPolicyStatementId;
-        Raise(new RacePolicyStatementAdded(Id, statementId, leftHandStatementId, operand, rightHandStatementId, isWithinBrackets));
+        Raise(new PilotSelectionPolicyStatementAdded(Id, statementId, leftHandStatementId, operand, rightHandStatementId, isWithinBrackets));
         return statementId;
     }
 
@@ -167,7 +167,7 @@ public class RacePolicy : AggregateRoot<Guid>
         
         ValidateStatementNotReferenced(policyStatementId);
 
-        Raise(new RacePolicyStatementRemoved(Id, policyStatementId));
+        Raise(new PilotSelectionPolicyStatementRemoved(Id, policyStatementId));
     }
 
     public void SetRootStatement(int rootPolicyStatementId)
@@ -176,7 +176,7 @@ public class RacePolicy : AggregateRoot<Guid>
         if (!_statementTypes.ContainsKey(rootPolicyStatementId))
             throw new InvalidOperationException($"Statement {rootPolicyStatementId} does not exist.");
 
-        Raise(new RacePolicyRootStatementSet(Id, rootPolicyStatementId));
+        Raise(new PilotSelectionPolicyRootStatementSet(Id, rootPolicyStatementId));
     }
     private void ValidateStatementBranchForNoRecursion(int validateStatementId, int branchStatementId)
     {
@@ -208,15 +208,15 @@ public class RacePolicy : AggregateRoot<Guid>
     }
 
     // Event handlers
-    private void When(RacePolicyCreated e)
+    private void When(PilotSelectionPolicyCreated e)
     {
-        Id = e.RacePolicyId;
+        Id = e.PilotSelectionPolicyId;
         _clubId = e.ClubId;
         _name = ValueTypes.Name.Rehydrate(e.Name);
         _description = e.Description;
     }
 
-    private void When(RacePolicyMinimumAgeRequirementAdded e)
+    private void When(PilotSelectionPolicyMinimumAgeRequirementAdded e)
     {
         _minimumAgeRequirements[e.PolicyStatementId] = new MinimumAgeRequirement
         {
@@ -229,7 +229,7 @@ public class RacePolicy : AggregateRoot<Guid>
             _nextPolicyStatementId = e.PolicyStatementId + 1;
     }
 
-    private void When(RacePolicyMaximumAgeRequirementAdded e)
+    private void When(PilotSelectionPolicyMaximumAgeRequirementAdded e)
     {
         _maximumAgeRequirements[e.PolicyStatementId] = new MaximumAgeRequirement
         {
@@ -242,7 +242,7 @@ public class RacePolicy : AggregateRoot<Guid>
             _nextPolicyStatementId = e.PolicyStatementId + 1;
     }
 
-    private void When(RacePolicyInsuranceProviderRequirementAdded e)
+    private void When(PilotSelectionPolicyInsuranceProviderRequirementAdded e)
     {
         _insuranceProviderRequirements[e.PolicyStatementId] = new InsuranceProviderRequirement
         {
@@ -255,7 +255,7 @@ public class RacePolicy : AggregateRoot<Guid>
             _nextPolicyStatementId = e.PolicyStatementId + 1;
     }
 
-    private void When(RacePolicyGovernmentDocumentValidationRequirementAdded e)
+    private void When(PilotSelectionPolicyGovernmentDocumentValidationRequirementAdded e)
     {
         _governmentDocumentRequirements[e.PolicyStatementId] = new GovernmentDocumentRequirement
         {
@@ -268,7 +268,7 @@ public class RacePolicy : AggregateRoot<Guid>
             _nextPolicyStatementId = e.PolicyStatementId + 1;
     }
 
-    private void When(RacePolicyClubRequirementAdded e)
+    private void When(PilotSelectionPolicyClubRequirementAdded e)
     {
         _clubRequirements[e.PolicyStatementId] = new ClubRequirement
         {
@@ -280,7 +280,7 @@ public class RacePolicy : AggregateRoot<Guid>
             _nextPolicyStatementId = e.PolicyStatementId + 1;
     }
 
-    private void When(RacePolicyClubMembershipLevelRequirementAdded e)
+    private void When(PilotSelectionPolicyClubMembershipLevelRequirementAdded e)
     {
         _clubMembershipLevelRequirements[e.PolicyStatementId] = new ClubMembershipLevelRequirement
         {
@@ -292,7 +292,7 @@ public class RacePolicy : AggregateRoot<Guid>
         if (e.PolicyStatementId >= _nextPolicyStatementId)
             _nextPolicyStatementId = e.PolicyStatementId + 1;
     }
-    private void When(RacePolicyStatementAdded e)
+    private void When(PilotSelectionPolicyStatementAdded e)
     {
         _compositeStatements[e.PolicyStatementId] = new Statement
         {
@@ -307,13 +307,13 @@ public class RacePolicy : AggregateRoot<Guid>
             _nextPolicyStatementId = e.PolicyStatementId + 1;
     }
 
-    private void When(RacePolicyStatementRemoved e)
+    private void When(PilotSelectionPolicyStatementRemoved e)
     {
         _compositeStatements.Remove(e.PolicyStatementId);
         _statementTypes.Remove(e.PolicyStatementId);
     }
 
-    private void When(RacePolicyRootStatementSet e)
+    private void When(PilotSelectionPolicyRootStatementSet e)
     {
         _rootPolicyStatementId = e.RootPolicyStatementId;
     }

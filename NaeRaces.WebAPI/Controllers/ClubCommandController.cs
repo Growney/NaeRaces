@@ -400,14 +400,14 @@ public class ClubCommandController : Controller
             return NotFound();
         }
 
-        RacePolicyDetails? policyDetails = await _queryContext.RacePolicy.GetPolicyDetails(request.RacePolicyId, clubId);
+        PilotSelectionPolicyDetails? policyDetails = await _queryContext.PilotSelectionPolicy.GetPolicyDetails(request.PilotSelectionPolicyId, clubId);
 
         if (policyDetails == null)
         {
-            return BadRequest($"Race policy with ID {request.RacePolicyId} does not exist.");
+            return BadRequest($"Pilot selection policy with ID {request.PilotSelectionPolicyId} does not exist.");
         }
 
-        club.SetClubMembershipLevelPolicy(membershipLevelId, request.RacePolicyId, policyDetails.LatestVersion);
+        club.SetClubMembershipLevelPolicy(membershipLevelId, request.PilotSelectionPolicyId, policyDetails.LatestVersion);
 
         await _aggregateRepository.Save(club);
 

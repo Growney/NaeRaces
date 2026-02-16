@@ -10,6 +10,6 @@ public interface INaeRacesQueryContext
     IPilotValidationQueryHandler PilotValidation { get; }
     IPilotRegistrationDetailsQueryHandler PilotRegistrationDetails { get; }
     IRaceDetailsQueryHandler RaceDetails { get; }
-    IRacePolicyQueryHandler RacePolicy { get; }
+    IPilotSelectionPolicyQueryHandler PilotSelectionPolicy { get; }
     ITeamMemberQueryHandler TeamMember { get; }
 }

@@ -1,6 +1,6 @@
 namespace NaeRaces.Query.EntityFrameworkCore.Models;
 
-public class RacePolicyDetails
+public class PilotSelectionPolicyDetails
 {
     public Guid Id { get; set; }
     public Guid ClubId { get; set; }

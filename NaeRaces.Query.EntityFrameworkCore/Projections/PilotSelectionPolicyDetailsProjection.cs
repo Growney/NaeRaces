@@ -9,26 +9,26 @@ using System.Threading.Tasks;
 
 namespace NaeRaces.Query.EntityFrameworkCore.Projections;
 
-public class RacePolicyDetailsProjection
+public class PilotSelectionPolicyDetailsProjection
 {
     private readonly NaeRacesQueryDbContext _dbContext;
 
-    public RacePolicyDetailsProjection(NaeRacesQueryDbContext dbContext)
+    public PilotSelectionPolicyDetailsProjection(NaeRacesQueryDbContext dbContext)
     {
         _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
     }
 
-    private Task When(RacePolicyCreated e)
+    private Task When(PilotSelectionPolicyCreated e)
     {
-        RacePolicyDetails policy = new()
+        PilotSelectionPolicyDetails policy = new()
         {
-            Id = e.RacePolicyId,
+            Id = e.PilotSelectionPolicyId,
             ClubId = e.ClubId,
             Name = e.Name,
             Description = e.Description
         };
 
-        _dbContext.RacePolicyDetails.Add(policy);
+        _dbContext.PilotSelectionPolicyDetails.Add(policy);
 
         return _dbContext.SaveChangesAsync();
     }

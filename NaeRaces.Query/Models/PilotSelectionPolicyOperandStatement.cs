@@ -1,11 +1,11 @@
-﻿using NaeRaces.Query.Abstractions;
+using NaeRaces.Query.Abstractions;
 using System;
 using System.Collections.Generic;
 using System.Text;
 
 namespace NaeRaces.Query.Models;
 
-public class RacePolicyOperandStatement(IRacePolicyStatement Left, string Operator,  IRacePolicyStatement Right, bool IsWithinBrackets) : IRacePolicyStatement
+public class PilotSelectionPolicyOperandStatement(IPilotSelectionPolicyStatement Left, string Operator,  IPilotSelectionPolicyStatement Right, bool IsWithinBrackets) : IPilotSelectionPolicyStatement
 {
     public string? IsValidForPilot(PilotValidationDetails pilotValidationDetails, DateTime onDate)
     {

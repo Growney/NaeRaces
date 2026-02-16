@@ -1,11 +1,11 @@
-﻿using NaeRaces.Query.Abstractions;
+using NaeRaces.Query.Abstractions;
 using System;
 using System.Collections.Generic;
 using System.Text;
 
 namespace NaeRaces.Query.Models;
 
-public record RacePolicyGovernmentDocumentRequirementStatement(Guid ClubId, string GovernmentDocument, string ValidationPolicy) : IRacePolicyStatement
+public record PilotSelectionPolicyGovernmentDocumentRequirementStatement(Guid ClubId, string GovernmentDocument, string ValidationPolicy) : IPilotSelectionPolicyStatement
 {
     public string? IsValidForPilot(PilotValidationDetails pilotValidationDetails, DateTime OnDate)
     {

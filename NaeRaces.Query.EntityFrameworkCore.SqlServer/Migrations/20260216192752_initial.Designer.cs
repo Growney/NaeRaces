@@ -12,8 +12,8 @@ using NaeRaces.Query.EntityFrameworkCore;
 namespace NaeRaces.Query.EntityFrameworkCore.SqlServer.Migrations
 {
     [DbContext(typeof(NaeRacesQueryDbContext))]
-    [Migration("20260212213848_pilotpeervalidation")]
-    partial class pilotpeervalidation
+    [Migration("20260216192752_initial")]
+    partial class initial
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -244,6 +244,31 @@ namespace NaeRaces.Query.EntityFrameworkCore.SqlServer.Migrations
                     b.ToTable("PilotInsuranceProviderValidations");
                 });
 
+            modelBuilder.Entity("NaeRaces.Query.EntityFrameworkCore.Models.PilotSelectionPolicyDetails", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("ClubId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<long>("LatestVersion")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("PilotSelectionPolicyDetails");
+                });
+
             modelBuilder.Entity("NaeRaces.Query.EntityFrameworkCore.Models.RaceDetails", b =>
                 {
                     b.Property<Guid>("Id")
@@ -286,31 +311,6 @@ namespace NaeRaces.Query.EntityFrameworkCore.SqlServer.Migrations
                     b.ToTable("RaceDetails");
                 });
 
-            modelBuilder.Entity("NaeRaces.Query.EntityFrameworkCore.Models.RacePolicyDetails", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<Guid>("ClubId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("Description")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<long>("LatestVersion")
-                        .HasColumnType("bigint");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("RacePolicyDetails");
-                });
-
             modelBuilder.Entity("NaeRaces.Query.EntityFrameworkCore.Models.ReactionPosition", b =>
                 {
                     b.Property<string>("ReactionKey")
@@ -322,6 +322,19 @@ namespace NaeRaces.Query.EntityFrameworkCore.SqlServer.Migrations
                     b.HasKey("ReactionKey");
 
                     b.ToTable("ReactionPositions");
+                });
+
+            modelBuilder.Entity("NaeRaces.Query.EntityFrameworkCore.Models.TeamMember", b =>
+                {
+                    b.Property<Guid>("TeamId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("PilotId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("TeamId", "PilotId");
+
+                    b.ToTable("TeamMembers");
                 });
 #pragma warning restore 612, 618
         }
