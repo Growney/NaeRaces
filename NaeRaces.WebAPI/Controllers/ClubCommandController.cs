@@ -5,6 +5,8 @@ using Microsoft.AspNetCore.Mvc.ModelBinding;
 using NaeRaces.Command.Aggregates;
 using NaeRaces.Command.ValueTypes;
 using NaeRaces.Query.Abstractions;
+using NaeRaces.Query.Models;
+using NaeRaces.Query.Projections;
 using NaeRaces.WebAPI.Models.Club;
 
 namespace NaeRaces.WebAPI.Controllers;
@@ -280,168 +282,7 @@ public class ClubCommandController : Controller
         return Ok();
     }
 
-    [HttpPut("api/club/{clubId}/minimumage")]
-    public async Task<IActionResult> SetClubMinimumAgeAsync([FromRoute] Guid clubId,
-        [FromBody] SetClubAgeRequirementRequest request)
-    {
-        if (!ModelState.IsValid)
-        {
-            return BadRequest(ModelState);
-        }
-
-        ValidationPolicy policy = ValidationPolicy.Create(request.ValidationPolicy);
-
-        Club? club = await _aggregateRepository.Get<Club, Guid>(clubId);
-        if (club == null)
-        {
-            return NotFound();
-        }
-
-        club.SetClubMinimumAge(request.Age, policy);
-
-        await _aggregateRepository.Save(club);
-
-        return Ok();
-    }
-
-    [HttpDelete("api/club/{clubId}/minimumage")]
-    public async Task<IActionResult> RemoveClubMinimumAgeAsync([FromRoute] Guid clubId)
-    {
-        Club? club = await _aggregateRepository.Get<Club, Guid>(clubId);
-        if (club == null)
-        {
-            return NotFound();
-        }
-
-        club.RemoveClubMinimumAge();
-
-        await _aggregateRepository.Save(club);
-
-        return Ok();
-    }
-
-    [HttpPut("api/club/{clubId}/maximumage")]
-    public async Task<IActionResult> SetClubMaximumAgeAsync([FromRoute] Guid clubId,
-        [FromBody] SetClubAgeRequirementRequest request)
-    {
-        if (!ModelState.IsValid)
-        {
-            return BadRequest(ModelState);
-        }
-
-        ValidationPolicy policy = ValidationPolicy.Create(request.ValidationPolicy);
-
-        Club? club = await _aggregateRepository.Get<Club, Guid>(clubId);
-        if (club == null)
-        {
-            return NotFound();
-        }
-
-        club.SetClubMaximumAge(request.Age, policy);
-
-        await _aggregateRepository.Save(club);
-
-        return Ok();
-    }
-
-    [HttpDelete("api/club/{clubId}/maximumage")]
-    public async Task<IActionResult> RemoveClubMaximumAgeAsync([FromRoute] Guid clubId)
-    {
-        Club? club = await _aggregateRepository.Get<Club, Guid>(clubId);
-        if (club == null)
-        {
-            return NotFound();
-        }
-
-        club.RemoveClubMaximumAge();
-
-        await _aggregateRepository.Save(club);
-
-        return Ok();
-    }
-
-    [HttpPost("api/club/{clubId}/insuranceproviderrequirement")]
-    public async Task<IActionResult> AddClubInsuranceProviderRequirementAsync([FromRoute] Guid clubId,
-        [FromBody] AddClubInsuranceProviderRequirementRequest request)
-    {
-        if (!ModelState.IsValid)
-        {
-            return BadRequest(ModelState);
-        }
-
-        ValidationPolicy validation = ValidationPolicy.Create(request.ValidationPolicy);
-
-        Club? club = await _aggregateRepository.Get<Club, Guid>(clubId);
-        if (club == null)
-        {
-            return NotFound();
-        }
-
-        club.AddClubInsuranceProviderRequirement(request.InsuranceProvider, validation);
-
-        await _aggregateRepository.Save(club);
-
-        return Created($"/api/club/{clubId}/insuranceproviderrequirement/{request.InsuranceProvider}", new { InsuranceProvider = request.InsuranceProvider });
-    }
-
-    [HttpDelete("api/club/{clubId}/insuranceproviderrequirement/{insuranceProvider}")]
-    public async Task<IActionResult> RemoveClubInsuranceProviderRequirementAsync([FromRoute] Guid clubId,
-        [FromRoute] string insuranceProvider)
-    {
-        Club? club = await _aggregateRepository.Get<Club, Guid>(clubId);
-        if (club == null)
-        {
-            return NotFound();
-        }
-
-        club.RemoveClubInsuranceProviderRequirement(insuranceProvider);
-
-        await _aggregateRepository.Save(club);
-
-        return Ok();
-    }
-
-    [HttpPost("api/club/{clubId}/governmentdocumentvalidationrequirement")]
-    public async Task<IActionResult> AddClubGovernmentDocumentValidationRequirementAsync([FromRoute] Guid clubId,
-        [FromBody] AddClubGovernmentDocumentValidationRequirementRequest request)
-    {
-        if (!ModelState.IsValid)
-        {
-            return BadRequest(ModelState);
-        }
-
-        ValidationPolicy validation = ValidationPolicy.Create(request.ValidationPolicy);
-
-        Club? club = await _aggregateRepository.Get<Club, Guid>(clubId);
-        if (club == null)
-        {
-            return NotFound();
-        }
-
-        club.AddClubGovernmentDocumentValidationRequirement(request.GovernmentDocument, validation);
-
-        await _aggregateRepository.Save(club);
-
-        return Created($"/api/club/{clubId}/governmentdocumentvalidationrequirement/{request.GovernmentDocument}", new { GovernmentDocument = request.GovernmentDocument });
-    }
-
-    [HttpDelete("api/club/{clubId}/governmentdocumentvalidationrequirement/{governmentDocument}")]
-    public async Task<IActionResult> RemoveClubGovernmentDocumentValidationRequirementAsync([FromRoute] Guid clubId,
-        [FromRoute] string governmentDocument)
-    {
-        Club? club = await _aggregateRepository.Get<Club, Guid>(clubId);
-        if (club == null)
-        {
-            return NotFound();
-        }
-
-        club.RemoveClubGovernmentDocumentValidationRequirement(governmentDocument);
-
-        await _aggregateRepository.Save(club);
-
-        return Ok();
-    }
-
+   
     [HttpPost("api/club/{clubId}/committeemember")]
     public async Task<IActionResult> AddClubCommitteeMemberAsync([FromRoute] Guid clubId,
         [FromBody] AddClubCommitteeMemberRequest request)
@@ -543,17 +384,15 @@ public class ClubCommandController : Controller
         return Ok();
     }
 
-    [HttpPut("api/club/{clubId}/membershiplevel/{membershipLevelId}/minimumage")]
-    public async Task<IActionResult> SetClubMembershipLevelAgeAsync([FromRoute] Guid clubId,
+    [HttpPut("api/club/{clubId}/membershiplevel/{membershipLevelId}/policy")]
+    public async Task<IActionResult> SetClubMembershipLevelPolicyAsync([FromRoute] Guid clubId,
         [FromRoute] int membershipLevelId,
-        [FromBody] SetClubMembershipLevelAgeRequirementRequest request)
+        [FromBody] SetClubMembershipLevelPolicyRequest request)
     {
         if (!ModelState.IsValid)
         {
             return BadRequest(ModelState);
         }
-
-        ValidationPolicy validation = ValidationPolicy.Create(request.ValidationPolicy);
 
         Club? club = await _aggregateRepository.Get<Club, Guid>(clubId);
         if (club == null)
@@ -561,24 +400,28 @@ public class ClubCommandController : Controller
             return NotFound();
         }
 
-        club.SetClubMembershipLevelAge(membershipLevelId, request.Age, validation);
+        RacePolicyDetails? policyDetails = await _queryContext.RacePolicy.GetPolicyDetails(request.RacePolicyId, clubId);
+
+        if (policyDetails == null)
+        {
+            return BadRequest($"Race policy with ID {request.RacePolicyId} does not exist.");
+        }
+
+        club.SetClubMembershipLevelPolicy(membershipLevelId, request.RacePolicyId, policyDetails.LatestVersion);
 
         await _aggregateRepository.Save(club);
 
         return Ok();
     }
 
-    [HttpPut("api/club/{clubId}/membershiplevel/{membershipLevelId}/maximumage")]
+    [HttpDelete("api/club/{clubId}/membershiplevel/{membershipLevelId}/policy")]
     public async Task<IActionResult> SetClubMembershipLevelMaximumAgeAsync([FromRoute] Guid clubId,
-        [FromRoute] int membershipLevelId,
-        [FromBody] SetClubMembershipLevelAgeRequirementRequest request)
+        [FromRoute] int membershipLevelId)
     {
         if (!ModelState.IsValid)
         {
             return BadRequest(ModelState);
         }
-
-        ValidationPolicy validation = ValidationPolicy.Create(request.ValidationPolicy);
 
         Club? club = await _aggregateRepository.Get<Club, Guid>(clubId);
         if (club == null)
@@ -586,7 +429,7 @@ public class ClubCommandController : Controller
             return NotFound();
         }
 
-        club.SetClubMembershipLevelMaximumAge(membershipLevelId, request.Age, validation);
+        club.ClearClubMembershipLevelPolicy(membershipLevelId);
 
         await _aggregateRepository.Save(club);
 

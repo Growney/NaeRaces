@@ -45,10 +45,8 @@ public class Club : AggregateRoot<Guid>
     private class MembershipLevel
     {
         public Name Name { get; set; }
-        public int? MinimumAge { get; set; }
-        public int? MaximumAge { get; set; }
-        public ValidationPolicy? MinAgeValidationPolicy { get; set; }
-        public ValidationPolicy? MaxAgeValidationPolicy { get; set; }
+        public Guid? RacePolicyId { get; set; }
+        public long? RacePolicyVersion { get; set; }
         public Dictionary<int, PaymentOption> PaymentOptions { get; set; } = [];
     }
 
@@ -161,87 +159,6 @@ public class Club : AggregateRoot<Guid>
 
         Raise(new ClubHomeLocationSet(Id, locationId));
     }
-
-    public void SetClubMinimumAge(int minimumAge, ValidationPolicy validationPolicy)
-    {
-        ThrowIfIdNotSet();
-
-        if (_minimumAge == minimumAge && _minimumAgeValidationPolicy.Equals(validationPolicy))
-            return;
-
-        Raise(new ClubMinimumAgeRequirementSet(Id, minimumAge, validationPolicy.Value));
-    }
-
-    public void RemoveClubMinimumAge()
-    {
-        ThrowIfIdNotSet();
-
-        if (!_minimumAge.HasValue)
-            return;
-
-        Raise(new ClubMinimumAgeRequirementRemoved(Id));
-    }
-
-    public void SetClubMaximumAge(int maximumAge, ValidationPolicy validationPolicy)
-    {
-        ThrowIfIdNotSet();
-
-        if (_maximumAge == maximumAge && _maximumAgeValidationPolicy.Equals(validationPolicy))
-            return;
-
-        Raise(new ClubMaximumAgeRequirementSet(Id, maximumAge, validationPolicy.Value));
-    }
-
-    public void RemoveClubMaximumAge()
-    {
-        ThrowIfIdNotSet();
-
-        if (!_maximumAge.HasValue)
-            return;
-
-        Raise(new ClubMaximumAgeRequirementRemoved(Id));
-    }
-
-    public void AddClubInsuranceProviderRequirement(string insuranceProvider, ValidationPolicy validationPolicy)
-    {
-        ThrowIfIdNotSet();
-
-        if (_insuranceProviderRequirements.ContainsKey(insuranceProvider))
-            throw new InvalidOperationException($"Insurance provider requirement for {insuranceProvider} already exists.");
-
-        Raise(new ClubInsuranceProviderRequirementAdded(Id, insuranceProvider, validationPolicy.Value));
-    }
-
-    public void RemoveClubInsuranceProviderRequirement(string insuranceProvider)
-    {
-        ThrowIfIdNotSet();
-
-        if (!_insuranceProviderRequirements.ContainsKey(insuranceProvider))
-            throw new InvalidOperationException($"Insurance provider requirement for {insuranceProvider} does not exist.");
-
-        Raise(new ClubInsuranceProviderRequirementRemoved(Id, insuranceProvider));
-    }
-
-    public void AddClubGovernmentDocumentValidationRequirement(string governmentDocument, ValidationPolicy validationPolicy)
-    {
-        ThrowIfIdNotSet();
-
-        if (_governmentDocumentRequirements.ContainsKey(governmentDocument))
-            throw new InvalidOperationException($"Government document requirement for {governmentDocument} already exists.");
-
-        Raise(new ClubGovernmentDocumentValidationRequirementAdded(Id, governmentDocument, validationPolicy.Value));
-    }
-
-    public void RemoveClubGovernmentDocumentValidationRequirement(string governmentDocument)
-    {
-        ThrowIfIdNotSet();
-
-        if (!_governmentDocumentRequirements.ContainsKey(governmentDocument))
-            throw new InvalidOperationException($"Government document requirement for {governmentDocument} does not exist.");
-
-        Raise(new ClubGovernmentDocumentValidationRequirementRemoved(Id, governmentDocument));
-    }
-
     public void AddClubCommitteeMember(Guid pilotId, string role)
     {
         ThrowIfIdNotSet();
@@ -299,7 +216,7 @@ public class Club : AggregateRoot<Guid>
         Raise(new ClubMembershipLevelRenamed(Id, membershipLevelId, newName.Value));
     }
 
-    public void SetClubMembershipLevelAge(int membershipLevelId, int minimumAge, ValidationPolicy validationPolicy)
+    public void SetClubMembershipLevelPolicy(int membershipLevelId, Guid racePolicyId, long policyVersion)
     {
         ThrowIfIdNotSet();
         if (!_membershipLevels.ContainsKey(membershipLevelId))
@@ -307,24 +224,24 @@ public class Club : AggregateRoot<Guid>
 
         var existingPolicy = _membershipLevels[membershipLevelId];
 
-        if (existingPolicy.MinimumAge == minimumAge
-            && existingPolicy.MinAgeValidationPolicy.Equals(validationPolicy))
+        if (existingPolicy.RacePolicyId == racePolicyId && existingPolicy.RacePolicyVersion == policyVersion)
             return;
 
-        Raise(new ClubMembershipLevelMinimumAgeSet(Id, membershipLevelId, minimumAge, validationPolicy.Value));
+        Raise(new ClubMembershipLevelPolicySet(Id, membershipLevelId, racePolicyId, policyVersion));
     }
 
-    public void SetClubMembershipLevelMaximumAge(int membershipLevelId, int maximumAge, ValidationPolicy validationPolicy)
+    public void ClearClubMembershipLevelPolicy(int membershipLevelId)
     {
         ThrowIfIdNotSet();
         if (!_membershipLevels.ContainsKey(membershipLevelId))
             throw new InvalidOperationException($"Membership level {membershipLevelId} does not exist.");
 
-        if (_membershipLevels[membershipLevelId].MaximumAge == maximumAge
-            && _membershipLevels[membershipLevelId].MaxAgeValidationPolicy.Equals(validationPolicy))
+        var existingPolicy = _membershipLevels[membershipLevelId];
+
+        if (existingPolicy.RacePolicyId == null && existingPolicy.RacePolicyVersion == null)
             return;
 
-        Raise(new ClubMembershipLevelMaximumAgeSet(Id, membershipLevelId, maximumAge, validationPolicy.Value));
+        Raise(new ClubMembershipLevelPolicyCleared(Id, membershipLevelId));
     }
 
     public void AddClubMembershipLevelAnnualPaymentOption(int membershipLevelId, Name name, string currency, decimal price)
@@ -505,50 +422,6 @@ public class Club : AggregateRoot<Guid>
         _homeLocationId = e.LocationId;
     }
 
-    private void When(ClubMinimumAgeRequirementSet e)
-    {
-        _minimumAge = e.MinimumAge;
-        _minimumAgeValidationPolicy = ValidationPolicy.Rehydrate(e.ValidationPolicy);
-    }
-
-    private void When(ClubMinimumAgeRequirementRemoved e)
-    {
-        _minimumAge = null;
-        _minimumAgeValidationPolicy = null;
-    }
-
-    private void When(ClubMaximumAgeRequirementSet e)
-    {
-        _maximumAge = e.MaximumAge;
-        _maximumAgeValidationPolicy = ValidationPolicy.Rehydrate(e.ValidationPolicy);
-    }
-
-    private void When(ClubMaximumAgeRequirementRemoved e)
-    {
-        _maximumAge = null;
-        _maximumAgeValidationPolicy = null;
-    }
-
-    private void When(ClubInsuranceProviderRequirementAdded e)
-    {
-        _insuranceProviderRequirements[e.InsuranceProvider] = ValidationPolicy.Rehydrate(e.ValidationPolicy);
-    }
-
-    private void When(ClubInsuranceProviderRequirementRemoved e)
-    {
-        _insuranceProviderRequirements.Remove(e.InsuranceProvider);
-    }
-
-    private void When(ClubGovernmentDocumentValidationRequirementAdded e)
-    {
-        _governmentDocumentRequirements[e.GovernmentDocument] = ValidationPolicy.Rehydrate(e.ValidationPolicy);
-    }
-
-    private void When(ClubGovernmentDocumentValidationRequirementRemoved e)
-    {
-        _governmentDocumentRequirements.Remove(e.GovernmentDocument);
-    }
-
     private void When(ClubCommitteeMemberAdded e)
     {
         _committeeMembers[e.PilotId] = new CommitteeMember
@@ -581,17 +454,17 @@ public class Club : AggregateRoot<Guid>
         _membershipLevels[e.MembershipLevelId].Name = Name.Rehydrate(e.NewName);
     }
 
-    private void When(ClubMembershipLevelMinimumAgeSet e)
+    private void When(ClubMembershipLevelPolicySet e)
     {
-        _membershipLevels[e.MembershipLevelId].MinimumAge = e.MinimumAge;
-        _membershipLevels[e.MembershipLevelId].MinAgeValidationPolicy = ValidationPolicy.Rehydrate(e.ValidationPolicy);
+        _membershipLevels[e.MembershipLevelId].RacePolicyId = e.RacePolicyId;
+        _membershipLevels[e.MembershipLevelId].RacePolicyVersion = e.PolicyVersion;
 
     }
 
-    private void When(ClubMembershipLevelMaximumAgeSet e)
+    private void When(ClubMembershipLevelPolicyCleared e)
     {
-        _membershipLevels[e.MembershipLevelId].MaximumAge = e.MaximumAge;
-        _membershipLevels[e.MembershipLevelId].MaxAgeValidationPolicy = ValidationPolicy.Rehydrate(e.ValidationPolicy);
+        _membershipLevels[e.MembershipLevelId].RacePolicyId = null;
+        _membershipLevels[e.MembershipLevelId].RacePolicyVersion = null;
     }
 
     private void When(ClubMembershipLevelAnnualPaymentOptionAdded e)
