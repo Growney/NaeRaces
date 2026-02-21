@@ -10,5 +10,5 @@ public record RaceRemovedFromSeries(Guid RaceSeriesId, Guid RaceId);
 public record RaceSeriesRaceApproved(Guid RaceSeriesId, Guid RaceId);
 public record RaceSeriesHostClubSet(Guid RaceSeriesId, Guid ClubId);
 public record RaceSeriesRacePublishRulesSet(Guid RaceSeriesId, string PublishRules);
-public record RaceSeriesRaceRequiredClubMembershipDiscountSet(Guid RaceSeriesId, Guid ClubId, int MembershipLevelId, decimal Discount);
-public record RaceSeriesRaceRequiredClubDiscountSet(Guid RaceSeriesId, Guid ClubId, decimal Discount);
+public record RaceSeriesDiscountAdded(Guid RaceId, int RaceSeriesDiscountId, Guid PilotPolicyId, long PolicyVersion, string Currency, decimal Discount, bool CanBeCombined);
+public record RaceSeriesDiscountRemoved(Guid RaceId, int RaceSeriesDiscountId);

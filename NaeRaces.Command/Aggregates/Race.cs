@@ -74,6 +74,7 @@ public class Race : AggregateRoot<Guid>
         public long PolicyVersion { get; set; }
         public string Currency { get; set; } = string.Empty;
         public decimal DiscountAmount { get; set; }
+        public bool CanBeCombined { get; set; }
     }
 
     private class Registration
@@ -350,7 +351,7 @@ public class Race : AggregateRoot<Guid>
         Raise(new RaceEarlyRegistrationPolicyRemoved(Id, earlyRegistrationId));
     }
 
-    public int AddRaceDiscount(Guid pilotPolicyId, long policyVersion, string currency, decimal discount)
+    public int AddRaceDiscount(Name name, Guid pilotPolicyId, long policyVersion, string currency, decimal discount,bool isPercentage, bool canBeCombined)
     {
         ThrowIfIdNotSet();
 
@@ -362,7 +363,7 @@ public class Race : AggregateRoot<Guid>
 
         var discountId = _discounts.Count > 0 ? _discounts.Keys.Max() + 1 : 1;
 
-        Raise(new RaceDiscountAdded(Id, discountId, pilotPolicyId, policyVersion, currency, discount));
+        Raise(new RaceDiscountAdded(Id, discountId, name.Value, pilotPolicyId, policyVersion, currency, discount, isPercentage, canBeCombined));
 
         return discountId;
     }
@@ -377,8 +378,7 @@ public class Race : AggregateRoot<Guid>
         if (!_discounts.ContainsKey(discountId))
             throw new InvalidOperationException($"Discount {discountId} does not exist.");
 
-        var discount = _discounts[discountId];
-        Raise(new RaceDiscountAddedRemoved(Id, discountId, discount.PilotPolicyId, discount.PolicyVersion, discount.Currency, discount.DiscountAmount));
+        Raise(new RaceDiscountRemoved(Id, discountId));
     }
 
     public void PublishRaceDetails()
@@ -624,8 +624,8 @@ public class Race : AggregateRoot<Guid>
             throw new InvalidOperationException($"Team {teamId} already has a roster registered for this race");
 
         // Count registrations based on slot consumption policy
-        var registrationsToCount = _unconfirmedSlotConsumptionIsAllowed 
-            ? _registrations.Values 
+        var registrationsToCount = _unconfirmedSlotConsumptionIsAllowed
+            ? _registrations.Values
             : _registrations.Values.Where(r => r.IsConfirmed);
 
         int registeredTeamCount = registrationsToCount.Count(r => r.IsTeamRegistration);
@@ -638,7 +638,7 @@ public class Race : AggregateRoot<Guid>
         if (_maximumAttendees.HasValue && registeredPilotsCount + pilotIds.Count() > _maximumAttendees.Value)
             throw new InvalidOperationException("Registering this roster would exceed the maximum number of attendees");
 
-        int rosterId = (_registrations.Values.Where(r => r.IsTeamRegistration && r.TeamId == teamId).Select(r => r.RosterId).DefaultIfEmpty(0).Max() + 1) ?? 0;    
+        int rosterId = (_registrations.Values.Where(r => r.IsTeamRegistration && r.TeamId == teamId).Select(r => r.RosterId).DefaultIfEmpty(0).Max() + 1) ?? 0;
 
         Raise(new TeamRosterRegisteredForRace(Id, teamId, rosterId, pilotIds, registrationId));
     }
@@ -656,12 +656,12 @@ public class Race : AggregateRoot<Guid>
             throw new InvalidOperationException("Pilot has already been registered");
 
         // Count registrations based on slot consumption policy
-        var registrationsToCount = _unconfirmedSlotConsumptionIsAllowed 
-            ? _registrations.Values 
+        var registrationsToCount = _unconfirmedSlotConsumptionIsAllowed
+            ? _registrations.Values
             : _registrations.Values.Where(r => r.IsConfirmed);
 
         int registeredPilotsCount = registrationsToCount.SelectMany(r => r.PilotIds).Count();
-        
+
         if (_maximumAttendees.HasValue && registeredPilotsCount >= _maximumAttendees.Value)
             throw new InvalidOperationException("Maximum number of attendees already registered for this race");
 
@@ -833,7 +833,7 @@ public class Race : AggregateRoot<Guid>
         };
     }
 
-    private void When(RaceDiscountAddedRemoved e)
+    private void When(RaceDiscountRemoved e)
     {
         _discounts.Remove(e.RaceDiscountId);
     }

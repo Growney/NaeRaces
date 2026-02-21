@@ -6,4 +6,5 @@ namespace NaeRaces.Query.Abstractions;
 
 public interface IRaceDetailsQueryHandler
 {
+    Task<bool> DoesRaceExist(Guid raceId);
 }

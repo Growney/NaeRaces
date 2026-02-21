@@ -454,6 +454,8 @@ public class RaceCommandController : Controller
             return BadRequest(ModelState);
         }
 
+        Name name = Name.Create(request.Name);
+
         Race? race = await _aggregateRepository.Get<Race, Guid>(raceId);
         if (race == null)
         {
@@ -472,7 +474,7 @@ public class RaceCommandController : Controller
             return BadRequest($"Pilot selection policy with ID {request.PilotPolicyId} does not exist.");
         }
 
-        int discountId = race.AddRaceDiscount(request.PilotPolicyId, policyDetails.LatestVersion, request.Currency, request.Discount);
+        int discountId = race.AddRaceDiscount(name,request.PilotPolicyId, policyDetails.LatestVersion, request.Currency, request.Discount,request.IsPercentage, request.CanBeCombined);
 
         await _aggregateRepository.Save(race);
 
@@ -878,14 +880,13 @@ public class RaceCommandController : Controller
         }
 
         var currentDate = DateTime.UtcNow;
-        
+
         foreach (Guid pilotId in request.PilotIds)
         {
             var registrationDetails = await _queryContext.PilotRegistrationDetails.GetPilotRegistrationDetails(
                 pilotId, 
                 raceId, 
-                request.Currency, 
-                currentDate);
+                request.Currency);
 
             if (registrationDetails != null && !registrationDetails.MeetsValidation)
             {
@@ -915,8 +916,7 @@ public class RaceCommandController : Controller
         var registrationDetails = await _queryContext.PilotRegistrationDetails.GetPilotRegistrationDetails(
             request.PilotId,
             raceId,
-            request.Currency,
-            currentDate);
+            request.Currency);
 
         if (registrationDetails != null && !registrationDetails.MeetsValidation)
         {

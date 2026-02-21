@@ -25,8 +25,8 @@ public record RaceEarlyRegistrationOpenDateScheduled(Guid RaceId, int EarlyRegis
 public record RaceEarlyRegistrationOpenDateRescheduled(Guid RaceId, int EarlyRegistrationId, DateTime RegistrationOpenDate);
 public record RaceEarlyRegistrationPolicyChanged(Guid RaceId, int EarlyRegistrationId, Guid PilotPolicyId, long PolicyVersion);
 public record RaceEarlyRegistrationPolicyRemoved(Guid RaceId, int EarlyRegistrationId);
-public record RaceDiscountAdded(Guid RaceId, int RaceDiscountId, Guid PilotPolicyId, long PolicyVersion, string Currency, decimal Discount);
-public record RaceDiscountAddedRemoved(Guid RaceId, int RaceDiscountId, Guid PilotPolicyId, long PolicyVersion, string Currency, decimal Discount);
+public record RaceDiscountAdded(Guid RaceId, int RaceDiscountId,string Name, Guid PilotPolicyId, long PolicyVersion, string Currency, decimal Discount, bool IsPercentage, bool CanBeCombined);
+public record RaceDiscountRemoved(Guid RaceId, int RaceDiscountId);
 public record RaceDetailsPublished(Guid RaceId);
 public record RacePublished(Guid RaceId);
 

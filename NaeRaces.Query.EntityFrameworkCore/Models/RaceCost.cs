@@ -16,11 +16,14 @@ public class RaceCost
 public class RaceCostDiscount
 {
     public Guid RaceId { get; set; }
+    public string Name { get; set; } = string.Empty;
     public string Currency { get; set; } = string.Empty;
     public int RaceDiscountId { get; set; }
     public Guid PilotPolicyId { get; set; }
     public long PolicyVersion { get; set; }
     public decimal Discount { get; set; }
+    public bool IsPercentage { get; set; }
+    public bool CanBeCombined { get; set; }
 
     public RaceCost? RaceCost { get; set; }
 }

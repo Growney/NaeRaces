@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using NaeRaces.Command.Aggregates;
+using NaeRaces.Query.Abstractions;
 using NaeRaces.WebAPI.Models.RaceSeries;
 
 namespace NaeRaces.WebAPI.Controllers;
@@ -9,10 +10,12 @@ namespace NaeRaces.WebAPI.Controllers;
 public class RaceSeriesCommandController : Controller
 {
     private readonly IAggregateRepository _aggregateRepository;
+    private readonly INaeRacesQueryContext _queryContext;
 
-    public RaceSeriesCommandController(IAggregateRepository aggregateRepository)
+    public RaceSeriesCommandController(IAggregateRepository aggregateRepository, INaeRacesQueryContext queryContext)
     {
         _aggregateRepository = aggregateRepository;
+        _queryContext = queryContext;
     }
 
     [HttpPost("api/raceseries")]
@@ -42,6 +45,11 @@ public class RaceSeriesCommandController : Controller
         if (!ModelState.IsValid)
         {
             return BadRequest(ModelState);
+        }
+
+        if (!await _queryContext.RaceDetails.DoesRaceExist(request.RaceId))
+        {
+            return BadRequest("Race not found");
         }
 
         RaceSeries? raceSeries = await _aggregateRepository.Get<RaceSeries, Guid>(raceSeriesId);

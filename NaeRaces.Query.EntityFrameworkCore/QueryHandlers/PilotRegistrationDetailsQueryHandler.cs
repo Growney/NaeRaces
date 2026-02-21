@@ -25,8 +25,7 @@ public class PilotRegistrationDetailsQueryHandler : IPilotRegistrationDetailsQue
         _raceRegistrationDatesQueryHandler = raceRegistrationDatesQueryHandler ?? throw new ArgumentNullException(nameof(raceRegistrationDatesQueryHandler));
         _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
     }
-
-    public async Task<PilotRegistrationDetails?> GetPilotRegistrationDetails(Guid pilotId, Guid raceId, string currency, DateTime onDate)
+    public async Task<PilotRegistrationDetails?> GetPilotRegistrationDetails(Guid pilotId, Guid raceId, string currency)
     {
         var raceDetails = await _dbContext.RaceDetails.SingleOrDefaultAsync(x => x.Id == raceId);
         if (raceDetails == null)
@@ -34,77 +33,160 @@ public class PilotRegistrationDetailsQueryHandler : IPilotRegistrationDetailsQue
             return null;
         }
 
+        var lastRaceDate = raceDetails.LastRaceDateEnd;
+
         var raceCost = await _raceCostQueryHandler.GetRaceCost(raceId, currency);
         var baseCost = raceCost?.Cost ?? 0m;
 
-        var details = new PilotRegistrationDetails
-        {
-            PilotId = pilotId,
-            RaceId = raceId,
-            Currency = currency,
-            BaseCost = baseCost,
-            FinalCost = baseCost
-        };
-
         var registrationDates = await _raceRegistrationDatesQueryHandler.GetRaceRegistrationDates(raceId);
-        
+
+        bool meetsValidation = true;
+        string? validationError = null;
+
         if (registrationDates?.RaceValidationPolicyId.HasValue == true && registrationDates.RaceValidationPolicyVersion.HasValue)
         {
-            var validationError = await _pilotPolicyValidationQueryHandler.ValidatePilotAgainstPolicy(
+            validationError = await _pilotPolicyValidationQueryHandler.ValidatePilotAgainstPolicy(
                 pilotId,
                 registrationDates.RaceValidationPolicyId.Value,
                 registrationDates.RaceValidationPolicyVersion.Value,
-                onDate);
+                lastRaceDate);
 
-            details.MeetsValidation = validationError == null;
-            details.ValidationError = validationError;
-        }
-        else
-        {
-            details.MeetsValidation = true;
+            meetsValidation = validationError == null;
         }
 
-        var bestDiscount = await GetBestDiscount(pilotId, raceCost, onDate);
-        if (bestDiscount.HasValue)
-        {
-            details.BestDiscountAmount = bestDiscount.Value.DiscountAmount;
-            details.BestDiscountPolicyId = bestDiscount.Value.PolicyId;
-            details.BestDiscountPolicyVersion = bestDiscount.Value.PolicyVersion;
-            details.FinalCost = Math.Max(0, baseCost - bestDiscount.Value.DiscountAmount);
-        }
+        var (validDiscounts, finalCost) = meetsValidation 
+            ? await GetValidDiscounts(pilotId, raceCost, lastRaceDate) 
+            : (Enumerable.Empty<RaceDiscount>(), baseCost);
 
-        return details;
+        return new PilotRegistrationDetails(
+            pilotId,
+            raceId,
+            meetsValidation,
+            validationError,
+            currency,
+            baseCost,
+            finalCost,
+            validDiscounts);
     }
 
-    private async Task<(Guid PolicyId, long PolicyVersion, decimal DiscountAmount)?> GetBestDiscount(
+    private async Task<(IEnumerable<RaceDiscount> Discounts, decimal FinalCost)> GetValidDiscounts(
         Guid pilotId,
         RaceCost? raceCost,
-        DateTime onDate)
+        DateTime lastRaceDate)
     {
         if (raceCost == null)
         {
-            return null;
+            return (Enumerable.Empty<RaceDiscount>(), 0m);
         }
 
-        (Guid PolicyId, long PolicyVersion, decimal DiscountAmount)? bestDiscount = null;
+        var baseCost = raceCost.Cost;
+
+        // First, validate all discounts and get the valid ones
+        List<RaceCostDiscount> validDiscounts = new();
 
         foreach (var discount in raceCost.Discounts)
         {
             var validationError = await _pilotPolicyValidationQueryHandler.ValidatePilotAgainstPolicy(
-                pilotId,
-                discount.PilotPolicyId,
-                discount.PolicyVersion,
-                onDate);
+                pilotId, 
+                discount.PilotPolicyId, 
+                discount.PolicyVersion, 
+                lastRaceDate);
 
             if (validationError == null)
             {
-                if (!bestDiscount.HasValue || discount.Discount > bestDiscount.Value.DiscountAmount)
-                {
-                    bestDiscount = (discount.PilotPolicyId, discount.PolicyVersion, discount.Discount);
-                }
+                validDiscounts.Add(discount);
             }
         }
 
-        return bestDiscount;
+        if (!validDiscounts.Any())
+        {
+            return (Enumerable.Empty<RaceDiscount>(), baseCost);
+        }
+
+        // Calculate the best combination of discounts with running totals in one pass
+        return CalculateBestDiscountCombinationWithRunningTotal(baseCost, validDiscounts);
+    }
+
+    private (List<RaceDiscount> Discounts, decimal FinalCost) CalculateBestDiscountCombinationWithRunningTotal(
+        decimal baseCost,
+        List<RaceCostDiscount> validDiscounts)
+    {
+        var combinableDiscounts = validDiscounts.Where(d => d.CanBeCombined).ToList();
+        var nonCombinableDiscounts = validDiscounts.Where(d => !d.CanBeCombined).ToList();
+
+        decimal lowestCost = baseCost;
+        List<RaceDiscount> bestDiscounts = new();
+
+        // Option 1: All combinable discounts together
+        if (combinableDiscounts.Any())
+        {
+            var (discounts, finalCost) = CalculateDiscountsWithRunningTotal(baseCost, combinableDiscounts);
+            if (finalCost < lowestCost)
+            {
+                lowestCost = finalCost;
+                bestDiscounts = discounts;
+            }
+        }
+
+        // Option 2: Each non-combinable discount individually
+        foreach (var nonCombinable in nonCombinableDiscounts)
+        {
+            var (discounts, finalCost) = CalculateDiscountsWithRunningTotal(baseCost, new List<RaceCostDiscount> { nonCombinable });
+            if (finalCost < lowestCost)
+            {
+                lowestCost = finalCost;
+                bestDiscounts = discounts;
+            }
+        }
+
+        return (bestDiscounts, lowestCost);
+    }
+
+    private (List<RaceDiscount> Discounts, decimal FinalCost) CalculateDiscountsWithRunningTotal(
+        decimal baseCost,
+        List<RaceCostDiscount> discounts)
+    {
+        if (!discounts.Any())
+        {
+            return (new List<RaceDiscount>(), baseCost);
+        }
+
+        var fixedDiscounts = discounts.Where(d => !d.IsPercentage).ToList();
+        var percentageDiscounts = discounts.Where(d => d.IsPercentage).OrderByDescending(d => d.Discount).ToList();
+
+        List<RaceDiscount> orderedDiscounts = new();
+        decimal runningTotal = baseCost;
+        int order = 1;
+
+        // Apply fixed-amount discounts first
+        foreach (var discount in fixedDiscounts)
+        {
+            runningTotal = Math.Max(0, runningTotal - discount.Discount);
+            orderedDiscounts.Add(new RaceDiscount(
+                discount.Name,
+                discount.Discount,
+                discount.IsPercentage,
+                discount.CanBeCombined,
+                order++,
+                runningTotal
+            ));
+        }
+
+        // Apply percentage discounts to the running total
+        foreach (var discount in percentageDiscounts)
+        {
+            var discountAmount = runningTotal * (discount.Discount / 100m);
+            runningTotal = Math.Max(0, runningTotal - discountAmount);
+            orderedDiscounts.Add(new RaceDiscount(
+                discount.Name,
+                discount.Discount,
+                discount.IsPercentage,
+                discount.CanBeCombined,
+                order++,
+                runningTotal
+            ));
+        }
+
+        return (orderedDiscounts, runningTotal);
     }
 }

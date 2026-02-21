@@ -16,4 +16,8 @@ public class RaceDetailsQueryHandler : IRaceDetailsQueryHandler
         _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
     }
 
+    public async Task<bool> DoesRaceExist(Guid raceId)
+    {
+        return await _dbContext.RaceDetails.AnyAsync(x => x.Id == raceId);
+    }
 }

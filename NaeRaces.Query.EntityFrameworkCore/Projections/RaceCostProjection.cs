@@ -72,11 +72,14 @@ public class RaceCostProjection
         RaceCostDiscount discount = new()
         {
             RaceId = e.RaceId,
+            Name = e.Name,
             Currency = e.Currency,
             RaceDiscountId = e.RaceDiscountId,
             PilotPolicyId = e.PilotPolicyId,
             PolicyVersion = e.PolicyVersion,
-            Discount = e.Discount
+            IsPercentage = e.IsPercentage,
+            Discount = e.Discount,
+            CanBeCombined = e.CanBeCombined
         };
 
         _dbContext.Set<RaceCostDiscount>().Add(discount);
@@ -84,7 +87,7 @@ public class RaceCostProjection
         return _dbContext.SaveChangesAsync();
     }
 
-    private async Task When(RaceDiscountAddedRemoved e)
+    private async Task When(RaceDiscountRemoved e)
     {
         RaceCostDiscount? discount = await _dbContext.Set<RaceCostDiscount>()
             .SingleOrDefaultAsync(x => x.RaceId == e.RaceId && x.RaceDiscountId == e.RaceDiscountId);

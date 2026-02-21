@@ -27,10 +27,13 @@ public class RaceCostQueryHandler : IRaceCostQueryHandler
             return null;
 
         var discounts = dbRaceCost.Discounts.Select(d => new RaceCostDiscount(
+            d.Name,
             d.RaceDiscountId,
             d.PilotPolicyId,
             d.PolicyVersion,
-            d.Discount
+            d.Discount,
+            d.IsPercentage,
+            d.CanBeCombined
         )).ToList();
 
         return new RaceCost(
@@ -50,10 +53,13 @@ public class RaceCostQueryHandler : IRaceCostQueryHandler
                 dbRaceCost.Currency,
                 dbRaceCost.Cost,
                 dbRaceCost.Discounts.Select(d => new RaceCostDiscount(
+                    d.Name,
                     d.RaceDiscountId,
                     d.PilotPolicyId,
                     d.PolicyVersion,
-                    d.Discount
+                    d.Discount,
+                    d.IsPercentage,
+                    d.CanBeCombined
                 ))
             ))
             .ToAsyncEnumerable();
@@ -67,10 +73,13 @@ public class RaceCostQueryHandler : IRaceCostQueryHandler
             return null;
 
         return new RaceCostDiscount(
+            dbDiscount.Name,
             dbDiscount.RaceDiscountId,
             dbDiscount.PilotPolicyId,
             dbDiscount.PolicyVersion,
-            dbDiscount.Discount
+            dbDiscount.Discount,
+            dbDiscount.IsPercentage,
+            dbDiscount.CanBeCombined
         );
     }
 
@@ -78,10 +87,13 @@ public class RaceCostQueryHandler : IRaceCostQueryHandler
         _dbContext.Set<Models.RaceCostDiscount>()
             .Where(x => x.RaceId == raceId && x.Currency == currency)
             .Select(dbDiscount => new RaceCostDiscount(
+                dbDiscount.Name,
                 dbDiscount.RaceDiscountId,
                 dbDiscount.PilotPolicyId,
                 dbDiscount.PolicyVersion,
-                dbDiscount.Discount
+                dbDiscount.Discount,
+                dbDiscount.IsPercentage,
+                dbDiscount.CanBeCombined
             ))
             .ToAsyncEnumerable();
 }
