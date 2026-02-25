@@ -11,6 +11,6 @@ public class RegisterIndividualPilotForRaceRequest
     public Guid RegistrationId { get; set; }
 
     [Required]
-    public string Currency { get; set; } = string.Empty;
+    public int RacePackageId { get; set; }
 }
 

@@ -143,4 +143,35 @@ public class RaceDetailsProjection
         }
         await _dbContext.SaveChangesAsync();
     }
+
+    private async Task When(RaceValidationPolicySet e)
+    {
+        RaceDetails? details = await _dbContext.RaceDetails.SingleOrDefaultAsync(x => x.Id == e.RaceId);
+        if (details != null)
+        {
+            details.PilotPolicyId = e.PolicyId;
+            details.PilotPolicyVersion = e.PolicyVersion;
+        }
+        await _dbContext.SaveChangesAsync();
+    }
+    private async Task When(RaceValidationPolicyRemoved e)
+    {
+        RaceDetails? details = await _dbContext.RaceDetails.SingleOrDefaultAsync(x => x.Id == e.RaceId);
+        if (details != null)
+        {
+            details.PilotPolicyId = null;
+            details.PilotPolicyVersion = null;
+        }
+        await _dbContext.SaveChangesAsync();
+    }
+    private async Task When(RaceValidationPolicyMigratedToVersion e)
+    {
+        RaceDetails? details = await _dbContext.RaceDetails.SingleOrDefaultAsync(x => x.Id == e.RaceId);
+        if (details != null)
+        {
+            details.PilotPolicyId = e.PolicyId;
+            details.PilotPolicyVersion = e.PolicyVersion;
+        }
+        await _dbContext.SaveChangesAsync();
+    }
 }

@@ -17,4 +17,6 @@ public class RaceDetails
     public bool IsCancelled { get; set; }
     public Guid ClubId { get; set; }
     public int LocationId { get; set; }
+    public Guid? PilotPolicyId { get; set; }
+    public long? PilotPolicyVersion { get; set; }
 }

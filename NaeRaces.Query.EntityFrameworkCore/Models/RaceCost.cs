@@ -4,16 +4,7 @@ using System.Text;
 
 namespace NaeRaces.Query.EntityFrameworkCore.Models;
 
-public class RaceCost
-{
-    public Guid RaceId { get; set; }
-    public string Currency { get; set; } = string.Empty;
-    public decimal Cost { get; set; }
-
-    public ICollection<RaceCostDiscount> Discounts { get; set; } = new List<RaceCostDiscount>();
-}
-
-public class RaceCostDiscount
+public class RaceDiscount
 {
     public Guid RaceId { get; set; }
     public string Name { get; set; } = string.Empty;
@@ -24,6 +15,4 @@ public class RaceCostDiscount
     public decimal Discount { get; set; }
     public bool IsPercentage { get; set; }
     public bool CanBeCombined { get; set; }
-
-    public RaceCost? RaceCost { get; set; }
 }

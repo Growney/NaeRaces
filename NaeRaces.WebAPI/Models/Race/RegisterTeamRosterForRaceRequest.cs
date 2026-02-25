@@ -8,12 +8,14 @@ public class RegisterTeamRosterForRaceRequest
     public Guid TeamId { get; set; }
 
     [Required]
-    public IEnumerable<Guid> PilotIds { get; set; } = Enumerable.Empty<Guid>();
+    public IEnumerable<TeamPilot> Pilots { get; set; } = Enumerable.Empty<TeamPilot>();
 
-    [Required]
-    public Guid RegistrationId { get; set; }
-
-    [Required]
-    public string Currency { get; set; } = string.Empty;
+    public class TeamPilot
+    {
+        [Required]
+        public Guid PilotId { get; set; }
+        [Required]
+        public int RacePackageId { get; set; }
+    }
 }
 

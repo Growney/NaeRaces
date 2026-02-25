@@ -1,11 +1,14 @@
 ﻿using EventDbLite.Abstractions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
+using Microsoft.EntityFrameworkCore.Query.Internal;
 using NaeRaces.Command.Aggregates;
 using NaeRaces.Command.ValueTypes;
 using NaeRaces.Query.Abstractions;
 using NaeRaces.Query.Models;
 using NaeRaces.WebAPI.Models.Race;
+using static NaeRaces.Query.Abstractions.IPilotRegistrationQueryHandler;
+using static NaeRaces.WebAPI.Models.Race.RegisterTeamRosterForRaceRequest;
 
 namespace NaeRaces.WebAPI.Controllers;
 
@@ -28,19 +31,19 @@ public class RaceCommandController : Controller
             return BadRequest(ModelState);
         }
 
-        if(request.RaceId == Guid.Empty)
+        if (request.RaceId == Guid.Empty)
         {
             return BadRequest("RaceId must be a non-empty GUID.");
         }
 
-        if(!await _queryContext.ClubDetails.DoesClubExist(request.ClubId))
+        if (!await _queryContext.ClubDetails.DoesClubExist(request.ClubId))
         {
             return BadRequest($"Club with ID {request.ClubId} does not exist.");
         }
-        
-        if(!await _queryContext.ClubLocation.DoesLocationExist(request.ClubId, request.LocationId)) 
-        { 
-            return BadRequest($"Location with ID {request.LocationId} does not exist."); 
+
+        if (!await _queryContext.ClubLocation.DoesLocationExist(request.ClubId, request.LocationId))
+        {
+            return BadRequest($"Location with ID {request.LocationId} does not exist.");
         }
 
         Name nameValueType = Name.Create(request.Name);
@@ -60,7 +63,7 @@ public class RaceCommandController : Controller
             return BadRequest(ModelState);
         }
 
-        if(request.RaceId == Guid.Empty)
+        if (request.RaceId == Guid.Empty)
         {
             return BadRequest("RaceId must be a non-empty GUID.");
         }
@@ -239,9 +242,9 @@ public class RaceCommandController : Controller
         return Ok();
     }
 
-    [HttpPut("api/race/{raceId}/cost")]
-    public async Task<IActionResult> SetRaceCostAsync([FromRoute] Guid raceId,
-        [FromBody] SetRaceCostRequest request)
+    [HttpPost("api/race/{raceId}/package")]
+    public async Task<IActionResult> AddRacePackageAsync([FromRoute] Guid raceId,
+        [FromBody] AddRacePackageRequest request)
     {
         if (!ModelState.IsValid)
         {
@@ -254,7 +257,30 @@ public class RaceCommandController : Controller
             return NotFound();
         }
 
-        race.SetRaceCost(request.Currency, request.Cost);
+        int packageId = race.AddRacePackage(Name.Create(request.Name), request.Currency, request.Cost);
+
+        await _aggregateRepository.Save(race);
+
+        return Created($"/api/race/{raceId}/package/{packageId}", new { PackageId = packageId });
+    }
+
+    [HttpPut("api/race/{raceId}/package/{packageId}/discountstatus")]
+    public async Task<IActionResult> SetRacePackageDiscountStatusAsync([FromRoute] Guid raceId,
+        [FromRoute] int packageId,
+        [FromBody] SetRacePackageDiscountStatusRequest request)
+    {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
+        Race? race = await _aggregateRepository.Get<Race, Guid>(raceId);
+        if (race == null)
+        {
+            return NotFound();
+        }
+
+        race.SetRacePackageDiscountStatus(packageId, request.ApplyDiscounts);
 
         await _aggregateRepository.Save(race);
 
@@ -305,8 +331,9 @@ public class RaceCommandController : Controller
         return Ok();
     }
 
-    [HttpPut("api/race/{raceId}/registrationopendate")]
-    public async Task<IActionResult> ScheduleRaceRegistrationOpenDateAsync([FromRoute] Guid raceId,
+    [HttpPut("api/race/{raceId}/package/{packageId}/registrationopendate")]
+    public async Task<IActionResult> ScheduleRacePackageRegistrationOpenAsync([FromRoute] Guid raceId,
+        [FromRoute] int packageId,
         [FromBody] ScheduleDateRequest request)
     {
         if (!ModelState.IsValid)
@@ -320,16 +347,17 @@ public class RaceCommandController : Controller
             return NotFound();
         }
 
-        race.ScheduleRaceRegistrationOpenDate(request.Date);
+        race.ScheduleRacePackageRegistrationOpen(packageId, request.Date);
 
         await _aggregateRepository.Save(race);
 
         return Ok();
     }
 
-    [HttpPost("api/race/{raceId}/earlyregistration")]
-    public async Task<IActionResult> ScheduleEarlyRegistrationOpenDateAsync([FromRoute] Guid raceId,
-        [FromBody] ScheduleEarlyRegistrationOpenDateRequest request)
+    [HttpPut("api/race/{raceId}/package/{packageId}/registrationclosedate")]
+    public async Task<IActionResult> ScheduleRacePackageRegistrationCloseAsync([FromRoute] Guid raceId,
+        [FromRoute] int packageId,
+        [FromBody] ScheduleDateRequest request)
     {
         if (!ModelState.IsValid)
         {
@@ -342,38 +370,17 @@ public class RaceCommandController : Controller
             return NotFound();
         }
 
-        // Policy is required for early registration
-        if (!request.PilotPolicyId.HasValue)
-        {
-            return BadRequest("Pilot selection policy is required for early registration.");
-        }
-
-        if (race.ClubId == null)
-        {
-            return BadRequest("Race club not set. Cannot set early registration policy without club context.");
-        }
-
-        PilotSelectionPolicyDetails? policyDetails = await _queryContext.PilotSelectionPolicy.GetPolicyDetails(request.PilotPolicyId.Value, race.ClubId.Value);
-
-        if (policyDetails == null)
-        {
-            return BadRequest($"Pilot selection policy with ID {request.PilotPolicyId.Value} does not exist.");
-        }
-
-        int earlyRegistrationId = race.ScheduleEarlyRegistrationOpenDate(
-            request.RegistrationOpenDate, 
-            policyDetails.Id, 
-            policyDetails.LatestVersion);
+        race.ScheduleRacePackageRegistrationClose(packageId, request.Date);
 
         await _aggregateRepository.Save(race);
 
-        return Created($"/api/race/{raceId}/earlyregistration/{earlyRegistrationId}", new { EarlyRegistrationId = earlyRegistrationId });
+        return Ok();
     }
 
-    [HttpPut("api/race/{raceId}/earlyregistration/{earlyRegistrationId}")]
-    public async Task<IActionResult> RescheduleEarlyRegistrationOpenDateAsync([FromRoute] Guid raceId,
-        [FromRoute] int earlyRegistrationId,
-        [FromBody] RescheduleEarlyRegistrationOpenDateRequest request)
+    [HttpPut("api/race/{raceId}/package/{packageId}/registrationstatus")]
+    public async Task<IActionResult> SetRacePackageRegistrationStatusAsync([FromRoute] Guid raceId,
+        [FromRoute] int packageId,
+        [FromBody] SetRacePackageRegistrationStatusRequest request)
     {
         if (!ModelState.IsValid)
         {
@@ -386,16 +393,16 @@ public class RaceCommandController : Controller
             return NotFound();
         }
 
-        race.RescheduleEarlyRegistrationOpenDate(earlyRegistrationId, request.RegistrationOpenDate);
+        race.SetRacePackageRegistrationStatus(packageId, request.IsOpen);
 
         await _aggregateRepository.Save(race);
 
         return Ok();
     }
 
-    [HttpPut("api/race/{raceId}/earlyregistration/{earlyRegistrationId}/policy")]
-    public async Task<IActionResult> SetEarlyRegistrationPolicyAsync([FromRoute] Guid raceId,
-        [FromRoute] int earlyRegistrationId,
+    [HttpPut("api/race/{raceId}/package/{packageId}/pilotpolicy")]
+    public async Task<IActionResult> SetRacePackagePilotPolicyAsync([FromRoute] Guid raceId,
+        [FromRoute] int packageId,
         [FromBody] SetEarlyRegistrationPolicyRequest request)
     {
         if (!ModelState.IsValid)
@@ -411,7 +418,7 @@ public class RaceCommandController : Controller
 
         if (race.ClubId == null)
         {
-            return BadRequest("Race club not set. Cannot set early registration policy without club context.");
+            return BadRequest("Race club not set. Cannot set package pilot policy without club context.");
         }
 
         PilotSelectionPolicyDetails? policyDetails = await _queryContext.PilotSelectionPolicy.GetPolicyDetails(request.PilotPolicyId, race.ClubId.Value);
@@ -421,16 +428,16 @@ public class RaceCommandController : Controller
             return BadRequest($"Pilot selection policy with ID {request.PilotPolicyId} does not exist.");
         }
 
-        race.SetEarlyRegistrationPolicy(earlyRegistrationId, request.PilotPolicyId, policyDetails.LatestVersion);
+        race.SetRacePackagePilotPolicy(packageId, request.PilotPolicyId, policyDetails.LatestVersion);
 
         await _aggregateRepository.Save(race);
 
         return Ok();
     }
 
-    [HttpDelete("api/race/{raceId}/earlyregistration/{earlyRegistrationId}/policy")]
-    public async Task<IActionResult> RemoveEarlyRegistrationPolicyAsync([FromRoute] Guid raceId,
-        [FromRoute] int earlyRegistrationId)
+    [HttpDelete("api/race/{raceId}/package/{packageId}")]
+    public async Task<IActionResult> RemoveRacePackageAsync([FromRoute] Guid raceId,
+        [FromRoute] int packageId)
     {
         Race? race = await _aggregateRepository.Get<Race, Guid>(raceId);
         if (race == null)
@@ -438,7 +445,7 @@ public class RaceCommandController : Controller
             return NotFound();
         }
 
-        race.RemoveEarlyRegistrationPolicy(earlyRegistrationId);
+        race.RemoveRacePackage(packageId);
 
         await _aggregateRepository.Save(race);
 
@@ -474,7 +481,7 @@ public class RaceCommandController : Controller
             return BadRequest($"Pilot selection policy with ID {request.PilotPolicyId} does not exist.");
         }
 
-        int discountId = race.AddRaceDiscount(name,request.PilotPolicyId, policyDetails.LatestVersion, request.Currency, request.Discount,request.IsPercentage, request.CanBeCombined);
+        int discountId = race.AddRaceDiscount(name, request.PilotPolicyId, policyDetails.LatestVersion, request.Currency, request.Discount, request.IsPercentage, request.CanBeCombined);
 
         await _aggregateRepository.Save(race);
 
@@ -871,7 +878,7 @@ public class RaceCommandController : Controller
             return NotFound();
         }
 
-        foreach (Guid pilotId in request.PilotIds)
+        foreach (Guid pilotId in request.Pilots.Select(x=>x.PilotId))
         {
             if (!await _queryContext.TeamMember.IsPilotMemberOfTeam(request.TeamId, pilotId))
             {
@@ -881,24 +888,23 @@ public class RaceCommandController : Controller
 
         var currentDate = DateTime.UtcNow;
 
-        foreach (Guid pilotId in request.PilotIds)
+        foreach (TeamPilot teamPilot in request.Pilots)
         {
-            var registrationDetails = await _queryContext.PilotRegistrationDetails.GetPilotRegistrationDetails(
-                pilotId, 
-                raceId, 
-                request.Currency);
+            var registrationStatus = await _queryContext.PilotRegistration.GetPilotPotentialRegistrationStatusForRace(teamPilot.PilotId, raceId, teamPilot.RacePackageId);
 
-            if (registrationDetails != null && !registrationDetails.MeetsValidation)
+            if (registrationStatus != RegistrationStatus.Success)
             {
-                return BadRequest($"Pilot with ID {pilotId} does not meet race validation requirements: {registrationDetails.ValidationError}");
+                return BadRequest($"Pilot with ID {teamPilot} cannot register for race: {registrationStatus}");
             }
         }
 
-        race.RegisterTeamRosterForRace(request.TeamId, request.PilotIds, request.RegistrationId);
+        Guid registrationId = Guid.NewGuid();
+
+        race.RegisterTeamRosterForRace(request.TeamId, request.Pilots.Select(x=> TeamMemberRegistration.Create(x.PilotId, registrationId,x.RacePackageId)));
 
         await _aggregateRepository.Save(race);
 
-        return Created($"/api/race/{raceId}/registration/{request.RegistrationId}", new { RegistrationId = request.RegistrationId });
+        return Created($"/api/race/{raceId}/registration/{registrationId}", new { RegistrationId = registrationId });
     }
 
     [HttpPost("api/race/{raceId}/registration/pilot")]
@@ -910,17 +916,11 @@ public class RaceCommandController : Controller
             return BadRequest(ModelState);
         }
 
-     
-        var currentDate = DateTime.UtcNow;
+        var registrationStatus = await _queryContext.PilotRegistration.GetPilotPotentialRegistrationStatusForRace(request.PilotId, raceId, request.RacePackageId);
 
-        var registrationDetails = await _queryContext.PilotRegistrationDetails.GetPilotRegistrationDetails(
-            request.PilotId,
-            raceId,
-            request.Currency);
-
-        if (registrationDetails != null && !registrationDetails.MeetsValidation)
+        if (registrationStatus != RegistrationStatus.Success)
         {
-            return BadRequest($"Pilot with ID {request.PilotId} does not meet race validation requirements: {registrationDetails.ValidationError}");
+            return BadRequest($"Pilot cannot register for race: {registrationStatus}");
         }
         Race? race = await _aggregateRepository.Get<Race, Guid>(raceId);
         if (race == null)
@@ -928,7 +928,7 @@ public class RaceCommandController : Controller
             return NotFound();
         }
 
-        race.RegisterIndividualPilotForRace(request.PilotId, request.RegistrationId);
+        race.RegisterIndividualPilotForRace(request.PilotId, request.RegistrationId, request.RacePackageId);
 
         await _aggregateRepository.Save(race);
 

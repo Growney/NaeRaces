@@ -5,11 +5,10 @@ namespace NaeRaces.Query.Models;
 public record PilotRegistrationDetails(
     Guid PilotId,
     Guid RaceId,
-    bool MeetsValidation,
-    string? ValidationError,
+    int RacePackageId,
     string Currency,
     decimal BaseCost,
     decimal FinalCost,
-    IEnumerable<RaceDiscount> ValidDiscounts);
+    IEnumerable<PilotRaceDiscount> ValidDiscounts);
 
-public record RaceDiscount(string Name, decimal Amount, bool IsPercentage, bool CanBeCombined, int Order, decimal RunningTotal);
+public record PilotRaceDiscount(string Name, decimal Amount, bool IsPercentage, bool CanBeCombined, int Order, decimal RunningTotal);

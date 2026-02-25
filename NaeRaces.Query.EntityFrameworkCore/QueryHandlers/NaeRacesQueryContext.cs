@@ -13,9 +13,10 @@ public class NaeRacesQueryContext : INaeRacesQueryContext
         IPilotDetailsQueryHandler pilotDetails,
         IPilotValidationQueryHandler pilotValidation,
         IPilotPolicyValidationQueryHandler pilotPolicyValidation,
-        IPilotRegistrationDetailsQueryHandler pilotRegistrationDetails,
+        IPilotRegistrationQueryHandler pilotRegistrationDetails,
         IRaceDetailsQueryHandler raceDetails,
-        IRaceCostQueryHandler raceCost,
+        IRaceDiscountQueryHandler raceCost,
+        IRacePackageQueryHandler racePackage,
         IRaceRegistrationDatesQueryHandler raceRegistrationDates,
         IPilotSelectionPolicyQueryHandler pilotSelectionPolicy,
         ITeamMemberQueryHandler teamMember)
@@ -28,9 +29,10 @@ public class NaeRacesQueryContext : INaeRacesQueryContext
         PilotDetails = pilotDetails;
         PilotValidation = pilotValidation;
         PilotPolicyValidation = pilotPolicyValidation;
-        PilotRegistrationDetails = pilotRegistrationDetails;
+        PilotRegistration = pilotRegistrationDetails;
         RaceDetails = raceDetails;
         RaceCost = raceCost;
+        RacePackage = racePackage;
         RaceRegistrationDates = raceRegistrationDates;
         PilotSelectionPolicy = pilotSelectionPolicy;
         TeamMember = teamMember;
@@ -44,9 +46,10 @@ public class NaeRacesQueryContext : INaeRacesQueryContext
     public IPilotDetailsQueryHandler PilotDetails { get; }
     public IPilotValidationQueryHandler PilotValidation { get; }
     public IPilotPolicyValidationQueryHandler PilotPolicyValidation { get; }
-    public IPilotRegistrationDetailsQueryHandler PilotRegistrationDetails { get; }
+    public IPilotRegistrationQueryHandler PilotRegistration { get; }
     public IRaceDetailsQueryHandler RaceDetails { get; }
-    public IRaceCostQueryHandler RaceCost { get; }
+    public IRaceDiscountQueryHandler RaceCost { get; }
+    public IRacePackageQueryHandler RacePackage { get; }
     public IRaceRegistrationDatesQueryHandler RaceRegistrationDates { get; }
     public IPilotSelectionPolicyQueryHandler PilotSelectionPolicy { get; }
     public ITeamMemberQueryHandler TeamMember { get; }

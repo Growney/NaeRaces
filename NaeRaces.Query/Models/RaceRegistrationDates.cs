@@ -4,15 +4,11 @@ using System.Text;
 
 namespace NaeRaces.Query.Models;
 
+/// <summary>
+/// Tracks race-level validation policy. 
+/// Registration dates are now tracked per package - see RacePackage model.
+/// </summary>
 public record RaceRegistrationDates(
     Guid RaceId,
-    DateTime? RegistrationOpenDate,
     Guid? RaceValidationPolicyId,
-    long? RaceValidationPolicyVersion,
-    IEnumerable<RaceEarlyRegistrationDate> EarlyRegistrationDates);
-
-public record RaceEarlyRegistrationDate(
-    int EarlyRegistrationId,
-    DateTime RegistrationOpenDate,
-    Guid PilotPolicyId,
-    long PolicyVersion);
+    long? RaceValidationPolicyVersion);
