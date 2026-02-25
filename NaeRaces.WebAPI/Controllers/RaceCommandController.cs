@@ -6,9 +6,9 @@ using NaeRaces.Command.Aggregates;
 using NaeRaces.Command.ValueTypes;
 using NaeRaces.Query.Abstractions;
 using NaeRaces.Query.Models;
-using NaeRaces.WebAPI.Models.Race;
+using NaeRaces.WebAPI.Shared.Race;
 using static NaeRaces.Query.Abstractions.IPilotRegistrationQueryHandler;
-using static NaeRaces.WebAPI.Models.Race.RegisterTeamRosterForRaceRequest;
+using static NaeRaces.WebAPI.Shared.Race.RegisterTeamRosterForRaceRequest;
 
 namespace NaeRaces.WebAPI.Controllers;
 

@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Mvc.ModelBinding;
 using NaeRaces.Command.Aggregates;
 using NaeRaces.Command.ValueTypes;
 using NaeRaces.Query.Abstractions;
-using NaeRaces.WebAPI.Models.Pilot;
+using NaeRaces.WebAPI.Shared.Pilot;
 using System.ComponentModel.DataAnnotations;
 using System.Runtime.CompilerServices;
 

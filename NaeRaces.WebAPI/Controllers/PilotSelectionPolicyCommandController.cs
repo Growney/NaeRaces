@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Mvc.ModelBinding;
 using NaeRaces.Command.Aggregates;
 using NaeRaces.Command.ValueTypes;
 using NaeRaces.WebAPI.Models.Club;
-using NaeRaces.WebAPI.Models.PilotSelectionPolicy;
+using NaeRaces.WebAPI.Shared.PilotSelectionPolicy;
 
 namespace NaeRaces.WebAPI.Controllers;
 
@@ -137,7 +137,7 @@ public class PilotSelectionPolicyCommandController : Controller
 
     [HttpPost("api/pilotselectionpolicy/{pilotSelectionPolicyId}/requirement/club")]
     public async Task<IActionResult> AddClubRequirementAsync([FromRoute] Guid pilotSelectionPolicyId,
-        [FromBody] Models.PilotSelectionPolicy.AddClubRequirementRequest request)
+        [FromBody] AddClubRequirementRequest request)
     {
         if (!ModelState.IsValid)
         {

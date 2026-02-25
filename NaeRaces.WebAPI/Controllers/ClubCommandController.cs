@@ -7,7 +7,7 @@ using NaeRaces.Command.ValueTypes;
 using NaeRaces.Query.Abstractions;
 using NaeRaces.Query.Models;
 using NaeRaces.Query.Projections;
-using NaeRaces.WebAPI.Models.Club;
+using NaeRaces.WebAPI.Shared.Club;
 
 namespace NaeRaces.WebAPI.Controllers;
 

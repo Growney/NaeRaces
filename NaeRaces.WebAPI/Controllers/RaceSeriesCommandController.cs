@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using NaeRaces.Command.Aggregates;
 using NaeRaces.Query.Abstractions;
-using NaeRaces.WebAPI.Models.RaceSeries;
+using NaeRaces.WebAPI.Shared.RaceSeries;
 
 namespace NaeRaces.WebAPI.Controllers;
 

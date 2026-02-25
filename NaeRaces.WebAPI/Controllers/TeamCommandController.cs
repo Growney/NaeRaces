@@ -2,7 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using NaeRaces.Command.Aggregates;
-using NaeRaces.WebAPI.Models.Team;
+using NaeRaces.WebAPI.Shared.Team;
 
 namespace NaeRaces.WebAPI.Controllers;
 
