@@ -1,6 +1,9 @@
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Cors.Infrastructure;
 using Microsoft.EntityFrameworkCore;
+using OpenIddict.Validation.AspNetCore;
 using NaeRaces.Query.EntityFrameworkCore.Extensions;
+using NaeRaces.WebAPI;
 using NaeRaces.WebAPI.Data;
 using OpenIddict.Abstractions;
 using static OpenIddict.Abstractions.OpenIddictConstants;
@@ -9,6 +12,8 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 
+builder.Services.AddCors();
+builder.Services.AddSingleton<ICorsPolicyProvider, OpenIddictCorsPolicyProvider>();
 builder.Services.AddControllersWithViews();
 builder.Services.AddRazorPages();
 builder.Services.AddOpenApi();
@@ -27,13 +32,27 @@ builder.Services.AddDbContext<OpenIddictDbContext>(options =>
     options.UseOpenIddict();
 });
 
-// Configure cookie authentication for user login sessions.
-builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
-    .AddCookie(options =>
+// Configure authentication with a policy scheme that selects bearer or cookie auth based on the request.
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultScheme = "BearerOrCookie";
+    options.DefaultChallengeScheme = "BearerOrCookie";
+})
+.AddCookie(CookieAuthenticationDefaults.AuthenticationScheme, options =>
+{
+    options.LoginPath = "/Identity/Account/Login";
+    options.LogoutPath = "/Identity/Account/Logout";
+})
+.AddPolicyScheme("BearerOrCookie", displayName: null, options =>
+{
+    options.ForwardDefaultSelector = context =>
     {
-        options.LoginPath = "/Identity/Account/Login";
-        options.LogoutPath = "/Identity/Account/Logout";
-    });
+        string? authorization = context.Request.Headers["Authorization"];
+        if (!string.IsNullOrEmpty(authorization) && authorization.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+            return OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme;
+        return CookieAuthenticationDefaults.AuthenticationScheme;
+    };
+});
 
 builder.Services.AddOpenIddict()
     .AddCore(options =>
@@ -83,6 +102,8 @@ app.UseStaticFiles();
 
 app.UseRouting();
 
+app.UseCors();
+
 app.UseAuthentication();
 app.UseAuthorization();
 
@@ -98,40 +119,43 @@ await using (var scope = app.Services.CreateAsyncScope())
 
     var manager = scope.ServiceProvider.GetRequiredService<IOpenIddictApplicationManager>();
 
-    if (await manager.FindByClientIdAsync("naeraces-blazor-client") is null)
+    var descriptor = new OpenIddictApplicationDescriptor
     {
-        await manager.CreateAsync(new OpenIddictApplicationDescriptor
+        ClientId = "naeraces-blazor-client",
+        ConsentType = ConsentTypes.Implicit,
+        DisplayName = "NaeRaces Blazor Client",
+        ClientType = ClientTypes.Public,
+        PostLogoutRedirectUris =
         {
-            ClientId = "naeraces-blazor-client",
-            ConsentType = ConsentTypes.Implicit,
-            DisplayName = "NaeRaces Blazor Client",
-            ClientType = ClientTypes.Public,
-            PostLogoutRedirectUris =
-            {
-                new Uri("https://localhost:7112/authentication/logout-callback")
-            },
-            RedirectUris =
-            {
-                new Uri("https://localhost:7112/authentication/login-callback")
-            },
-            Permissions =
-            {
-                Permissions.Endpoints.Authorization,
-                Permissions.Endpoints.EndSession,
-                Permissions.Endpoints.Token,
-                Permissions.GrantTypes.AuthorizationCode,
-                Permissions.GrantTypes.RefreshToken,
-                Permissions.ResponseTypes.Code,
-                Permissions.Scopes.Email,
-                Permissions.Scopes.Profile,
-                Permissions.Scopes.Roles
-            },
-            Requirements =
-            {
-                Requirements.Features.ProofKeyForCodeExchange
-            }
-        });
-    }
+            new Uri("https://localhost:7229/authentication/logout-callback")
+        },
+        RedirectUris =
+        {
+            new Uri("https://localhost:7229/authentication/login-callback")
+        },
+        Permissions =
+        {
+            Permissions.Endpoints.Authorization,
+            Permissions.Endpoints.EndSession,
+            Permissions.Endpoints.Token,
+            Permissions.GrantTypes.AuthorizationCode,
+            Permissions.GrantTypes.RefreshToken,
+            Permissions.ResponseTypes.Code,
+            Permissions.Scopes.Email,
+            Permissions.Scopes.Profile,
+            Permissions.Scopes.Roles
+        },
+        Requirements =
+        {
+            Requirements.Features.ProofKeyForCodeExchange
+        }
+    };
+
+    var existing = await manager.FindByClientIdAsync(descriptor.ClientId!);
+    if (existing is not null)
+        await manager.DeleteAsync(existing);
+
+    await manager.CreateAsync(descriptor);
 }
 
 await app.RunAsync();

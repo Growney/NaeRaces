@@ -13,6 +13,12 @@ public class ClubOverviewQueryHandler : IClubOverviewQueryHandler
         _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
     }
 
+    public async Task<ClubOverview?> GetClubOverview(Guid clubId)
+    {
+        var x = await _dbContext.ClubOverviews.FirstOrDefaultAsync(c => c.ClubId == clubId);
+        return x == null ? null : ToQueryModel(x);
+    }
+
     public IAsyncEnumerable<ClubOverview> GetAllClubs()
     {
         return _dbContext.ClubOverviews

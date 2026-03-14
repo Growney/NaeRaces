@@ -14,4 +14,8 @@
     <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.5" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\NaeRaces.WebAPI.Shared\NaeRaces.WebAPI.Shared.csproj" />
+  </ItemGroup>
+
 </Project>

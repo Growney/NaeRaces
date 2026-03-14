@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Authentication;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
@@ -13,10 +14,16 @@ if (string.IsNullOrWhiteSpace(apiBaseAddress))
 {
     apiBaseAddress = builder.HostEnvironment.BaseAddress;
 }
+builder.Services.AddScoped<ApiAuthorizationMessageHandler>(serviceProvider =>
+{
+    NavigationManager navigationManager = serviceProvider.GetRequiredService<NavigationManager>();
+    IAccessTokenProvider tokenProvider = serviceProvider.GetRequiredService<IAccessTokenProvider>();
 
+    return new ApiAuthorizationMessageHandler(tokenProvider, navigationManager, [apiBaseAddress]);
+});
 builder.Services.AddHttpClient("NaeRaces.ServerAPI")
     .ConfigureHttpClient(client => client.BaseAddress = new Uri(apiBaseAddress))
-    .AddHttpMessageHandler<BaseAddressAuthorizationMessageHandler>();
+    .AddHttpMessageHandler<ApiAuthorizationMessageHandler>();
 
 builder.Services.AddScoped(provider =>
 {

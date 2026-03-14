@@ -1,7 +1,166 @@
 ﻿@page "/"
+@using NaeRaces.WebAPI.Shared.Club
+@inject HttpClient Http
 
 <PageTitle>Home</PageTitle>
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="input-group">
+            <input type="text" class="form-control" placeholder="Search clubs by name or code..."
+                   value="@searchTerm"
+                   @oninput="e => searchTerm = e.Value?.ToString() ?? string.Empty"
+                   @onkeyup="HandleSearchKeyUpAsync" />
+            <button class="btn btn-primary" @onclick="SearchAsync" disabled="@isSearching">
+                @if (isSearching)
+                {
+                    <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                }
+                Search
+            </button>
+        </div>
+    </div>
+</div>
 
-<h1>Hello, world!</h1>
+@if (searchResults != null)
+{
+    <div class="row mt-2">
+        <div class="col-12">
+            @if (searchResults.Count == 0)
+            {
+                <p>No clubs were found. <a href="/club/create">Create a new club</a>.</p>
+            }
+            else
+            {
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Code</th>
+                            <th>Name</th>
+                            <th>Members</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var club in searchResults)
+                        {
+                            <tr>
+                                <td>@club.Code</td>
+                                <td>@club.Name</td>
+                                <td>@club.MemberCount</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+        </div>
+    </div>
+}
 
-Welcome to your new app.
+<div class="row mt-4">
+    <div class="col-6">
+        <h3>Top 10 Clubs by Members</h3>
+        @if (topClubs == null)
+        {
+            <p><em>Loading...</em></p>
+        }
+        else
+        {
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Code</th>
+                        <th>Name</th>
+                        <th>Members</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var club in topClubs)
+                    {
+                        <tr>
+                            <td>@club.Code</td>
+                            <td>@club.Name</td>
+                            <td>@club.MemberCount</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+    <div class="col-6">
+        <h3>Clubs with Upcoming Races</h3>
+        @if (clubsWithRaces == null)
+        {
+            <p><em>Loading...</em></p>
+        }
+        else if (!clubsWithRaces.Any())
+        {
+            <p>No clubs have upcoming races.</p>
+        }
+        else
+        {
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Code</th>
+                        <th>Name</th>
+                        <th>Members</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var club in clubsWithRaces)
+                    {
+                        <tr>
+                            <td>@club.Code</td>
+                            <td>@club.Name</td>
+                            <td>@club.MemberCount</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+</div>
+
+@code {
+    private TopClubByMemberCountResponse[]? topClubs;
+    private ClubWithUpcomingRacesResponse[]? clubsWithRaces;
+    private string searchTerm = string.Empty;
+    private List<ClubSearchResponse>? searchResults;
+    private bool isSearching;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var topClubsTask = Http.GetFromJsonAsync<TopClubByMemberCountResponse[]>("api/club/query/top/10");
+        var clubsWithRacesTask = Http.GetFromJsonAsync<ClubWithUpcomingRacesResponse[]>("api/club/query/with-upcoming-races");
+
+        await Task.WhenAll(topClubsTask, clubsWithRacesTask);
+
+        topClubs = topClubsTask.Result;
+        clubsWithRaces = clubsWithRacesTask.Result;
+    }
+
+    private async Task HandleSearchKeyUpAsync(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await SearchAsync();
+        }
+    }
+
+    private async Task SearchAsync()
+    {
+        if (string.IsNullOrWhiteSpace(searchTerm))
+        {
+            searchResults = null;
+            return;
+        }
+
+        isSearching = true;
+        searchResults = null;
+
+        var results = await Http.GetFromJsonAsync<ClubSearchResponse[]>(
+            $"api/club/query/search?term={Uri.EscapeDataString(searchTerm)}");
+
+        searchResults = results?.ToList() ?? [];
+        isSearching = false;
+    }
+}

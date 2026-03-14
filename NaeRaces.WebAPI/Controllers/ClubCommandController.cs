@@ -9,6 +9,7 @@ using NaeRaces.Query.Abstractions;
 using NaeRaces.Query.Models;
 using NaeRaces.Query.Projections;
 using NaeRaces.WebAPI.Shared.Club;
+using OpenIddict.Abstractions;
 using System.Security.Claims;
 
 namespace NaeRaces.WebAPI.Controllers;
@@ -38,7 +39,7 @@ public class ClubCommandController : Controller
             return BadRequest("Club Id must be set");
         }
 
-        var founderPilotIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        var founderPilotIdClaim = User.FindFirst(OpenIddictConstants.Claims.Subject)?.Value;
         if (!Guid.TryParse(founderPilotIdClaim, out Guid founderPilotId))
         {
             return Unauthorized();
@@ -66,7 +67,7 @@ public class ClubCommandController : Controller
 
     private Task<bool> IsCurrentUserAdmin(Guid clubId)
     {
-        var pilotIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        var pilotIdClaim = User.FindFirst(OpenIddictConstants.Claims.Subject)?.Value;
         if (!Guid.TryParse(pilotIdClaim, out Guid pilotId))
         {
             return Task.FromResult(false);
@@ -77,7 +78,7 @@ public class ClubCommandController : Controller
 
     [Authorize]
     [HttpPut("api/club/{clubId}/details")]
-    public async Task<IActionResult> UpdateClubDetailsAsync([FromRoute] Guid clubId, 
+    public async Task<IActionResult> UpdateClubDetailsAsync([FromRoute] Guid clubId,
         [FromBody] UpdateClubDetailsRequest request)
     {
         if (!ModelState.IsValid)
@@ -643,7 +644,7 @@ public class ClubCommandController : Controller
             return BadRequest(ModelState);
         }
 
-        var pilotIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        var pilotIdClaim = User.FindFirst(OpenIddictConstants.Claims.Subject)?.Value;
         if (!Guid.TryParse(pilotIdClaim, out Guid pilotId))
         {
             return Unauthorized();

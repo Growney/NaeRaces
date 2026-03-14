@@ -7,6 +7,7 @@ using NaeRaces.Command.ValueTypes;
 using NaeRaces.Query.Abstractions;
 using NaeRaces.WebAPI.Shared.Club;
 using NaeRaces.WebAPI.Shared.Pilot;
+using OpenIddict.Abstractions;
 using System.ComponentModel.DataAnnotations;
 using System.Runtime.CompilerServices;
 using System.Security.Claims;
@@ -33,7 +34,7 @@ public class PilotCommandController : Controller
             return BadRequest(ModelState);
         }
 
-        var pilotIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        var pilotIdClaim = User.FindFirst(OpenIddictConstants.Claims.Subject)?.Value;
         if (!Guid.TryParse(pilotIdClaim, out Guid pilotId))
         {
             return Unauthorized();
@@ -62,7 +63,7 @@ public class PilotCommandController : Controller
             return BadRequest(ModelState);
         }
 
-        var pilotIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        var pilotIdClaim = User.FindFirst(OpenIddictConstants.Claims.Subject)?.Value;
         if (!Guid.TryParse(pilotIdClaim, out Guid pilotId))
         {
             return Unauthorized();
@@ -88,7 +89,7 @@ public class PilotCommandController : Controller
             return BadRequest(ModelState);
         }
 
-        var pilotIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        var pilotIdClaim = User.FindFirst(OpenIddictConstants.Claims.Subject)?.Value;
         if (!Guid.TryParse(pilotIdClaim, out Guid pilotId))
         {
             return Unauthorized();
@@ -114,7 +115,7 @@ public class PilotCommandController : Controller
             return BadRequest(ModelState);
         }
 
-        var pilotIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        var pilotIdClaim = User.FindFirst(OpenIddictConstants.Claims.Subject)?.Value;
         if (!Guid.TryParse(pilotIdClaim, out Guid pilotId))
         {
             return Unauthorized();
@@ -152,7 +153,7 @@ public class PilotCommandController : Controller
             return BadRequest("Invalid 'validUntil' date");
         }
 
-        var validatedByPilotIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        var validatedByPilotIdClaim = User.FindFirst(OpenIddictConstants.Claims.Subject)?.Value;
         if (!Guid.TryParse(validatedByPilotIdClaim, out Guid validatedByPilotId))
         {
             return Unauthorized();
@@ -206,7 +207,7 @@ public class PilotCommandController : Controller
             return BadRequest("Invalid 'validUntil' date");
         }
 
-        var validatedByPilotIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        var validatedByPilotIdClaim = User.FindFirst(OpenIddictConstants.Claims.Subject)?.Value;
         if (!Guid.TryParse(validatedByPilotIdClaim, out Guid validatedByPilotId))
         {
             return Unauthorized();
@@ -244,7 +245,7 @@ public class PilotCommandController : Controller
     [HttpPost("api/pilot/{pilotId}/dateofbirthvalidation")]
     public async Task<IActionResult> PeerValidatePilotDateOfBirthAsync([FromRoute] Guid pilotId)
     {
-        var validatedByPilotIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        var validatedByPilotIdClaim = User.FindFirst(OpenIddictConstants.Claims.Subject)?.Value;
         if (!Guid.TryParse(validatedByPilotIdClaim, out Guid validatedByPilotId))
         {
             return Unauthorized();
@@ -282,7 +283,7 @@ public class PilotCommandController : Controller
     [HttpPost("api/pilot/follow/{clubId}")]
     public async Task<IActionResult> FollowClubAsync([FromRoute] Guid clubId)
     {
-        var pilotIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        var pilotIdClaim = User.FindFirst(OpenIddictConstants.Claims.Subject)?.Value;
         if (!Guid.TryParse(pilotIdClaim, out Guid pilotId))
         {
             return Unauthorized();
@@ -309,7 +310,7 @@ public class PilotCommandController : Controller
     [HttpDelete("api/pilot/follow/{clubId}")]
     public async Task<IActionResult> UnfollowClubAsync([FromRoute] Guid clubId)
     {
-        var pilotIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        var pilotIdClaim = User.FindFirst(OpenIddictConstants.Claims.Subject)?.Value;
         if (!Guid.TryParse(pilotIdClaim, out Guid pilotId))
         {
             return Unauthorized();

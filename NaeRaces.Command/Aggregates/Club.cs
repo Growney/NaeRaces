@@ -13,6 +13,7 @@ public class Club : AggregateRoot<Guid>
 {
     private Code _code;
     private Name _name;
+    private Guid _founderId;
     private string? _description;
     private string? _phoneNumber;
     private string? _emailAddress;
@@ -320,8 +321,8 @@ public class Club : AggregateRoot<Guid>
     public void AssignClubMemberRole(Guid pilotId, string role)
     {
         ThrowIfIdNotSet();
-        if (!_pilotMemberships.TryGetValue(pilotId, out var membership) || !membership.IsConfirmed)
-            throw new InvalidOperationException($"Pilot {pilotId} must be a confirmed member to be assigned a role.");
+        if (pilotId != _founderId && (!_pilotMemberships.TryGetValue(pilotId, out var membership) || !membership.IsConfirmed))
+            throw new InvalidOperationException($"Pilot {pilotId} must be a confirmed member to be assigned a role. or must be the founder");
 
         if (_memberRoles.TryGetValue(pilotId, out var roles) && roles.Contains(role))
             return;
@@ -360,6 +361,7 @@ public class Club : AggregateRoot<Guid>
     private void When(ClubFormed e)
     {
         Id = e.ClubId;
+        _founderId = e.FounderPilotId;
         _code = Code.Rehydrate(e.Code);
         _name = Name.Rehydrate(e.Name);
     }

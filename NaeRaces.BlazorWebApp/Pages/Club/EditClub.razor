@@ -1,0 +1,723 @@
+@page "/club/edit/{ClubId:guid}"
+@attribute [Authorize]
+@using NaeRaces.WebAPI.Shared.Club
+@using System.ComponentModel.DataAnnotations
+@inject HttpClient Http
+@inject NavigationManager Navigation
+
+<PageTitle>Edit Club</PageTitle>
+
+@if (isLoading)
+{
+    <div class="d-flex align-items-center">
+        <span class="spinner-border me-2" role="status" aria-hidden="true"></span>
+        <em>Loading club...</em>
+    </div>
+}
+else if (overview == null)
+{
+    <div class="alert alert-warning">Club not found.</div>
+    <a href="/" class="btn btn-secondary">Back to Home</a>
+}
+else
+{
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h1 class="mb-0">@overview.Name</h1>
+            <span class="text-muted">@overview.Code &bull; @overview.MemberCount members</span>
+        </div>
+        <a href="/" class="btn btn-outline-secondary">Back to Home</a>
+    </div>
+
+    <!-- Basic Details -->
+    <div class="card mb-3">
+        <div class="card-header fw-bold">Basic Details</div>
+        <div class="card-body">
+            <EditForm Model="detailsModel" OnValidSubmit="SaveDetailsAsync">
+                <DataAnnotationsValidator />
+                <ValidationSummary class="text-danger" />
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label">Code</label>
+                        <InputText @bind-Value="detailsModel.Code" class="form-control" />
+                    </div>
+                    <div class="col-md-8">
+                        <label class="form-label">Name</label>
+                        <InputText @bind-Value="detailsModel.Name" class="form-control" />
+                    </div>
+                </div>
+                @if (!string.IsNullOrEmpty(detailsMessage))
+                {
+                    <div class="alert @(detailsSuccess ? "alert-success" : "alert-danger") mt-2 mb-0 py-2">@detailsMessage</div>
+                }
+                <button type="submit" class="btn btn-primary mt-3" disabled="@isSavingDetails">
+                    @if (isSavingDetails)
+                    {
+                        <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                    }
+                    Save Details
+                </button>
+            </EditForm>
+        </div>
+    </div>
+
+    <!-- Description -->
+    <div class="card mb-3">
+        <div class="card-header fw-bold">Description</div>
+        <div class="card-body">
+            <EditForm Model="descriptionModel" OnValidSubmit="SaveDescriptionAsync">
+                <DataAnnotationsValidator />
+                <ValidationSummary class="text-danger" />
+                <div class="mb-3">
+                    <label class="form-label">Description</label>
+                    <InputTextArea @bind-Value="descriptionModel.Description" class="form-control" rows="4" />
+                </div>
+                @if (!string.IsNullOrEmpty(descriptionMessage))
+                {
+                    <div class="alert @(descriptionSuccess ? "alert-success" : "alert-danger") mb-2 py-2">@descriptionMessage</div>
+                }
+                <button type="submit" class="btn btn-primary" disabled="@isSavingDescription">
+                    @if (isSavingDescription)
+                    {
+                        <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                    }
+                    Save Description
+                </button>
+            </EditForm>
+        </div>
+    </div>
+
+    <!-- Contact Details -->
+    <div class="card mb-3">
+        <div class="card-header fw-bold">Contact Details</div>
+        <div class="card-body">
+            <EditForm Model="contactModel" OnValidSubmit="SaveContactAsync">
+                <DataAnnotationsValidator />
+                <ValidationSummary class="text-danger" />
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Phone Number</label>
+                        <InputText @bind-Value="contactModel.PhoneNumber" class="form-control" placeholder="+44 123 456 7890" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Email Address</label>
+                        <InputText @bind-Value="contactModel.EmailAddress" class="form-control" placeholder="club@example.com" />
+                    </div>
+                </div>
+                @if (!string.IsNullOrEmpty(contactMessage))
+                {
+                    <div class="alert @(contactSuccess ? "alert-success" : "alert-danger") mt-2 mb-0 py-2">@contactMessage</div>
+                }
+                <button type="submit" class="btn btn-primary mt-3" disabled="@isSavingContact">
+                    @if (isSavingContact)
+                    {
+                        <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                    }
+                    Save Contact Details
+                </button>
+            </EditForm>
+        </div>
+    </div>
+
+    <!-- Locations -->
+    <div class="card mb-3">
+        <div class="card-header fw-bold">Locations</div>
+        <div class="card-body">
+            @if (locations.Count == 0)
+            {
+                <p class="text-muted">No locations added yet.</p>
+            }
+            else
+            {
+                @foreach (var loc in locations)
+                {
+                    <div class="border rounded p-3 mb-3">
+                        <div class="d-flex justify-content-between align-items-start gap-2">
+                            <div>
+                                <strong>@loc.Name</strong>
+                                @if (loc.IsHomeLocation)
+                                {
+                                    <span class="badge bg-primary ms-2">Home</span>
+                                }
+                                @if (!string.IsNullOrWhiteSpace(loc.Information))
+                                {
+                                    <br /><small class="text-muted">@loc.Information</small>
+                                }
+                                <br />
+                                <small class="text-muted">
+                                    @loc.AddressLine1@(loc.AddressLine2 != null ? ", " + loc.AddressLine2 : ""), @loc.City, @loc.Postcode, @loc.County
+                                </small>
+                            </div>
+                            <div class="d-flex gap-2 flex-shrink-0">
+                                @if (!loc.IsHomeLocation)
+                                {
+                                    <button class="btn btn-sm btn-outline-primary" @onclick="() => SetHomeLocationAsync(loc.LocationId)">
+                                        Set as Home
+                                    </button>
+                                }
+                                <button class="btn btn-sm btn-outline-secondary" @onclick="() => ToggleEditLocation(loc.LocationId)">
+                                    @(editingLocationId == loc.LocationId ? "Cancel" : "Edit")
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger" @onclick="() => RemoveLocationAsync(loc.LocationId)">
+                                    Remove
+                                </button>
+                            </div>
+                        </div>
+
+                        @if (editingLocationId == loc.LocationId)
+                        {
+                            <hr />
+                            <EditForm Model="locationEditModel" OnValidSubmit="SaveLocationAsync">
+                                <DataAnnotationsValidator />
+                                <ValidationSummary class="text-danger" />
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label">Name</label>
+                                        <InputText @bind-Value="locationEditModel.Name" class="form-control" />
+                                    </div>
+                                    <div class="col-12">
+                                        <label class="form-label">Information</label>
+                                        <InputTextArea @bind-Value="locationEditModel.Information" class="form-control" rows="2" />
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Address Line 1</label>
+                                        <InputText @bind-Value="locationEditModel.AddressLine1" class="form-control" />
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Address Line 2</label>
+                                        <InputText @bind-Value="locationEditModel.AddressLine2" class="form-control" />
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">City</label>
+                                        <InputText @bind-Value="locationEditModel.City" class="form-control" />
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">Postcode</label>
+                                        <InputText @bind-Value="locationEditModel.Postcode" class="form-control" />
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">County</label>
+                                        <InputText @bind-Value="locationEditModel.County" class="form-control" />
+                                    </div>
+                                </div>
+                                @if (!string.IsNullOrEmpty(locationMessage))
+                                {
+                                    <div class="alert @(locationSuccess ? "alert-success" : "alert-danger") mt-2 mb-0 py-2">@locationMessage</div>
+                                }
+                                <button type="submit" class="btn btn-primary mt-3" disabled="@isSavingLocation">
+                                    @if (isSavingLocation)
+                                    {
+                                        <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                                    }
+                                    Save Location
+                                </button>
+                            </EditForm>
+                        }
+                    </div>
+                }
+            }
+
+            <hr />
+            <h6>Add Location</h6>
+            <EditForm Model="addLocationModel" OnValidSubmit="AddLocationAsync">
+                <DataAnnotationsValidator />
+                <ValidationSummary class="text-danger" />
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Name <span class="text-danger">*</span></label>
+                        <InputText @bind-Value="addLocationModel.LocationName" class="form-control" />
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Information <span class="text-danger">*</span></label>
+                        <InputTextArea @bind-Value="addLocationModel.LocationInformation" class="form-control" rows="2" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Address Line 1 <span class="text-danger">*</span></label>
+                        <InputText @bind-Value="addLocationModel.AddressLine1" class="form-control" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Address Line 2</label>
+                        <InputText @bind-Value="addLocationModel.AddressLine2" class="form-control" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">City <span class="text-danger">*</span></label>
+                        <InputText @bind-Value="addLocationModel.City" class="form-control" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Postcode <span class="text-danger">*</span></label>
+                        <InputText @bind-Value="addLocationModel.Postcode" class="form-control" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">County <span class="text-danger">*</span></label>
+                        <InputText @bind-Value="addLocationModel.County" class="form-control" />
+                    </div>
+                </div>
+                @if (!string.IsNullOrEmpty(addLocationMessage))
+                {
+                    <div class="alert @(addLocationSuccess ? "alert-success" : "alert-danger") mt-2 mb-0 py-2">@addLocationMessage</div>
+                }
+                <button type="submit" class="btn btn-success mt-3" disabled="@isAddingLocation">
+                    @if (isAddingLocation)
+                    {
+                        <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                    }
+                    Add Location
+                </button>
+            </EditForm>
+        </div>
+    </div>
+
+    <!-- Membership Levels -->
+    <div class="card mb-4">
+        <div class="card-header fw-bold">Membership Levels</div>
+        <div class="card-body">
+            @if (membershipLevels.Count == 0)
+            {
+                <p class="text-muted">No membership levels added yet.</p>
+            }
+            else
+            {
+                @foreach (var level in membershipLevels)
+                {
+                    <div class="border rounded p-3 mb-2">
+                        <div class="d-flex justify-content-between align-items-center gap-2">
+                            @if (editingMembershipLevelId == level.MembershipLevelId)
+                            {
+                                <div class="flex-grow-1">
+                                    <input type="text" class="form-control form-control-sm" @bind="renameLevelModel.NewName" />
+                                </div>
+                                <div class="d-flex gap-2 flex-shrink-0">
+                                    <button class="btn btn-sm btn-primary" @onclick="() => RenameLevelAsync(level.MembershipLevelId)" disabled="@isRenamingLevel">
+                                        @if (isRenamingLevel)
+                                        {
+                                            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                                        }
+                                        else
+                                        {
+                                            <text>Save</text>
+                                        }
+                                    </button>
+                                    <button class="btn btn-sm btn-secondary" @onclick="() => editingMembershipLevelId = null">Cancel</button>
+                                </div>
+                            }
+                            else
+                            {
+                                <strong>@level.Name</strong>
+                                <div class="d-flex gap-2 flex-shrink-0">
+                                    <button class="btn btn-sm btn-outline-secondary" @onclick="() => StartRenameLevel(level.MembershipLevelId, level.Name)">Rename</button>
+                                    <button class="btn btn-sm btn-outline-danger" @onclick="() => RemoveLevelAsync(level.MembershipLevelId)">Remove</button>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
+            }
+
+            @if (!string.IsNullOrEmpty(levelMessage))
+            {
+                <div class="alert @(levelSuccess ? "alert-success" : "alert-danger") py-2">@levelMessage</div>
+            }
+
+            <hr />
+            <h6>Add Membership Level</h6>
+            <EditForm Model="addLevelModel" OnValidSubmit="AddLevelAsync">
+                <DataAnnotationsValidator />
+                <ValidationSummary class="text-danger" />
+                <div class="input-group">
+                    <InputText @bind-Value="addLevelModel.Name" class="form-control" placeholder="Level name..." />
+                    <button type="submit" class="btn btn-success" disabled="@isAddingLevel">
+                        @if (isAddingLevel)
+                        {
+                            <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                        }
+                        Add Level
+                    </button>
+                </div>
+            </EditForm>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public Guid ClubId { get; set; }
+
+    private bool isLoading = true;
+    private ClubOverviewResponse? overview;
+    private List<ClubLocationResponse> locations = [];
+    private List<ClubMembershipLevelResponse> membershipLevels = [];
+
+    private UpdateClubDetailsRequest detailsModel = new();
+    private bool isSavingDetails;
+    private string? detailsMessage;
+    private bool detailsSuccess;
+
+    private UpdateClubDescriptionRequest descriptionModel = new();
+    private bool isSavingDescription;
+    private string? descriptionMessage;
+    private bool descriptionSuccess;
+
+    private UpdateClubContactDetailsRequest contactModel = new();
+    private bool isSavingContact;
+    private string? contactMessage;
+    private bool contactSuccess;
+
+    private int? editingLocationId;
+    private LocationEditModel locationEditModel = new();
+    private bool isSavingLocation;
+    private string? locationMessage;
+    private bool locationSuccess;
+
+    private AddClubLocationRequest addLocationModel = new();
+    private bool isAddingLocation;
+    private string? addLocationMessage;
+    private bool addLocationSuccess;
+
+    private int? editingMembershipLevelId;
+    private RenameClubMembershipLevelRequest renameLevelModel = new();
+    private bool isRenamingLevel;
+    private string? levelMessage;
+    private bool levelSuccess;
+
+    private AddClubMembershipLevelRequest addLevelModel = new();
+    private bool isAddingLevel;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDataAsync();
+    }
+
+    private async Task LoadDataAsync()
+    {
+        isLoading = true;
+        try
+        {
+            var overviewTask = Http.GetFromJsonAsync<ClubOverviewResponse>($"api/club/{ClubId}/query/overview");
+            var locationsTask = Http.GetFromJsonAsync<List<ClubLocationResponse>>($"api/club/{ClubId}/query/locations");
+            var levelsTask = Http.GetFromJsonAsync<List<ClubMembershipLevelResponse>>($"api/club/{ClubId}/query/membershiplevels");
+
+            await Task.WhenAll(overviewTask, locationsTask, levelsTask);
+
+            overview = overviewTask.Result;
+            locations = locationsTask.Result ?? [];
+            membershipLevels = levelsTask.Result ?? [];
+
+            if (overview != null)
+            {
+                detailsModel = new UpdateClubDetailsRequest { Code = overview.Code, Name = overview.Name };
+            }
+        }
+        catch
+        {
+            overview = null;
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task SaveDetailsAsync()
+    {
+        isSavingDetails = true;
+        detailsMessage = null;
+        try
+        {
+            var response = await Http.PutAsJsonAsync($"api/club/{ClubId}/details", detailsModel);
+            if (response.IsSuccessStatusCode)
+            {
+                detailsSuccess = true;
+                detailsMessage = "Details saved successfully.";
+                if (overview != null)
+                {
+                    overview.Name = detailsModel.Name;
+                    overview.Code = detailsModel.Code;
+                }
+            }
+            else if (response.StatusCode == System.Net.HttpStatusCode.Conflict)
+            {
+                detailsSuccess = false;
+                detailsMessage = "A club with the same code or name already exists.";
+            }
+            else
+            {
+                detailsSuccess = false;
+                detailsMessage = "Failed to save details.";
+            }
+        }
+        catch
+        {
+            detailsSuccess = false;
+            detailsMessage = "An error occurred.";
+        }
+        finally
+        {
+            isSavingDetails = false;
+        }
+    }
+
+    private async Task SaveDescriptionAsync()
+    {
+        isSavingDescription = true;
+        descriptionMessage = null;
+        try
+        {
+            var response = await Http.PutAsJsonAsync($"api/club/{ClubId}/description", descriptionModel);
+            descriptionSuccess = response.IsSuccessStatusCode;
+            descriptionMessage = response.IsSuccessStatusCode ? "Description saved successfully." : "Failed to save description.";
+        }
+        catch
+        {
+            descriptionSuccess = false;
+            descriptionMessage = "An error occurred.";
+        }
+        finally
+        {
+            isSavingDescription = false;
+        }
+    }
+
+    private async Task SaveContactAsync()
+    {
+        isSavingContact = true;
+        contactMessage = null;
+        try
+        {
+            var response = await Http.PutAsJsonAsync($"api/club/{ClubId}/contactdetails", contactModel);
+            contactSuccess = response.IsSuccessStatusCode;
+            contactMessage = response.IsSuccessStatusCode ? "Contact details saved successfully." : "Failed to save contact details.";
+        }
+        catch
+        {
+            contactSuccess = false;
+            contactMessage = "An error occurred.";
+        }
+        finally
+        {
+            isSavingContact = false;
+        }
+    }
+
+    private void ToggleEditLocation(int locationId)
+    {
+        if (editingLocationId == locationId)
+        {
+            editingLocationId = null;
+            locationMessage = null;
+        }
+        else
+        {
+            var loc = locations.FirstOrDefault(l => l.LocationId == locationId);
+            if (loc != null)
+            {
+                locationEditModel = new LocationEditModel
+                {
+                    Name = loc.Name,
+                    Information = loc.Information,
+                    AddressLine1 = loc.AddressLine1,
+                    AddressLine2 = loc.AddressLine2,
+                    City = loc.City,
+                    Postcode = loc.Postcode,
+                    County = loc.County
+                };
+            }
+            editingLocationId = locationId;
+            locationMessage = null;
+        }
+    }
+
+    private async Task SaveLocationAsync()
+    {
+        if (editingLocationId == null) return;
+        isSavingLocation = true;
+        locationMessage = null;
+        try
+        {
+            var nameTask = Http.PutAsJsonAsync(
+                $"api/club/{ClubId}/location/{editingLocationId}/name",
+                new RenameClubLocationRequest { NewLocationName = locationEditModel.Name });
+
+            var infoTask = Http.PutAsJsonAsync(
+                $"api/club/{ClubId}/location/{editingLocationId}/information",
+                new ChangeClubLocationInformationRequest { LocationInformation = locationEditModel.Information });
+
+            var addressTask = Http.PutAsJsonAsync(
+                $"api/club/{ClubId}/location/{editingLocationId}/address",
+                new ChangeClubLocationAddressRequest
+                {
+                    AddressLine1 = locationEditModel.AddressLine1,
+                    AddressLine2 = locationEditModel.AddressLine2,
+                    City = locationEditModel.City,
+                    Postcode = locationEditModel.Postcode,
+                    County = locationEditModel.County
+                });
+
+            await Task.WhenAll(nameTask, infoTask, addressTask);
+
+            if (nameTask.Result.IsSuccessStatusCode && infoTask.Result.IsSuccessStatusCode && addressTask.Result.IsSuccessStatusCode)
+            {
+                locationSuccess = true;
+                locationMessage = "Location saved successfully.";
+                editingLocationId = null;
+                await RefreshLocationsAsync();
+            }
+            else
+            {
+                locationSuccess = false;
+                locationMessage = "Failed to save location.";
+            }
+        }
+        catch
+        {
+            locationSuccess = false;
+            locationMessage = "An error occurred.";
+        }
+        finally
+        {
+            isSavingLocation = false;
+        }
+    }
+
+    private async Task SetHomeLocationAsync(int locationId)
+    {
+        var response = await Http.PutAsJsonAsync(
+            $"api/club/{ClubId}/homelocation",
+            new SetClubHomeLocationRequest { LocationId = locationId });
+
+        if (response.IsSuccessStatusCode)
+        {
+            await RefreshLocationsAsync();
+        }
+    }
+
+    private async Task RemoveLocationAsync(int locationId)
+    {
+        var response = await Http.DeleteAsync($"api/club/{ClubId}/location/{locationId}");
+        if (response.IsSuccessStatusCode)
+        {
+            if (editingLocationId == locationId)
+                editingLocationId = null;
+            await RefreshLocationsAsync();
+        }
+    }
+
+    private async Task AddLocationAsync()
+    {
+        isAddingLocation = true;
+        addLocationMessage = null;
+        try
+        {
+            var response = await Http.PostAsJsonAsync($"api/club/{ClubId}/location", addLocationModel);
+            addLocationSuccess = response.IsSuccessStatusCode;
+            addLocationMessage = response.IsSuccessStatusCode ? "Location added." : "Failed to add location.";
+            if (response.IsSuccessStatusCode)
+            {
+                addLocationModel = new AddClubLocationRequest();
+                await RefreshLocationsAsync();
+            }
+        }
+        catch
+        {
+            addLocationSuccess = false;
+            addLocationMessage = "An error occurred.";
+        }
+        finally
+        {
+            isAddingLocation = false;
+        }
+    }
+
+    private async Task RefreshLocationsAsync()
+    {
+        var result = await Http.GetFromJsonAsync<List<ClubLocationResponse>>($"api/club/{ClubId}/query/locations");
+        locations = result ?? [];
+    }
+
+    private void StartRenameLevel(int levelId, string currentName)
+    {
+        editingMembershipLevelId = levelId;
+        renameLevelModel = new RenameClubMembershipLevelRequest { NewName = currentName };
+        levelMessage = null;
+    }
+
+    private async Task RenameLevelAsync(int levelId)
+    {
+        isRenamingLevel = true;
+        levelMessage = null;
+        try
+        {
+            var response = await Http.PutAsJsonAsync($"api/club/{ClubId}/membershiplevel/{levelId}/name", renameLevelModel);
+            levelSuccess = response.IsSuccessStatusCode;
+            levelMessage = response.IsSuccessStatusCode ? "Level renamed." : "Failed to rename level.";
+            if (response.IsSuccessStatusCode)
+            {
+                editingMembershipLevelId = null;
+                await RefreshMembershipLevelsAsync();
+            }
+        }
+        catch
+        {
+            levelSuccess = false;
+            levelMessage = "An error occurred.";
+        }
+        finally
+        {
+            isRenamingLevel = false;
+        }
+    }
+
+    private async Task RemoveLevelAsync(int levelId)
+    {
+        var response = await Http.DeleteAsync($"api/club/{ClubId}/membershiplevel/{levelId}");
+        levelSuccess = response.IsSuccessStatusCode;
+        levelMessage = response.IsSuccessStatusCode ? "Level removed." : "Failed to remove level.";
+        if (response.IsSuccessStatusCode)
+        {
+            if (editingMembershipLevelId == levelId)
+                editingMembershipLevelId = null;
+            await RefreshMembershipLevelsAsync();
+        }
+    }
+
+    private async Task AddLevelAsync()
+    {
+        isAddingLevel = true;
+        levelMessage = null;
+        try
+        {
+            var response = await Http.PostAsJsonAsync($"api/club/{ClubId}/membershiplevel", addLevelModel);
+            levelSuccess = response.IsSuccessStatusCode;
+            levelMessage = response.IsSuccessStatusCode ? "Level added." : "Failed to add level.";
+            if (response.IsSuccessStatusCode)
+            {
+                addLevelModel = new AddClubMembershipLevelRequest();
+                await RefreshMembershipLevelsAsync();
+            }
+        }
+        catch
+        {
+            levelSuccess = false;
+            levelMessage = "An error occurred.";
+        }
+        finally
+        {
+            isAddingLevel = false;
+        }
+    }
+
+    private async Task RefreshMembershipLevelsAsync()
+    {
+        var result = await Http.GetFromJsonAsync<List<ClubMembershipLevelResponse>>($"api/club/{ClubId}/query/membershiplevels");
+        membershipLevels = result ?? [];
+    }
+
+    private class LocationEditModel
+    {
+        [Required] public string Name { get; set; } = string.Empty;
+        [Required, MaxLength(250)] public string Information { get; set; } = string.Empty;
+        [Required] public string AddressLine1 { get; set; } = string.Empty;
+        public string? AddressLine2 { get; set; }
+        [Required] public string City { get; set; } = string.Empty;
+        [Required] public string Postcode { get; set; } = string.Empty;
+        [Required] public string County { get; set; } = string.Empty;
+    }
+}

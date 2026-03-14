@@ -7,6 +7,7 @@ using NaeRaces.Command.ValueTypes;
 using NaeRaces.Query.Abstractions;
 using NaeRaces.Query.Models;
 using NaeRaces.WebAPI.Shared.Race;
+using OpenIddict.Abstractions;
 using System.Security.Claims;
 using static NaeRaces.Query.Abstractions.IPilotRegistrationQueryHandler;
 using static NaeRaces.WebAPI.Shared.Race.RegisterTeamRosterForRaceRequest;
@@ -25,7 +26,7 @@ public class RaceCommandController : Controller
     }
     private Task<bool> IsCurrentUserAdminOrRaceOrganiser(Guid clubId)
     {
-        var pilotIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        var pilotIdClaim = User.FindFirst(OpenIddictConstants.Claims.Subject)?.Value;
         if (!Guid.TryParse(pilotIdClaim, out Guid pilotId))
         {
             return Task.FromResult(false);
@@ -1057,7 +1058,7 @@ public class RaceCommandController : Controller
             return BadRequest(ModelState);
         }
 
-        var pilotIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        var pilotIdClaim = User.FindFirst(OpenIddictConstants.Claims.Subject)?.Value;
         if (!Guid.TryParse(pilotIdClaim, out Guid currentPilotId))
         {
             return Unauthorized();
@@ -1112,7 +1113,7 @@ public class RaceCommandController : Controller
             return BadRequest(ModelState);
         }
 
-        var pilotIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        var pilotIdClaim = User.FindFirst(OpenIddictConstants.Claims.Subject)?.Value;
         if (!Guid.TryParse(pilotIdClaim, out Guid pilotId))
         {
             return Unauthorized();
