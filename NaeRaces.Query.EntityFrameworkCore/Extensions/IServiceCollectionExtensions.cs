@@ -29,6 +29,7 @@ public static class IServiceCollectionExtensions
         services.AddScoped<IPilotSelectionPolicyQueryHandler, PilotSelectionPolicyQueryHandler>();
         services.AddScoped<IPilotPolicyValidationQueryHandler, PilotPolicyValidationQueryHandler>();
         services.AddScoped<IPilotRegistrationQueryHandler, PilotRegistrationQueryHandler>();
+        services.AddScoped<IClubOverviewQueryHandler, ClubOverviewQueryHandler>();
         services.AddScoped<INaeRacesQueryContext, NaeRacesQueryContext>();
 
         services.AddTransient<IClock, Clock>();
@@ -51,6 +52,7 @@ public static class IServiceCollectionExtensions
         services.AddConstantReactionClass<RacePackageProjection>();
         services.AddConstantReactionClass<RaceInformationProjection>();
         services.AddConstantReactionClass<PilotRaceRegistrationProjection>();
+        services.AddConstantReactionClass<ClubOverviewProjection>();
 
         return services;
     }

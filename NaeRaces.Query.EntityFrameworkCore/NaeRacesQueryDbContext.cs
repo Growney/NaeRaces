@@ -30,6 +30,7 @@ public class NaeRacesQueryDbContext : DbContext
     public DbSet<PilotClubDetails> PilotClubDetails => Set<PilotClubDetails>();
     public DbSet<RaceInformation> RaceInformation => Set<RaceInformation>();
     public DbSet<PilotRaceRegistration> PilotRaceRegistrations => Set<PilotRaceRegistration>();
+    public DbSet<ClubOverview> ClubOverviews => Set<ClubOverview>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

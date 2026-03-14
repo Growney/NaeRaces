@@ -25,7 +25,8 @@ public class PilotClubDetailsQueryHandler : IPilotClubDetailsQueryHandler
                     ? new HomeLocation(x.HomeLocationName, x.HomeLocationAddressLine1, x.HomeLocationAddressLine2, x.HomeLocationCity, x.HomeLocationPostcode, x.HomeLocationCounty)
                     : null,
                 x.MembershipLevelName,
-                x.MembershipValidUntil))
+                x.MembershipValidUntil,
+                _dbContext.PilotClubDetails.Count(m => m.ClubId == x.ClubId)))
             .AsAsyncEnumerable();
     }
 }

@@ -189,6 +189,44 @@ namespace NaeRaces.Query.EntityFrameworkCore.SqlServer.Migrations
                     b.ToTable("ClubMembershipLevelPaymentOption");
                 });
 
+            modelBuilder.Entity("NaeRaces.Query.EntityFrameworkCore.Models.ClubOverview", b =>
+                {
+                    b.Property<Guid>("ClubId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Code")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("HomeLocationAddressLine1")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("HomeLocationAddressLine2")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("HomeLocationCity")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("HomeLocationCounty")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("HomeLocationName")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("HomeLocationPostcode")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Name")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("TotalMemberCount")
+                        .HasColumnType("int");
+
+                    b.HasKey("ClubId");
+
+                    b.ToTable("ClubOverviews");
+                });
+
             modelBuilder.Entity("NaeRaces.Query.EntityFrameworkCore.Models.ClubUniquenessDetails", b =>
                 {
                     b.Property<Guid>("Id")

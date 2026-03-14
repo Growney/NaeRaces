@@ -48,6 +48,19 @@ namespace NaeRaces.Query.EntityFrameworkCore.SqlServer.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "ClubMemberRoles",
+                columns: table => new
+                {
+                    ClubId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    PilotId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Role = table.Column<string>(type: "nvarchar(450)", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_ClubMemberRoles", x => new { x.ClubId, x.PilotId, x.Role });
+                });
+
+            migrationBuilder.CreateTable(
                 name: "ClubMembers",
                 columns: table => new
                 {
@@ -56,7 +69,6 @@ namespace NaeRaces.Query.EntityFrameworkCore.SqlServer.Migrations
                     PilotId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     MembershipLevelId = table.Column<int>(type: "int", nullable: true),
                     PaymentOptionId = table.Column<int>(type: "int", nullable: true),
-                    IsOnCommittee = table.Column<bool>(type: "bit", nullable: false),
                     IsRegistrationConfirmed = table.Column<bool>(type: "bit", nullable: false),
                     RegistrationValidatedBy = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
                     RegistrationValidUntil = table.Column<DateTime>(type: "datetime2", nullable: true)
@@ -79,6 +91,26 @@ namespace NaeRaces.Query.EntityFrameworkCore.SqlServer.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_ClubMembershipLevels", x => new { x.ClubId, x.MembershipLevelId });
+                });
+
+            migrationBuilder.CreateTable(
+                name: "ClubOverviews",
+                columns: table => new
+                {
+                    ClubId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Name = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Code = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    HomeLocationName = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    HomeLocationAddressLine1 = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    HomeLocationAddressLine2 = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    HomeLocationCity = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    HomeLocationPostcode = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    HomeLocationCounty = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    TotalMemberCount = table.Column<int>(type: "int", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_ClubOverviews", x => x.ClubId);
                 });
 
             migrationBuilder.CreateTable(
@@ -110,6 +142,29 @@ namespace NaeRaces.Query.EntityFrameworkCore.SqlServer.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "PilotClubDetails",
+                columns: table => new
+                {
+                    PilotId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    ClubId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    ClubName = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    ClubCode = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    HomeLocationName = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    HomeLocationAddressLine1 = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    HomeLocationAddressLine2 = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    HomeLocationCity = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    HomeLocationPostcode = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    HomeLocationCounty = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    MembershipLevelId = table.Column<int>(type: "int", nullable: true),
+                    MembershipLevelName = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    MembershipValidUntil = table.Column<DateTime>(type: "datetime2", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_PilotClubDetails", x => new { x.PilotId, x.ClubId });
+                });
+
+            migrationBuilder.CreateTable(
                 name: "PilotDetails",
                 columns: table => new
                 {
@@ -124,6 +179,18 @@ namespace NaeRaces.Query.EntityFrameworkCore.SqlServer.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_PilotDetails", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "PilotFollowedClubs",
+                columns: table => new
+                {
+                    PilotId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    ClubId = table.Column<Guid>(type: "uniqueidentifier", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_PilotFollowedClubs", x => new { x.PilotId, x.ClubId });
                 });
 
             migrationBuilder.CreateTable(
@@ -162,6 +229,19 @@ namespace NaeRaces.Query.EntityFrameworkCore.SqlServer.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "PilotRaceRegistrations",
+                columns: table => new
+                {
+                    PilotId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    RaceId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    RegistrationId = table.Column<Guid>(type: "uniqueidentifier", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_PilotRaceRegistrations", x => new { x.PilotId, x.RaceId });
+                });
+
+            migrationBuilder.CreateTable(
                 name: "PilotSelectionPolicyDetails",
                 columns: table => new
                 {
@@ -197,6 +277,27 @@ namespace NaeRaces.Query.EntityFrameworkCore.SqlServer.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_RaceDetails", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "RaceInformation",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Name = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    FirstRaceDateStart = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    LastRaceDateEnd = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    NumberOfRaceDates = table.Column<int>(type: "int", nullable: false),
+                    ClubId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    ClubName = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    LocationId = table.Column<int>(type: "int", nullable: false),
+                    LocationName = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    RegisteredPilotCount = table.Column<int>(type: "int", nullable: false),
+                    MaximumPilots = table.Column<int>(type: "int", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_RaceInformation", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -280,10 +381,16 @@ namespace NaeRaces.Query.EntityFrameworkCore.SqlServer.Migrations
                 name: "ClubLocations");
 
             migrationBuilder.DropTable(
+                name: "ClubMemberRoles");
+
+            migrationBuilder.DropTable(
                 name: "ClubMembers");
 
             migrationBuilder.DropTable(
                 name: "ClubMembershipLevelPaymentOption");
+
+            migrationBuilder.DropTable(
+                name: "ClubOverviews");
 
             migrationBuilder.DropTable(
                 name: "ClubUniquenessDetails");
@@ -292,7 +399,13 @@ namespace NaeRaces.Query.EntityFrameworkCore.SqlServer.Migrations
                 name: "PilotAgeValidations");
 
             migrationBuilder.DropTable(
+                name: "PilotClubDetails");
+
+            migrationBuilder.DropTable(
                 name: "PilotDetails");
+
+            migrationBuilder.DropTable(
+                name: "PilotFollowedClubs");
 
             migrationBuilder.DropTable(
                 name: "PilotGovernmentDocumentValidations");
@@ -301,10 +414,16 @@ namespace NaeRaces.Query.EntityFrameworkCore.SqlServer.Migrations
                 name: "PilotInsuranceProviderValidations");
 
             migrationBuilder.DropTable(
+                name: "PilotRaceRegistrations");
+
+            migrationBuilder.DropTable(
                 name: "PilotSelectionPolicyDetails");
 
             migrationBuilder.DropTable(
                 name: "RaceDetails");
+
+            migrationBuilder.DropTable(
+                name: "RaceInformation");
 
             migrationBuilder.DropTable(
                 name: "RacePackages");
