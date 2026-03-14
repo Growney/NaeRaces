@@ -15,6 +15,7 @@ public class NaeRacesQueryContext : INaeRacesQueryContext
         IPilotPolicyValidationQueryHandler pilotPolicyValidation,
         IPilotRegistrationQueryHandler pilotRegistrationDetails,
         IRaceDetailsQueryHandler raceDetails,
+        IRaceInformationQueryHandler raceInformation,
         IRaceDiscountQueryHandler raceCost,
         IRacePackageQueryHandler racePackage,
         IPilotSelectionPolicyQueryHandler pilotSelectionPolicy,
@@ -31,6 +32,7 @@ public class NaeRacesQueryContext : INaeRacesQueryContext
         PilotPolicyValidation = pilotPolicyValidation;
         PilotRegistration = pilotRegistrationDetails;
         RaceDetails = raceDetails;
+        RaceInformation = raceInformation;
         RaceCost = raceCost;
         RacePackage = racePackage;
         PilotSelectionPolicy = pilotSelectionPolicy;
@@ -48,6 +50,7 @@ public class NaeRacesQueryContext : INaeRacesQueryContext
     public IPilotPolicyValidationQueryHandler PilotPolicyValidation { get; }
     public IPilotRegistrationQueryHandler PilotRegistration { get; }
     public IRaceDetailsQueryHandler RaceDetails { get; }
+    public IRaceInformationQueryHandler RaceInformation { get; }
     public IRaceDiscountQueryHandler RaceCost { get; }
     public IRacePackageQueryHandler RacePackage { get; }
     public IPilotSelectionPolicyQueryHandler PilotSelectionPolicy { get; }

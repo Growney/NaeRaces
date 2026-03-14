@@ -19,9 +19,11 @@ public static class IServiceCollectionExtensions
         services.AddScoped<IClubMembershipLevelQueryHandler, ClubMembershipLevelQueryHandler>();
         services.AddScoped<ITeamMemberQueryHandler, TeamMemberQueryHandler>();
         services.AddScoped<IPilotFollowedClubQueryHandler, PilotFollowedClubQueryHandler>();
+        services.AddScoped<IPilotClubDetailsQueryHandler, PilotClubDetailsQueryHandler>();
         services.AddScoped<IClubLocationQueryHandler, ClubLocationQueryHandler>();
         services.AddScoped<IPilotValidationQueryHandler, PilotValidationQueryHandler>();
         services.AddScoped<IRaceDetailsQueryHandler, RaceDetailsQueryHandler>();
+        services.AddScoped<IRaceInformationQueryHandler, RaceInformationQueryHandler>();
         services.AddScoped<IRaceDiscountQueryHandler, RaceDiscountQueryHandler>();
         services.AddScoped<IRacePackageQueryHandler, RacePackageQueryHandler>();
         services.AddScoped<IPilotSelectionPolicyQueryHandler, PilotSelectionPolicyQueryHandler>();
@@ -43,9 +45,12 @@ public static class IServiceCollectionExtensions
         services.AddConstantReactionClass<PilotFollowedClubProjection>();
         services.AddConstantReactionClass<ClubUniquenessProjection>();
         services.AddConstantReactionClass<ClubDetailsProjection>();
+        services.AddConstantReactionClass<PilotClubDetailsProjection>();
         services.AddConstantReactionClass<ClubMembershipProjection>();
         services.AddConstantReactionClass<ClubMembershipLevelProjection>();
         services.AddConstantReactionClass<RacePackageProjection>();
+        services.AddConstantReactionClass<RaceInformationProjection>();
+        services.AddConstantReactionClass<PilotRaceRegistrationProjection>();
 
         return services;
     }

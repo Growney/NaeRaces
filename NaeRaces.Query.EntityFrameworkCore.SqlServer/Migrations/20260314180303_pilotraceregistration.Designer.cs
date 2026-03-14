@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using NaeRaces.Query.EntityFrameworkCore;
 
@@ -11,9 +12,11 @@ using NaeRaces.Query.EntityFrameworkCore;
 namespace NaeRaces.Query.EntityFrameworkCore.SqlServer.Migrations
 {
     [DbContext(typeof(NaeRacesQueryDbContext))]
-    partial class NaeRacesQueryDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260314180303_pilotraceregistration")]
+    partial class pilotraceregistration
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using NaeRaces.Query.EntityFrameworkCore;
 
@@ -11,9 +12,11 @@ using NaeRaces.Query.EntityFrameworkCore;
 namespace NaeRaces.Query.EntityFrameworkCore.SqlServer.Migrations
 {
     [DbContext(typeof(NaeRacesQueryDbContext))]
-    partial class NaeRacesQueryDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260314171609_pilotclubdetailsaddress")]
+    partial class pilotclubdetailsaddress
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -260,15 +263,6 @@ namespace NaeRaces.Query.EntityFrameworkCore.SqlServer.Migrations
                     b.Property<string>("HomeLocationPostcode")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<int?>("MembershipLevelId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("MembershipLevelName")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime?>("MembershipValidUntil")
-                        .HasColumnType("datetime2");
-
                     b.HasKey("PilotId", "ClubId");
 
                     b.ToTable("PilotClubDetails");
@@ -375,22 +369,6 @@ namespace NaeRaces.Query.EntityFrameworkCore.SqlServer.Migrations
                     b.ToTable("PilotInsuranceProviderValidations");
                 });
 
-            modelBuilder.Entity("NaeRaces.Query.EntityFrameworkCore.Models.PilotRaceRegistration", b =>
-                {
-                    b.Property<Guid>("PilotId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<Guid>("RaceId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<Guid>("RegistrationId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.HasKey("PilotId", "RaceId");
-
-                    b.ToTable("PilotRaceRegistrations");
-                });
-
             modelBuilder.Entity("NaeRaces.Query.EntityFrameworkCore.Models.PilotSelectionPolicyDetails", b =>
                 {
                     b.Property<Guid>("Id")
@@ -462,47 +440,6 @@ namespace NaeRaces.Query.EntityFrameworkCore.SqlServer.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("RaceDetails");
-                });
-
-            modelBuilder.Entity("NaeRaces.Query.EntityFrameworkCore.Models.RaceInformation", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<Guid>("ClubId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("ClubName")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime>("FirstRaceDateStart")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime>("LastRaceDateEnd")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("LocationId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("LocationName")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int?>("MaximumPilots")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Name")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("NumberOfRaceDates")
-                        .HasColumnType("int");
-
-                    b.Property<int>("RegisteredPilotCount")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("RaceInformation");
                 });
 
             modelBuilder.Entity("NaeRaces.Query.EntityFrameworkCore.Models.RacePackage", b =>

@@ -27,6 +27,9 @@ public class NaeRacesQueryDbContext : DbContext
     public DbSet<RacePackage> RacePackages => Set<RacePackage>();
     public DbSet<ClubMemberRole> ClubMemberRoles => Set<ClubMemberRole>();
     public DbSet<PilotFollowedClub> PilotFollowedClubs => Set<PilotFollowedClub>();
+    public DbSet<PilotClubDetails> PilotClubDetails => Set<PilotClubDetails>();
+    public DbSet<RaceInformation> RaceInformation => Set<RaceInformation>();
+    public DbSet<PilotRaceRegistration> PilotRaceRegistrations => Set<PilotRaceRegistration>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -54,5 +57,8 @@ public class NaeRacesQueryDbContext : DbContext
 
         modelBuilder.Entity<PilotFollowedClub>()
             .HasKey(pfc => new { pfc.PilotId, pfc.ClubId });
+
+        modelBuilder.Entity<PilotRaceRegistration>()
+            .HasKey(prr => new { prr.PilotId, prr.RaceId });
     }
 }

@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using NaeRaces.Query.EntityFrameworkCore;
 
@@ -11,9 +12,11 @@ using NaeRaces.Query.EntityFrameworkCore;
 namespace NaeRaces.Query.EntityFrameworkCore.SqlServer.Migrations
 {
     [DbContext(typeof(NaeRacesQueryDbContext))]
-    partial class NaeRacesQueryDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260314174445_racedetails")]
+    partial class racedetails
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -373,22 +376,6 @@ namespace NaeRaces.Query.EntityFrameworkCore.SqlServer.Migrations
                     b.HasKey("PilotId", "InsuranceProvider", "ValidatedByPilotId", "ValidatedByClubId");
 
                     b.ToTable("PilotInsuranceProviderValidations");
-                });
-
-            modelBuilder.Entity("NaeRaces.Query.EntityFrameworkCore.Models.PilotRaceRegistration", b =>
-                {
-                    b.Property<Guid>("PilotId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<Guid>("RaceId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<Guid>("RegistrationId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.HasKey("PilotId", "RaceId");
-
-                    b.ToTable("PilotRaceRegistrations");
                 });
 
             modelBuilder.Entity("NaeRaces.Query.EntityFrameworkCore.Models.PilotSelectionPolicyDetails", b =>
