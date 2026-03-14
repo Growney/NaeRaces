@@ -17,7 +17,7 @@ namespace NaeRaces.Query.EntityFrameworkCore.SqlServer.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.3")
+                .HasAnnotation("ProductVersion", "10.0.5")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
@@ -94,9 +94,6 @@ namespace NaeRaces.Query.EntityFrameworkCore.SqlServer.Migrations
                     b.Property<Guid>("ClubId")
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<bool>("IsOnCommittee")
-                        .HasColumnType("bit");
-
                     b.Property<bool>("IsRegistrationConfirmed")
                         .HasColumnType("bit");
 
@@ -118,6 +115,78 @@ namespace NaeRaces.Query.EntityFrameworkCore.SqlServer.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("ClubMembers");
+                });
+
+            modelBuilder.Entity("NaeRaces.Query.EntityFrameworkCore.Models.ClubMemberRole", b =>
+                {
+                    b.Property<Guid>("ClubId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("PilotId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Role")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("ClubId", "PilotId", "Role");
+
+                    b.ToTable("ClubMemberRoles");
+                });
+
+            modelBuilder.Entity("NaeRaces.Query.EntityFrameworkCore.Models.ClubMembershipLevel", b =>
+                {
+                    b.Property<Guid>("ClubId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("MembershipLevelId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Name")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid?>("PilotPolicyId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<long?>("PolicyVersion")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("ClubId", "MembershipLevelId");
+
+                    b.ToTable("ClubMembershipLevels");
+                });
+
+            modelBuilder.Entity("NaeRaces.Query.EntityFrameworkCore.Models.ClubMembershipLevelPaymentOption", b =>
+                {
+                    b.Property<Guid>("ClubId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("MembershipLevelId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("PaymentOptionId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Currency")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int?>("DayOfMonthDue")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Name")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int?>("PaymentInterval")
+                        .HasColumnType("int");
+
+                    b.Property<int>("PaymentType")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("Price")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("ClubId", "MembershipLevelId", "PaymentOptionId");
+
+                    b.ToTable("ClubMembershipLevelPaymentOption");
                 });
 
             modelBuilder.Entity("NaeRaces.Query.EntityFrameworkCore.Models.ClubUniquenessDetails", b =>
@@ -171,15 +240,34 @@ namespace NaeRaces.Query.EntityFrameworkCore.SqlServer.Migrations
                     b.Property<DateTime?>("DateOfBirth")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("Email")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("Name")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Nationality")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("UserName")
+                        .HasColumnType("nvarchar(max)");
+
                     b.HasKey("Id");
 
                     b.ToTable("PilotDetails");
+                });
+
+            modelBuilder.Entity("NaeRaces.Query.EntityFrameworkCore.Models.PilotFollowedClub", b =>
+                {
+                    b.Property<Guid>("PilotId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("ClubId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("PilotId", "ClubId");
+
+                    b.ToTable("PilotFollowedClubs");
                 });
 
             modelBuilder.Entity("NaeRaces.Query.EntityFrameworkCore.Models.PilotGovernmentDocumentValidation", b =>
@@ -303,9 +391,57 @@ namespace NaeRaces.Query.EntityFrameworkCore.SqlServer.Migrations
                     b.Property<int>("NumberOfRaceDates")
                         .HasColumnType("int");
 
+                    b.Property<Guid?>("PilotPolicyId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<long?>("PilotPolicyVersion")
+                        .HasColumnType("bigint");
+
                     b.HasKey("Id");
 
                     b.ToTable("RaceDetails");
+                });
+
+            modelBuilder.Entity("NaeRaces.Query.EntityFrameworkCore.Models.RacePackage", b =>
+                {
+                    b.Property<Guid>("RaceId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("RacePackageId")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("ApplyDiscounts")
+                        .HasColumnType("bit");
+
+                    b.Property<decimal>("Cost")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsRegistrationManuallyOpened")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid?>("PilotPolicyId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<long?>("PolicyVersion")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime?>("RegistrationCloseDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("RegistrationOpenDate")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("RaceId", "RacePackageId");
+
+                    b.ToTable("RacePackages");
                 });
 
             modelBuilder.Entity("NaeRaces.Query.EntityFrameworkCore.Models.ReactionPosition", b =>
@@ -332,6 +468,22 @@ namespace NaeRaces.Query.EntityFrameworkCore.SqlServer.Migrations
                     b.HasKey("TeamId", "PilotId");
 
                     b.ToTable("TeamMembers");
+                });
+
+            modelBuilder.Entity("NaeRaces.Query.EntityFrameworkCore.Models.ClubMembershipLevelPaymentOption", b =>
+                {
+                    b.HasOne("NaeRaces.Query.EntityFrameworkCore.Models.ClubMembershipLevel", "MembershipLevel")
+                        .WithMany("PaymentOptions")
+                        .HasForeignKey("ClubId", "MembershipLevelId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("MembershipLevel");
+                });
+
+            modelBuilder.Entity("NaeRaces.Query.EntityFrameworkCore.Models.ClubMembershipLevel", b =>
+                {
+                    b.Navigation("PaymentOptions");
                 });
 #pragma warning restore 612, 618
         }

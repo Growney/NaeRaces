@@ -26,7 +26,6 @@ public class ClubMembershipProjection
             PilotId = e.PilotId,
             MembershipLevelId = e.MembershipLevelId,
             PaymentOptionId = e.PaymentOptionId,
-            IsOnCommittee = false,
             IsRegistrationConfirmed = false
         };
 
@@ -69,12 +68,18 @@ public class ClubMembershipProjection
     {
         ClubMember? member = await _dbContext.ClubMembers
             .SingleOrDefaultAsync(x => x.ClubId == e.ClubId && x.PilotId == e.PilotId);
-        
+
         if (member != null)
         {
             _dbContext.ClubMembers.Remove(member);
         }
-        
+
+        var roles = await _dbContext.ClubMemberRoles
+            .Where(x => x.ClubId == e.ClubId && x.PilotId == e.PilotId)
+            .ToListAsync();
+
+        _dbContext.ClubMemberRoles.RemoveRange(roles);
+
         await _dbContext.SaveChangesAsync();
     }
 
@@ -82,38 +87,43 @@ public class ClubMembershipProjection
     {
         ClubMember? member = await _dbContext.ClubMembers
             .SingleOrDefaultAsync(x => x.ClubId == e.ClubId && x.PilotId == e.PilotId);
-        
+
         if (member != null)
         {
             _dbContext.ClubMembers.Remove(member);
         }
-        
+
+        var roles = await _dbContext.ClubMemberRoles
+            .Where(x => x.ClubId == e.ClubId && x.PilotId == e.PilotId)
+            .ToListAsync();
+
+        _dbContext.ClubMemberRoles.RemoveRange(roles);
+
         await _dbContext.SaveChangesAsync();
     }
 
-    private async Task When(ClubCommitteeMemberAdded e)
+    private Task When(ClubMemberRoleAssigned e)
     {
-        ClubMember? member = await _dbContext.ClubMembers
-            .SingleOrDefaultAsync(x => x.ClubId == e.ClubId && x.PilotId == e.PilotId);
-        
-        if (member != null)
+        _dbContext.ClubMemberRoles.Add(new ClubMemberRole
         {
-            member.IsOnCommittee = true;
-        }
-        
-        await _dbContext.SaveChangesAsync();
+            ClubId = e.ClubId,
+            PilotId = e.PilotId,
+            Role = e.Role
+        });
+
+        return _dbContext.SaveChangesAsync();
     }
 
-    private async Task When(ClubCommitteeMemberRemoved e)
+    private async Task When(ClubMemberRoleRevoked e)
     {
-        ClubMember? member = await _dbContext.ClubMembers
-            .SingleOrDefaultAsync(x => x.ClubId == e.ClubId && x.PilotId == e.PilotId);
-        
-        if (member != null)
+        ClubMemberRole? role = await _dbContext.ClubMemberRoles
+            .SingleOrDefaultAsync(x => x.ClubId == e.ClubId && x.PilotId == e.PilotId && x.Role == e.Role);
+
+        if (role != null)
         {
-            member.IsOnCommittee = false;
+            _dbContext.ClubMemberRoles.Remove(role);
         }
-        
+
         await _dbContext.SaveChangesAsync();
     }
 }

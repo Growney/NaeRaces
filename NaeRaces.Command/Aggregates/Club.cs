@@ -24,9 +24,9 @@ public class Club : AggregateRoot<Guid>
     private ValidationPolicy? _maximumAgeValidationPolicy;
     private readonly Dictionary<string, ValidationPolicy> _insuranceProviderRequirements = [];
     private readonly Dictionary<string, ValidationPolicy> _governmentDocumentRequirements = [];
-    private readonly Dictionary<Guid, CommitteeMember> _committeeMembers = [];
     private readonly Dictionary<int, MembershipLevel> _membershipLevels = [];
     private readonly Dictionary<Guid, PilotMembership> _pilotMemberships = [];
+    private readonly Dictionary<Guid, HashSet<string>> _memberRoles = [];
     private readonly Dictionary<Tag, string> _raceTags = [];
 
     private class Location
@@ -34,12 +34,6 @@ public class Club : AggregateRoot<Guid>
         public Name Name { get; set; }
         public string Information { get; set; } = string.Empty;
         public ValueTypes.Address Address { get; set; }
-    }
-
-    private class CommitteeMember
-    {
-        public Guid PilotId { get; set; }
-        public string Role { get; set; } = string.Empty;
     }
 
     private class MembershipLevel
@@ -159,27 +153,6 @@ public class Club : AggregateRoot<Guid>
 
         Raise(new ClubHomeLocationSet(Id, locationId));
     }
-    public void AddClubCommitteeMember(Guid pilotId, string role)
-    {
-        ThrowIfIdNotSet();
-        if (_committeeMembers.ContainsKey(pilotId))
-            throw new InvalidOperationException($"Pilot {pilotId} is already a committee member.");
-
-        if (!_pilotMemberships.ContainsKey(pilotId) || !_pilotMemberships[pilotId].IsConfirmed)
-            throw new InvalidOperationException($"Pilot {pilotId} must be a confirmed member to be added as a committee member.");
-
-        Raise(new ClubCommitteeMemberAdded(Id, pilotId, role));
-    }
-
-    public void RemoveClubCommitteeMember(Guid pilotId)
-    {
-        ThrowIfIdNotSet();
-        if (!_committeeMembers.ContainsKey(pilotId))
-            throw new InvalidOperationException($"Pilot {pilotId} is not a committee member.");
-
-        Raise(new ClubCommitteeMemberRemoved(Id, pilotId));
-    }
-
     public void AddClubMembershipLevel(Name name)
     {
         ThrowIfIdNotSet();
@@ -330,8 +303,8 @@ public class Club : AggregateRoot<Guid>
         if (membership.IsConfirmed)
             throw new InvalidOperationException($"Pilot {pilotId} membership is already confirmed.");
 
-        if (!_committeeMembers.ContainsKey(confirmedByPilotId))
-            throw new InvalidOperationException($"Pilot {confirmedByPilotId} is not a committee member.");
+        if (!_memberRoles.TryGetValue(confirmedByPilotId, out var confirmingRoles) || !confirmingRoles.Contains("Trustee"))
+            throw new InvalidOperationException($"Pilot {confirmedByPilotId} is not a trustee.");
 
         Raise(new PilotClubMembershipManuallyConfirmed(Id, membershipLevelId, paymentOptionId, pilotId, registrationId, validUntil, confirmedByPilotId));
     }
@@ -342,6 +315,27 @@ public class Club : AggregateRoot<Guid>
             throw new InvalidOperationException($"Pilot {pilotId} is not a member.");
 
         Raise(new PilotClubMembershipCancelled(Id, pilotId));
+    }
+
+    public void AssignClubMemberRole(Guid pilotId, string role)
+    {
+        ThrowIfIdNotSet();
+        if (!_pilotMemberships.TryGetValue(pilotId, out var membership) || !membership.IsConfirmed)
+            throw new InvalidOperationException($"Pilot {pilotId} must be a confirmed member to be assigned a role.");
+
+        if (_memberRoles.TryGetValue(pilotId, out var roles) && roles.Contains(role))
+            return;
+
+        Raise(new ClubMemberRoleAssigned(Id, pilotId, role));
+    }
+
+    public void RevokeClubMemberRole(Guid pilotId, string role)
+    {
+        ThrowIfIdNotSet();
+        if (!_memberRoles.TryGetValue(pilotId, out var roles) || !roles.Contains(role))
+            throw new InvalidOperationException($"Pilot {pilotId} does not have the role '{role}'.");
+
+        Raise(new ClubMemberRoleRevoked(Id, pilotId, role));
     }
 
     public void AddClubRaceTag(Tag tag, string colour)
@@ -420,20 +414,6 @@ public class Club : AggregateRoot<Guid>
     private void When(ClubHomeLocationSet e)
     {
         _homeLocationId = e.LocationId;
-    }
-
-    private void When(ClubCommitteeMemberAdded e)
-    {
-        _committeeMembers[e.PilotId] = new CommitteeMember
-        {
-            PilotId = e.PilotId,
-            Role = e.Role
-        };
-    }
-
-    private void When(ClubCommitteeMemberRemoved e)
-    {
-        _committeeMembers.Remove(e.PilotId);
     }
 
     private void When(ClubMembershipLevelAdded e)
@@ -520,6 +500,25 @@ public class Club : AggregateRoot<Guid>
     private void When(PilotClubMembershipCancelled e)
     {
         _pilotMemberships.Remove(e.PilotId);
+        _memberRoles.Remove(e.PilotId);
+    }
+
+    private void When(ClubMemberRoleAssigned e)
+    {
+        if (!_memberRoles.ContainsKey(e.PilotId))
+            _memberRoles[e.PilotId] = [];
+
+        _memberRoles[e.PilotId].Add(e.Role);
+    }
+
+    private void When(ClubMemberRoleRevoked e)
+    {
+        if (_memberRoles.TryGetValue(e.PilotId, out var roles))
+        {
+            roles.Remove(e.Role);
+            if (roles.Count == 0)
+                _memberRoles.Remove(e.PilotId);
+        }
     }
 
     private void When(ClubRaceTagAdded e)

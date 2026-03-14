@@ -22,7 +22,9 @@ public class PilotDetailsProjection
         PilotDetails details = new()
         {
             Id = e.PilotId,
-            Callsign = e.CallSign
+            Callsign = e.CallSign,
+            Email = e.Email,
+            UserName = e.UserName
         };
 
         _dbContext.PilotDetails.Add(details);

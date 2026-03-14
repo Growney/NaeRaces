@@ -17,6 +17,14 @@ public class Pilot : AggregateRoot<Guid>
     private readonly List<InsuranceValidation> _insuranceValidations = [];
     private readonly List<AgeValidation> _dateOfBirthValidations = [];
 
+    public string? Email { get; private set; }
+    public string? UserName { get; private set; }
+    public string? PasswordHash { get; private set; }
+    private readonly HashSet<string> _roles = [];
+    public IReadOnlySet<string> Roles => _roles;
+
+    private readonly HashSet<Guid> _followedClubIds = [];
+
     private class GovernmentDocumentValidation
     {
         public string GovernmentDocument { get; set; } = string.Empty;
@@ -46,9 +54,47 @@ public class Pilot : AggregateRoot<Guid>
     {
     }
 
-    public Pilot(Guid pilotId, CallSign callSign)
+    public Pilot(Guid pilotId, CallSign callSign, string email, string userName, string passwordHash)
     {
-        Raise(new PilotRegistered(pilotId, callSign.Value));
+        Raise(new PilotRegistered(pilotId, callSign.Value, email, userName, passwordHash));
+    }
+
+    public void ChangePassword(string passwordHash)
+    {
+        ThrowIfIdNotSet();
+        Raise(new PilotPasswordChanged(Id, passwordHash));
+    }
+
+    public void AssignRole(string role)
+    {
+        ThrowIfIdNotSet();
+        if (_roles.Contains(role))
+            return;
+        Raise(new PilotRoleAssigned(Id, role));
+    }
+
+    public void RemoveRole(string role)
+    {
+        ThrowIfIdNotSet();
+        if (!_roles.Contains(role))
+            return;
+        Raise(new PilotRoleRemoved(Id, role));
+    }
+
+    public void FollowClub(Guid clubId)
+    {
+        ThrowIfIdNotSet();
+        if (_followedClubIds.Contains(clubId))
+            return;
+        Raise(new PilotFollowedClub(Id, clubId));
+    }
+
+    public void UnfollowClub(Guid clubId)
+    {
+        ThrowIfIdNotSet();
+        if (!_followedClubIds.Contains(clubId))
+            return;
+        Raise(new PilotUnfollowedClub(Id, clubId));
     }
 
     public void ChangePilotCallSign(CallSign newCallSign)
@@ -127,6 +173,9 @@ public class Pilot : AggregateRoot<Guid>
     {
         Id = e.PilotId;
         _callSign = CallSign.Rehydrate(e.CallSign);
+        Email = e.Email;
+        UserName = e.UserName;
+        PasswordHash = e.PasswordHash;
     }
 
     private void When(PilotNameSet e)
@@ -182,5 +231,30 @@ public class Pilot : AggregateRoot<Guid>
             ValidatedByPilotId = e.ValidatedByPilotId,
             IsValidatingMemberOnCommiteeOfClub = e.IsValidatingMemberOnCommiteeOfClub
         });
+    }
+
+    private void When(PilotPasswordChanged e)
+    {
+        PasswordHash = e.PasswordHash;
+    }
+
+    private void When(PilotRoleAssigned e)
+    {
+        _roles.Add(e.Role);
+    }
+
+    private void When(PilotRoleRemoved e)
+    {
+        _roles.Remove(e.Role);
+    }
+
+    private void When(PilotFollowedClub e)
+    {
+        _followedClubIds.Add(e.ClubId);
+    }
+
+    private void When(PilotUnfollowedClub e)
+    {
+        _followedClubIds.Remove(e.ClubId);
     }
 }

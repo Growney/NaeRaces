@@ -7,6 +7,7 @@ using NaeRaces.Command.ValueTypes;
 using NaeRaces.Query.Abstractions;
 using NaeRaces.Query.Models;
 using NaeRaces.WebAPI.Shared.Race;
+using System.Security.Claims;
 using static NaeRaces.Query.Abstractions.IPilotRegistrationQueryHandler;
 using static NaeRaces.WebAPI.Shared.Race.RegisterTeamRosterForRaceRequest;
 
@@ -22,7 +23,16 @@ public class RaceCommandController : Controller
         _aggregateRepository = aggregateRepository;
         _queryContext = queryContext;
     }
+    private Task<bool> IsCurrentUserAdminOrRaceOrganiser(Guid clubId)
+    {
+        var pilotIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (!Guid.TryParse(pilotIdClaim, out Guid pilotId))
+        {
+            return Task.FromResult(false);
+        }
 
+        return _queryContext.ClubMember.HasClubMemberRole(pilotId, clubId, nameof(WebAPI.Shared.Club.ClubMemberRole.Administrator), nameof(WebAPI.Shared.Club.ClubMemberRole.RaceOrganiser));
+    }
     [HttpPost("api/race")]
     public async Task<IActionResult> PlanRaceAsync([FromBody] PlanRaceRequest request)
     {
@@ -39,6 +49,11 @@ public class RaceCommandController : Controller
         if (!await _queryContext.ClubDetails.DoesClubExist(request.ClubId))
         {
             return BadRequest($"Club with ID {request.ClubId} does not exist.");
+        }
+
+        if(!await IsCurrentUserAdminOrRaceOrganiser(request.ClubId))
+        {
+            return Unauthorized();
         }
 
         if (!await _queryContext.ClubLocation.DoesLocationExist(request.ClubId, request.LocationId))
@@ -73,6 +88,11 @@ public class RaceCommandController : Controller
             return BadRequest($"Club with ID {request.ClubId} does not exist.");
         }
 
+        if (!await IsCurrentUserAdminOrRaceOrganiser(request.ClubId))
+        {
+            return Unauthorized();
+        }
+
         if (!await _queryContext.ClubLocation.DoesLocationExist(request.ClubId, request.LocationId))
         {
             return BadRequest($"Location with ID {request.LocationId} does not exist.");
@@ -102,6 +122,11 @@ public class RaceCommandController : Controller
             return NotFound();
         }
 
+        if (!await IsCurrentUserAdminOrRaceOrganiser(race.ClubId))
+        {
+            return Unauthorized();
+        }
+
         race.SetRaceDescription(request.Description);
 
         await _aggregateRepository.Save(race);
@@ -124,12 +149,12 @@ public class RaceCommandController : Controller
             return NotFound();
         }
 
-        if (race.ClubId == null)
+        if (!await IsCurrentUserAdminOrRaceOrganiser(race.ClubId))
         {
-            return BadRequest("Race club not set. Cannot set validation policy without club context.");
+            return Unauthorized();
         }
 
-        PilotSelectionPolicyDetails? policyDetails = await _queryContext.PilotSelectionPolicy.GetPolicyDetails(request.ValidationPolicyId, race.ClubId.Value);
+        PilotSelectionPolicyDetails? policyDetails = await _queryContext.PilotSelectionPolicy.GetPolicyDetails(request.ValidationPolicyId, race.ClubId);
 
         if (policyDetails == null)
         {
@@ -158,6 +183,11 @@ public class RaceCommandController : Controller
             return NotFound();
         }
 
+        if (!await IsCurrentUserAdminOrRaceOrganiser(race.ClubId))
+        {
+            return Unauthorized();
+        }
+
         race.MigrateRaceValidationPolicy(request.ValidationPolicyId, request.Version);
 
         await _aggregateRepository.Save(race);
@@ -172,6 +202,11 @@ public class RaceCommandController : Controller
         if (race == null)
         {
             return NotFound();
+        }
+
+        if (!await IsCurrentUserAdminOrRaceOrganiser(race.ClubId))
+        {
+            return Unauthorized();
         }
 
         race.RemoveRaceValidationPolicy();
@@ -194,6 +229,11 @@ public class RaceCommandController : Controller
         if (race == null)
         {
             return NotFound();
+        }
+
+        if (!await IsCurrentUserAdminOrRaceOrganiser(race.ClubId))
+        {
+            return Unauthorized();
         }
 
         race.ScheduleRaceDate(request.Start, request.End);
@@ -219,6 +259,11 @@ public class RaceCommandController : Controller
             return NotFound();
         }
 
+        if (!await IsCurrentUserAdminOrRaceOrganiser(race.ClubId))
+        {
+            return Unauthorized();
+        }
+
         race.RescheduleRaceDate(raceDateId, request.Start, request.End);
 
         await _aggregateRepository.Save(race);
@@ -233,6 +278,11 @@ public class RaceCommandController : Controller
         if (race == null)
         {
             return NotFound();
+        }
+
+        if (!await IsCurrentUserAdminOrRaceOrganiser(race.ClubId))
+        {
+            return Unauthorized();
         }
 
         race.CancelRaceDate(raceDateId);
@@ -255,6 +305,11 @@ public class RaceCommandController : Controller
         if (race == null)
         {
             return NotFound();
+        }
+
+        if (!await IsCurrentUserAdminOrRaceOrganiser(race.ClubId))
+        {
+            return Unauthorized();
         }
 
         int packageId = race.AddRacePackage(Name.Create(request.Name), request.Currency, request.Cost);
@@ -280,6 +335,11 @@ public class RaceCommandController : Controller
             return NotFound();
         }
 
+        if (!await IsCurrentUserAdminOrRaceOrganiser(race.ClubId))
+        {
+            return Unauthorized();
+        }
+
         race.SetRacePackageDiscountStatus(packageId, request.ApplyDiscounts);
 
         await _aggregateRepository.Save(race);
@@ -302,6 +362,11 @@ public class RaceCommandController : Controller
             return NotFound();
         }
 
+        if (!await IsCurrentUserAdminOrRaceOrganiser(race.ClubId))
+        {
+            return Unauthorized();
+        }
+
         race.ScheduleRacePaymentDeadline(request.Date);
 
         await _aggregateRepository.Save(race);
@@ -322,6 +387,11 @@ public class RaceCommandController : Controller
         if (race == null)
         {
             return NotFound();
+        }
+
+        if (!await IsCurrentUserAdminOrRaceOrganiser(race.ClubId))
+        {
+            return Unauthorized();
         }
 
         race.SetUnconfirmedSlotConsumptionPolicy(request.IsAllowed);
@@ -347,6 +417,11 @@ public class RaceCommandController : Controller
             return NotFound();
         }
 
+        if (!await IsCurrentUserAdminOrRaceOrganiser(race.ClubId))
+        {
+            return Unauthorized();
+        }
+
         race.ScheduleRacePackageRegistrationOpen(packageId, request.Date);
 
         await _aggregateRepository.Save(race);
@@ -368,6 +443,11 @@ public class RaceCommandController : Controller
         if (race == null)
         {
             return NotFound();
+        }
+
+        if (!await IsCurrentUserAdminOrRaceOrganiser(race.ClubId))
+        {
+            return Unauthorized();
         }
 
         race.ScheduleRacePackageRegistrationClose(packageId, request.Date);
@@ -393,6 +473,11 @@ public class RaceCommandController : Controller
             return NotFound();
         }
 
+        if (!await IsCurrentUserAdminOrRaceOrganiser(race.ClubId))
+        {
+            return Unauthorized();
+        }
+
         race.SetRacePackageRegistrationStatus(packageId, request.IsOpen);
 
         await _aggregateRepository.Save(race);
@@ -416,12 +501,12 @@ public class RaceCommandController : Controller
             return NotFound();
         }
 
-        if (race.ClubId == null)
+        if (!await IsCurrentUserAdminOrRaceOrganiser(race.ClubId))
         {
-            return BadRequest("Race club not set. Cannot set package pilot policy without club context.");
+            return Unauthorized();
         }
 
-        PilotSelectionPolicyDetails? policyDetails = await _queryContext.PilotSelectionPolicy.GetPolicyDetails(request.PilotPolicyId, race.ClubId.Value);
+        PilotSelectionPolicyDetails? policyDetails = await _queryContext.PilotSelectionPolicy.GetPolicyDetails(request.PilotPolicyId, race.ClubId);
 
         if (policyDetails == null)
         {
@@ -469,12 +554,12 @@ public class RaceCommandController : Controller
             return NotFound();
         }
 
-        if (race.ClubId == null)
+        if (!await IsCurrentUserAdminOrRaceOrganiser(race.ClubId))
         {
-            return BadRequest("Race club not set. Cannot add discount without club context.");
+            return Unauthorized();
         }
 
-        PilotSelectionPolicyDetails? policyDetails = await _queryContext.PilotSelectionPolicy.GetPolicyDetails(request.PilotPolicyId, race.ClubId.Value);
+        PilotSelectionPolicyDetails? policyDetails = await _queryContext.PilotSelectionPolicy.GetPolicyDetails(request.PilotPolicyId, race.ClubId);
 
         if (policyDetails == null)
         {
@@ -498,6 +583,11 @@ public class RaceCommandController : Controller
             return NotFound();
         }
 
+        if (!await IsCurrentUserAdminOrRaceOrganiser(race.ClubId))
+        {
+            return Unauthorized();
+        }
+
         race.RemoveRaceDiscount(discountId);
 
         await _aggregateRepository.Save(race);
@@ -514,6 +604,11 @@ public class RaceCommandController : Controller
             return NotFound();
         }
 
+        if (!await IsCurrentUserAdminOrRaceOrganiser(race.ClubId))
+        {
+            return Unauthorized();
+        }
+
         race.PublishRaceDetails();
 
         await _aggregateRepository.Save(race);
@@ -528,6 +623,11 @@ public class RaceCommandController : Controller
         if (race == null)
         {
             return NotFound();
+        }
+
+        if (!await IsCurrentUserAdminOrRaceOrganiser(race.ClubId))
+        {
+            return Unauthorized();
         }
 
         race.PublishRace();
@@ -552,6 +652,11 @@ public class RaceCommandController : Controller
             return NotFound();
         }
 
+        if (!await IsCurrentUserAdminOrRaceOrganiser(race.ClubId))
+        {
+            return Unauthorized();
+        }
+
         race.ScheduleRaceGoNoGo(request.Date);
 
         await _aggregateRepository.Save(race);
@@ -574,6 +679,11 @@ public class RaceCommandController : Controller
             return NotFound();
         }
 
+        if (!await IsCurrentUserAdminOrRaceOrganiser(race.ClubId))
+        {
+            return Unauthorized();
+        }
+
         race.RescheduleRaceGoNoGo(request.Date);
 
         await _aggregateRepository.Save(race);
@@ -590,6 +700,11 @@ public class RaceCommandController : Controller
             return NotFound();
         }
 
+        if (!await IsCurrentUserAdminOrRaceOrganiser(race.ClubId))
+        {
+            return Unauthorized();
+        }
+
         race.CancelRace();
 
         await _aggregateRepository.Save(race);
@@ -604,6 +719,11 @@ public class RaceCommandController : Controller
         if (race == null)
         {
             return NotFound();
+        }
+
+        if (!await IsCurrentUserAdminOrRaceOrganiser(race.ClubId))
+        {
+            return Unauthorized();
         }
 
         race.CloseRaceRegistration();
@@ -628,6 +748,11 @@ public class RaceCommandController : Controller
             return NotFound();
         }
 
+        if (!await IsCurrentUserAdminOrRaceOrganiser(race.ClubId))
+        {
+            return Unauthorized();
+        }
+
         race.SetRaceMinimumAttendees(request.Attendees);
 
         await _aggregateRepository.Save(race);
@@ -650,6 +775,11 @@ public class RaceCommandController : Controller
             return NotFound();
         }
 
+        if (!await IsCurrentUserAdminOrRaceOrganiser(race.ClubId))
+        {
+            return Unauthorized();
+        }
+
         race.SetRaceMaximumAttendees(request.Attendees);
 
         await _aggregateRepository.Save(race);
@@ -664,6 +794,11 @@ public class RaceCommandController : Controller
         if (race == null)
         {
             return NotFound();
+        }
+
+        if (!await IsCurrentUserAdminOrRaceOrganiser(race.ClubId))
+        {
+            return Unauthorized();
         }
 
         race.PermitTeamAttendanceAtRace();
@@ -682,6 +817,11 @@ public class RaceCommandController : Controller
             return NotFound();
         }
 
+        if (!await IsCurrentUserAdminOrRaceOrganiser(race.ClubId))
+        {
+            return Unauthorized();
+        }
+
         race.ProhibitTeamAttendanceAtRace();
 
         await _aggregateRepository.Save(race);
@@ -696,6 +836,11 @@ public class RaceCommandController : Controller
         if (race == null)
         {
             return NotFound();
+        }
+
+        if (!await IsCurrentUserAdminOrRaceOrganiser(race.ClubId))
+        {
+            return Unauthorized();
         }
 
         race.PermitTeamSubstitutionsAtRace();
@@ -714,6 +859,11 @@ public class RaceCommandController : Controller
             return NotFound();
         }
 
+        if (!await IsCurrentUserAdminOrRaceOrganiser(race.ClubId))
+        {
+            return Unauthorized();
+        }
+
         race.ProhibitTeamSubstitutionsAtRace();
 
         await _aggregateRepository.Save(race);
@@ -730,6 +880,11 @@ public class RaceCommandController : Controller
             return NotFound();
         }
 
+        if (!await IsCurrentUserAdminOrRaceOrganiser(race.ClubId))
+        {
+            return Unauthorized();
+        }
+
         race.PermitIndividualPilotAttendanceAtRace();
 
         await _aggregateRepository.Save(race);
@@ -744,6 +899,11 @@ public class RaceCommandController : Controller
         if (race == null)
         {
             return NotFound();
+        }
+
+        if (!await IsCurrentUserAdminOrRaceOrganiser(race.ClubId))
+        {
+            return Unauthorized();
         }
 
         race.ProhibitIndividualPilotAttendanceAtRace();
@@ -768,6 +928,11 @@ public class RaceCommandController : Controller
             return NotFound();
         }
 
+        if (!await IsCurrentUserAdminOrRaceOrganiser(race.ClubId))
+        {
+            return Unauthorized();
+        }
+
         race.SetTeamRaceTeamSize(request.TeamSize);
 
         await _aggregateRepository.Save(race);
@@ -788,6 +953,11 @@ public class RaceCommandController : Controller
         if (race == null)
         {
             return NotFound();
+        }
+
+        if (!await IsCurrentUserAdminOrRaceOrganiser(race.ClubId))
+        {
+            return Unauthorized();
         }
 
         race.SetTeamRaceMinimumTeamSize(request.TeamSize);
@@ -812,6 +982,11 @@ public class RaceCommandController : Controller
             return NotFound();
         }
 
+        if (!await IsCurrentUserAdminOrRaceOrganiser(race.ClubId))
+        {
+            return Unauthorized();
+        }
+
         race.SetTeamRaceMaximumTeamSize(request.TeamSize);
 
         await _aggregateRepository.Save(race);
@@ -832,6 +1007,11 @@ public class RaceCommandController : Controller
         if (race == null)
         {
             return NotFound();
+        }
+
+        if (!await IsCurrentUserAdminOrRaceOrganiser(race.ClubId))
+        {
+            return Unauthorized();
         }
 
         race.SetTeamRaceMinimumTeams(request.Teams);
@@ -856,6 +1036,11 @@ public class RaceCommandController : Controller
             return NotFound();
         }
 
+        if (!await IsCurrentUserAdminOrRaceOrganiser(race.ClubId))
+        {
+            return Unauthorized();
+        }
+
         race.SetTeamRaceMaximumTeams(request.Teams);
 
         await _aggregateRepository.Save(race);
@@ -870,6 +1055,17 @@ public class RaceCommandController : Controller
         if (!ModelState.IsValid)
         {
             return BadRequest(ModelState);
+        }
+
+        var pilotIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (!Guid.TryParse(pilotIdClaim, out Guid currentPilotId))
+        {
+            return Unauthorized();
+        }
+
+        if (!request.Pilots.Any(x => x.PilotId == currentPilotId))
+        {
+            return BadRequest("The logged in pilot must be included in the team roster.");
         }
 
         Race? race = await _aggregateRepository.Get<Race, Guid>(raceId);
@@ -916,23 +1112,32 @@ public class RaceCommandController : Controller
             return BadRequest(ModelState);
         }
 
-        var registrationStatus = await _queryContext.PilotRegistration.GetPilotPotentialRegistrationStatusForRace(request.PilotId, raceId, request.RacePackageId);
+        var pilotIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (!Guid.TryParse(pilotIdClaim, out Guid pilotId))
+        {
+            return Unauthorized();
+        }
+
+        var registrationStatus = await _queryContext.PilotRegistration.GetPilotPotentialRegistrationStatusForRace(pilotId, raceId, request.RacePackageId);
 
         if (registrationStatus != RegistrationStatus.Success)
         {
             return BadRequest($"Pilot cannot register for race: {registrationStatus}");
         }
+
         Race? race = await _aggregateRepository.Get<Race, Guid>(raceId);
         if (race == null)
         {
             return NotFound();
         }
 
-        race.RegisterIndividualPilotForRace(request.PilotId, request.RegistrationId, request.RacePackageId);
+        Guid registrationId = Guid.NewGuid();
+
+        race.RegisterIndividualPilotForRace(pilotId, registrationId, request.RacePackageId);
 
         await _aggregateRepository.Save(race);
 
-        return Created($"/api/race/{raceId}/registration/{request.RegistrationId}", new { RegistrationId = request.RegistrationId });
+        return Created($"/api/race/{raceId}/registration/{registrationId}", new { RegistrationId = registrationId });
     }
 
     [HttpPut("api/race/{raceId}/registration/{registrationId}/confirm")]
@@ -943,6 +1148,11 @@ public class RaceCommandController : Controller
         if (race == null)
         {
             return NotFound();
+        }
+
+        if (!await IsCurrentUserAdminOrRaceOrganiser(race.ClubId))
+        {
+            return Unauthorized();
         }
 
         race.ConfirmRaceRegistration(registrationId);
@@ -986,6 +1196,11 @@ public class RaceCommandController : Controller
             return NotFound();
         }
 
+        if (!await IsCurrentUserAdminOrRaceOrganiser(race.ClubId))
+        {
+            return Unauthorized();
+        }
+
         race.TagRaceWithGlobalTag(tagValueType);
 
         await _aggregateRepository.Save(race);
@@ -1010,6 +1225,11 @@ public class RaceCommandController : Controller
             return NotFound();
         }
 
+        if (!await IsCurrentUserAdminOrRaceOrganiser(race.ClubId))
+        {
+            return Unauthorized();
+        }
+
         race.TagRaceWithClubTag(request.ClubId, tagValueType);
 
         await _aggregateRepository.Save(race);
@@ -1027,6 +1247,11 @@ public class RaceCommandController : Controller
         if (race == null)
         {
             return NotFound();
+        }
+
+        if (!await IsCurrentUserAdminOrRaceOrganiser(race.ClubId))
+        {
+            return Unauthorized();
         }
 
         race.RemoveGlobalTagFromRace(tagValueType);
@@ -1047,6 +1272,11 @@ public class RaceCommandController : Controller
         if (race == null)
         {
             return NotFound();
+        }
+
+        if (!await IsCurrentUserAdminOrRaceOrganiser(race.ClubId))
+        {
+            return Unauthorized();
         }
 
         race.RemoveClubTagFromRace(clubId, tagValueType);

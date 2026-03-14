@@ -12,7 +12,4 @@ public class CreateClubRequest
 
     [Required]
     public string Name { get; set; } = string.Empty;
-
-    [Required]
-    public Guid FounderPilotId { get; set; }
 }

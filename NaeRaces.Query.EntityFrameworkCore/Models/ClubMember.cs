@@ -11,7 +11,6 @@ public class ClubMember
     public Guid PilotId { get; set; }
     public int? MembershipLevelId { get; set; }
     public int? PaymentOptionId { get; set; }
-    public bool IsOnCommittee { get; set; }
     public bool IsRegistrationConfirmed { get; set; }
     public Guid? RegistrationValidatedBy { get; set; }
     public DateTime? RegistrationValidUntil { get; set; }

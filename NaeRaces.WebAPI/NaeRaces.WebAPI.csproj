@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk.Web">
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -9,12 +9,17 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="BCrypt.Net-Next" Version="4.1.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="10.0.5" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.2" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.3">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.5" />
     <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.23.0" />
+    <PackageReference Include="OpenIddict.AspNetCore" Version="7.4.0" />
+    <PackageReference Include="OpenIddict.EntityFrameworkCore" Version="7.4.0" />
   </ItemGroup>
 
   <ItemGroup>
@@ -22,6 +27,8 @@
     <ProjectReference Include="..\EventDbLite\EventDbLite\EventDbLite.csproj" />
     <ProjectReference Include="..\NaeRaces.Command\NaeRaces.Command.csproj" />
     <ProjectReference Include="..\NaeRaces.Query.EntityFrameworkCore.SqlServer\NaeRaces.Query.EntityFrameworkCore.SqlServer.csproj" />
+    <ProjectReference Include="..\NaeRaces.WebAPI.Shared\NaeRaces.WebAPI.Shared.csproj" />
+    <ProjectReference Include="..\NaeRaces.BlazorWebApp\NaeRaces.BlazorWebApp.csproj" />
   </ItemGroup>
 
 </Project>

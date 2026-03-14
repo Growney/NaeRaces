@@ -35,5 +35,8 @@ public record PilotClubMembershipManuallyConfirmed(Guid ClubId, int MembershipLe
 public record PilotClubMembershipCancelled(Guid ClubId, Guid PilotId);
 public record PilotClubMembershipRevoked(Guid ClubId, Guid PilotId, Guid RevokedBy);
 
+public record ClubMemberRoleAssigned(Guid ClubId, Guid PilotId, string Role);
+public record ClubMemberRoleRevoked(Guid ClubId, Guid PilotId, string Role);
+
 public record ClubRaceTagAdded(Guid ClubId, string Tag, string Colour);
 public record ClubRaceTagRemoved(Guid ClubId, string Tag);

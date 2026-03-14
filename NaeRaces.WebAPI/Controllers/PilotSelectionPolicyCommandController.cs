@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using NaeRaces.Command.Aggregates;
 using NaeRaces.Command.ValueTypes;
-using NaeRaces.WebAPI.Models.Club;
 using NaeRaces.WebAPI.Shared.PilotSelectionPolicy;
 
 namespace NaeRaces.WebAPI.Controllers;

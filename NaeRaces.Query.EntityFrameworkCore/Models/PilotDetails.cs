@@ -8,6 +8,8 @@ public class PilotDetails
 {
     public Guid Id { get; set; }
     public string? Callsign { get; set; }
+    public string? Email { get; set; }
+    public string? UserName { get; set; }
     public string? Name { get; set; }
     public string? Nationality { get; set; }
     public DateTime? DateOfBirth { get; set; }

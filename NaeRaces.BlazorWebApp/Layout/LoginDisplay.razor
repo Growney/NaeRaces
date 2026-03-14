@@ -1,0 +1,36 @@
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Components.WebAssembly.Authentication
+
+@inject NavigationManager Navigation
+@inject IConfiguration Configuration
+
+<AuthorizeView>
+    <Authorized>
+        <span>Hello, @context.User.Identity!.Name!</span>
+        <button class="nav-link btn btn-link" @onclick="BeginSignOut">Log out</button>
+    </Authorized>
+    <NotAuthorized>
+        <a href="" @onclick="NavigateToRegister" @onclick:preventDefault>Register</a>
+        <a href="authentication/login">Log in</a>
+    </NotAuthorized>
+</AuthorizeView>
+
+@code{
+    private void NavigateToRegister()
+    {
+        var apiBase = Configuration["ApiSettings:BaseAddress"];
+
+        if (string.IsNullOrWhiteSpace(apiBase))
+        {
+            apiBase = Navigation.BaseUri;
+        }
+
+        var baseUri = apiBase.TrimEnd('/');
+        Navigation.NavigateTo($"{baseUri}/Identity/Account/Register", forceLoad: true);
+    }
+
+    private void BeginSignOut(MouseEventArgs args)
+    {
+        Navigation.NavigateToLogout("authentication/logout");
+    }
+}

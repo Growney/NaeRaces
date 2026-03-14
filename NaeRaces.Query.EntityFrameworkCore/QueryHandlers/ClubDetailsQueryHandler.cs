@@ -15,4 +15,6 @@ public class ClubDetailsQueryHandler : IClubDetailsQueryHandler
         _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
     }
     public Task<bool> DoesClubExist(Guid clubId)=> _dbContext.ClubDetails.AnyAsync(cd => cd.Id == clubId);
+
+    public Task<bool> IsClubFounder(Guid clubId, Guid pilotId) => _dbContext.ClubDetails.AnyAsync(cd => cd.Id == clubId && cd.FounderPilotId == pilotId);
 }

@@ -14,7 +14,7 @@ public interface INaeRacesQueryContext
     IRaceDetailsQueryHandler RaceDetails { get; }
     IRaceDiscountQueryHandler RaceCost { get; }
     IRacePackageQueryHandler RacePackage { get; }
-    IRaceRegistrationDatesQueryHandler RaceRegistrationDates { get; }
     IPilotSelectionPolicyQueryHandler PilotSelectionPolicy { get; }
     ITeamMemberQueryHandler TeamMember { get; }
+    IPilotFollowedClubQueryHandler PilotFollowedClub { get; }
 }

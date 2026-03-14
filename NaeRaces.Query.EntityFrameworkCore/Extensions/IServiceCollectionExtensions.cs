@@ -18,17 +18,18 @@ public static class IServiceCollectionExtensions
         services.AddScoped<IClubMemberQueryHandler, ClubMemberQueryHandler>();
         services.AddScoped<IClubMembershipLevelQueryHandler, ClubMembershipLevelQueryHandler>();
         services.AddScoped<ITeamMemberQueryHandler, TeamMemberQueryHandler>();
+        services.AddScoped<IPilotFollowedClubQueryHandler, PilotFollowedClubQueryHandler>();
         services.AddScoped<IClubLocationQueryHandler, ClubLocationQueryHandler>();
         services.AddScoped<IPilotValidationQueryHandler, PilotValidationQueryHandler>();
         services.AddScoped<IRaceDetailsQueryHandler, RaceDetailsQueryHandler>();
         services.AddScoped<IRaceDiscountQueryHandler, RaceDiscountQueryHandler>();
         services.AddScoped<IRacePackageQueryHandler, RacePackageQueryHandler>();
-        services.AddScoped<IRaceRegistrationDatesQueryHandler, RaceRegistrationDatesQueryHandler>();
         services.AddScoped<IPilotSelectionPolicyQueryHandler, PilotSelectionPolicyQueryHandler>();
         services.AddScoped<IPilotPolicyValidationQueryHandler, PilotPolicyValidationQueryHandler>();
         services.AddScoped<IPilotRegistrationQueryHandler, PilotRegistrationQueryHandler>();
-
         services.AddScoped<INaeRacesQueryContext, NaeRacesQueryContext>();
+
+        services.AddTransient<IClock, Clock>();
 
         return services;
 
@@ -39,6 +40,7 @@ public static class IServiceCollectionExtensions
         services.AddEventDbLite();
         services.AddConstantReactionPositionStorage<NaeRacesDbContextConstantReactionPositionStorage>();
         services.AddConstantReactionClass<PilotDetailsProjection>();
+        services.AddConstantReactionClass<PilotFollowedClubProjection>();
         services.AddConstantReactionClass<ClubUniquenessProjection>();
         services.AddConstantReactionClass<ClubDetailsProjection>();
         services.AddConstantReactionClass<ClubMembershipProjection>();

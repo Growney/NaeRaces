@@ -11,8 +11,5 @@ public class RegisterPilotForClubMembershipLevelRequest
     public int PaymentOptionId { get; set; }
 
     [Required]
-    public Guid PilotId { get; set; }
-
-    [Required]
     public Guid RegistrationId { get; set; }
 }

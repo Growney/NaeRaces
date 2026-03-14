@@ -10,7 +10,7 @@ namespace NaeRaces.Command.Aggregates;
 
 public class Race : AggregateRoot<Guid>
 {
-    public Guid? ClubId { get; private set; }
+    public Guid ClubId { get; private set; }
 
     private ValueTypes.Name? _name;
     private string? _description;

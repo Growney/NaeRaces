@@ -6,6 +6,7 @@
     <Project Path="NaeRaces.Query.EntityFrameworkCore.SqlServer/NaeRaces.Query.EntityFrameworkCore.SqlServer.csproj" Id="c33181c1-bd4b-49e4-8abe-94ece3e7311f" />
     <Project Path="NaeRaces.Query.EntityFrameworkCore/NaeRaces.Query.EntityFrameworkCore.csproj" Id="4942d7d5-2961-46ff-a58c-d1255410be60" />
     <Project Path="NaeRaces.Query/NaeRaces.Query.csproj" Id="d6dcf07b-bbcf-4ff7-b645-1a5bc76ad093" />
+    <Project Path="NaeRaces.WebAPI.Shared/NaeRaces.WebAPI.Shared.csproj" Id="fb416f2b-121c-4e34-ac4e-371efd3b7aa8" />
     <Project Path="NaeRaces.WebAPI/NaeRaces.WebAPI.csproj" Id="8bb43b89-e654-447f-bf11-adccd87f7825" />
   </Folder>
   <Folder Name="/src/lib/">

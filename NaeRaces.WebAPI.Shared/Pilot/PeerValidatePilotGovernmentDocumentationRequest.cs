@@ -10,7 +10,4 @@ public class PeerValidatePilotGovernmentDocumentationRequest
 
     [Required]
     public DateTime ValidUntil { get; set; }
-
-    [Required]
-    public Guid ValidatedByPilotId { get; set; }
 }

@@ -17,11 +17,10 @@ public class ClubMemberQueryHandler : IClubMemberQueryHandler
     }
 
     public IAsyncEnumerable<ClubMember> GetClubMembers(Guid clubId) => _dbContext.ClubMembers
-        .Where(x => x.ClubId == clubId).Select(x => new ClubMember(x.Id, x.ClubId, x.PilotId, x.MembershipLevelId, x.PaymentOptionId, x.IsOnCommittee, x.IsRegistrationConfirmed, x.RegistrationValidatedBy, x.RegistrationValidUntil)).ToAsyncEnumerable<ClubMember>();
+        .Where(x => x.ClubId == clubId).Select(x => new ClubMember(x.Id, x.ClubId, x.PilotId, x.MembershipLevelId, x.PaymentOptionId, x.IsRegistrationConfirmed, x.RegistrationValidatedBy, x.RegistrationValidUntil)).ToAsyncEnumerable<ClubMember>();
 
     public IAsyncEnumerable<ClubMember> GetPilotMembershipDetails(Guid pilotId) => _dbContext.ClubMembers
-        .Where(x => x.PilotId == pilotId).Select(x => new ClubMember(x.Id, x.ClubId, x.PilotId, x.MembershipLevelId, x.PaymentOptionId, x.IsOnCommittee, x.IsRegistrationConfirmed, x.RegistrationValidatedBy, x.RegistrationValidUntil)).ToAsyncEnumerable<ClubMember>();
-
+        .Where(x => x.PilotId == pilotId).Select(x => new ClubMember(x.Id, x.ClubId, x.PilotId, x.MembershipLevelId, x.PaymentOptionId, x.IsRegistrationConfirmed, x.RegistrationValidatedBy, x.RegistrationValidUntil)).ToAsyncEnumerable<ClubMember>();
 
     public Task<bool> HasEverBeenClubMember(Guid clubId, Guid pilotId) => _dbContext.ClubMembers
             .AnyAsync(x => x.ClubId == clubId && x.PilotId == pilotId);
@@ -29,7 +28,12 @@ public class ClubMemberQueryHandler : IClubMemberQueryHandler
     public Task<bool> IsCurrentlyActiveClubMember(Guid clubId, Guid pilotId) => _dbContext.ClubMembers
             .AnyAsync(x => x.ClubId == clubId && x.PilotId == pilotId && x.IsRegistrationConfirmed);
 
-    public Task<bool> IsOnClubCommittee(Guid clubId, Guid pilotId) => _dbContext.ClubMembers
-            .AnyAsync(x => x.ClubId == clubId && x.PilotId == pilotId && x.IsOnCommittee);
+    public Task<bool> HasClubMemberRole(Guid clubId, Guid pilotId, IEnumerable<string> role) => _dbContext.ClubMemberRoles
+            .AnyAsync(x => x.ClubId == clubId && x.PilotId == pilotId && role.Contains(x.Role));
+
+    public IAsyncEnumerable<ClubMemberRole> GetClubMemberRoles(Guid clubId, Guid pilotId) => _dbContext.ClubMemberRoles
+        .Where(x => x.ClubId == clubId && x.PilotId == pilotId)
+        .Select(x => new ClubMemberRole(x.ClubId, x.PilotId, x.Role))
+        .ToAsyncEnumerable<ClubMemberRole>();
 
 }

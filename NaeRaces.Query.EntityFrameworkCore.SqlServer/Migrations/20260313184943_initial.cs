@@ -67,6 +67,21 @@ namespace NaeRaces.Query.EntityFrameworkCore.SqlServer.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "ClubMembershipLevels",
+                columns: table => new
+                {
+                    ClubId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    MembershipLevelId = table.Column<int>(type: "int", nullable: false),
+                    Name = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    PilotPolicyId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    PolicyVersion = table.Column<long>(type: "bigint", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_ClubMembershipLevels", x => new { x.ClubId, x.MembershipLevelId });
+                });
+
+            migrationBuilder.CreateTable(
                 name: "ClubUniquenessDetails",
                 columns: table => new
                 {
@@ -100,6 +115,8 @@ namespace NaeRaces.Query.EntityFrameworkCore.SqlServer.Migrations
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     Callsign = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Email = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    UserName = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     Name = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     Nationality = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     DateOfBirth = table.Column<DateTime>(type: "datetime2", nullable: true)
@@ -173,11 +190,34 @@ namespace NaeRaces.Query.EntityFrameworkCore.SqlServer.Migrations
                     IsPublished = table.Column<bool>(type: "bit", nullable: false),
                     IsCancelled = table.Column<bool>(type: "bit", nullable: false),
                     ClubId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    LocationId = table.Column<int>(type: "int", nullable: false)
+                    LocationId = table.Column<int>(type: "int", nullable: false),
+                    PilotPolicyId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    PilotPolicyVersion = table.Column<long>(type: "bigint", nullable: true)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_RaceDetails", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "RacePackages",
+                columns: table => new
+                {
+                    RaceId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    RacePackageId = table.Column<int>(type: "int", nullable: false),
+                    Name = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Currency = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Cost = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    ApplyDiscounts = table.Column<bool>(type: "bit", nullable: false),
+                    RegistrationOpenDate = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    RegistrationCloseDate = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    PilotPolicyId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    PolicyVersion = table.Column<long>(type: "bigint", nullable: true),
+                    IsRegistrationManuallyOpened = table.Column<bool>(type: "bit", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_RacePackages", x => new { x.RaceId, x.RacePackageId });
                 });
 
             migrationBuilder.CreateTable(
@@ -203,6 +243,31 @@ namespace NaeRaces.Query.EntityFrameworkCore.SqlServer.Migrations
                 {
                     table.PrimaryKey("PK_TeamMembers", x => new { x.TeamId, x.PilotId });
                 });
+
+            migrationBuilder.CreateTable(
+                name: "ClubMembershipLevelPaymentOption",
+                columns: table => new
+                {
+                    ClubId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    MembershipLevelId = table.Column<int>(type: "int", nullable: false),
+                    PaymentOptionId = table.Column<int>(type: "int", nullable: false),
+                    Name = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    PaymentType = table.Column<int>(type: "int", nullable: false),
+                    Currency = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Price = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    DayOfMonthDue = table.Column<int>(type: "int", nullable: true),
+                    PaymentInterval = table.Column<int>(type: "int", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_ClubMembershipLevelPaymentOption", x => new { x.ClubId, x.MembershipLevelId, x.PaymentOptionId });
+                    table.ForeignKey(
+                        name: "FK_ClubMembershipLevelPaymentOption_ClubMembershipLevels_ClubId_MembershipLevelId",
+                        columns: x => new { x.ClubId, x.MembershipLevelId },
+                        principalTable: "ClubMembershipLevels",
+                        principalColumns: new[] { "ClubId", "MembershipLevelId" },
+                        onDelete: ReferentialAction.Cascade);
+                });
         }
 
         /// <inheritdoc />
@@ -216,6 +281,9 @@ namespace NaeRaces.Query.EntityFrameworkCore.SqlServer.Migrations
 
             migrationBuilder.DropTable(
                 name: "ClubMembers");
+
+            migrationBuilder.DropTable(
+                name: "ClubMembershipLevelPaymentOption");
 
             migrationBuilder.DropTable(
                 name: "ClubUniquenessDetails");
@@ -239,10 +307,16 @@ namespace NaeRaces.Query.EntityFrameworkCore.SqlServer.Migrations
                 name: "RaceDetails");
 
             migrationBuilder.DropTable(
+                name: "RacePackages");
+
+            migrationBuilder.DropTable(
                 name: "ReactionPositions");
 
             migrationBuilder.DropTable(
                 name: "TeamMembers");
+
+            migrationBuilder.DropTable(
+                name: "ClubMembershipLevels");
         }
     }
 }

@@ -1,0 +1,36 @@
+@{
+    ViewData["Title"] = "Register";
+}
+
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <h1>Register</h1>
+
+        @if (ViewData["Error"] is string error)
+        {
+            <div class="alert alert-danger">@error</div>
+        }
+
+        <form method="post">
+            <div class="mb-3">
+                <label for="email" class="form-label">Email</label>
+                <input type="email" class="form-control" id="email" name="email" required />
+            </div>
+            <div class="mb-3">
+                <label for="callSign" class="form-label">Call Sign</label>
+                <input type="text" class="form-control" id="callSign" name="callSign" required />
+            </div>
+            <div class="mb-3">
+                <label for="password" class="form-label">Password</label>
+                <input type="password" class="form-control" id="password" name="password" required />
+            </div>
+            <div class="mb-3">
+                <label for="confirmPassword" class="form-label">Confirm Password</label>
+                <input type="password" class="form-control" id="confirmPassword" name="confirmPassword" required />
+            </div>
+            <input type="hidden" name="returnUrl" value="@ViewData["ReturnUrl"]" />
+            <button type="submit" class="btn btn-primary">Register</button>
+            <a href="~/Identity/Account/Login?returnUrl=@ViewData["ReturnUrl"]" class="btn btn-link">Already have an account?</a>
+        </form>
+    </div>
+</div>

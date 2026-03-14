@@ -1,15 +1,19 @@
 ﻿using EventDbLite.Abstractions;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using NaeRaces.Command.Aggregates;
 using NaeRaces.Command.ValueTypes;
 using NaeRaces.Query.Abstractions;
+using NaeRaces.WebAPI.Shared.Club;
 using NaeRaces.WebAPI.Shared.Pilot;
 using System.ComponentModel.DataAnnotations;
 using System.Runtime.CompilerServices;
+using System.Security.Claims;
 
 namespace NaeRaces.WebAPI.Controllers;
 
+[Authorize]
 public class PilotCommandController : Controller
 {
     private readonly IAggregateRepository _aggregateRepository;
@@ -21,35 +25,18 @@ public class PilotCommandController : Controller
         _queryContext = queryContext;
     }
 
-    [HttpPost("api/pilot")]
-    public async Task<IActionResult> RegisterPilotAsync([FromBody] RegisterPilotRequest request)
+    [HttpPut("api/pilot/callsign")]
+    public async Task<IActionResult> ChangePilotCallSignAsync([FromBody] ChangePilotCallSignRequest request)
     {
         if (!ModelState.IsValid)
         {
             return BadRequest(ModelState);
         }
 
-        if(request.PilotId == Guid.Empty)
+        var pilotIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (!Guid.TryParse(pilotIdClaim, out Guid pilotId))
         {
-            return BadRequest("Pilot id must be set");
-        }
-
-        CallSign callSignValueType = CallSign.Create(request.CallSign);
-
-        Pilot newPilot = _aggregateRepository.CreateNew<Pilot>(() => new Pilot(request.PilotId, callSignValueType));
-
-        await _aggregateRepository.Save(newPilot);
-
-        return Created($"/api/pilot/{newPilot.Id}", new { PilotId = newPilot.Id });
-    }
-
-    [HttpPut("api/pilot/{pilotId}/callsign")]
-    public async Task<IActionResult> ChangePilotCallSignAsync([FromRoute] Guid pilotId,
-        [FromBody] ChangePilotCallSignRequest request)
-    {
-        if (!ModelState.IsValid)
-        {
-            return BadRequest(ModelState);
+            return Unauthorized();
         }
 
         Pilot? pilot = await _aggregateRepository.Get<Pilot, Guid>(pilotId);
@@ -67,13 +54,18 @@ public class PilotCommandController : Controller
         return Ok();
     }
 
-    [HttpPut("api/pilot/{pilotId}/nationality")]
-    public async Task<IActionResult> SetPilotNationalityAsync([FromRoute] Guid pilotId,
-        [FromBody] SetPilotNationalityRequest request)
+    [HttpPut("api/pilot/nationality")]
+    public async Task<IActionResult> SetPilotNationalityAsync([FromBody] SetPilotNationalityRequest request)
     {
         if (!ModelState.IsValid)
         {
             return BadRequest(ModelState);
+        }
+
+        var pilotIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (!Guid.TryParse(pilotIdClaim, out Guid pilotId))
+        {
+            return Unauthorized();
         }
 
         Pilot? pilot = await _aggregateRepository.Get<Pilot, Guid>(pilotId);
@@ -88,13 +80,18 @@ public class PilotCommandController : Controller
 
         return Ok();
     }
-    [HttpPut("api/pilot/{pilotId}/name")]
-    public async Task<IActionResult> SetPilotNameAsync([FromRoute] Guid pilotId,
-        [FromBody] SetPilotNameRequest request)
+    [HttpPut("api/pilot/name")]
+    public async Task<IActionResult> SetPilotNameAsync([FromBody] SetPilotNameRequest request)
     {
         if (!ModelState.IsValid)
         {
             return BadRequest(ModelState);
+        }
+
+        var pilotIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (!Guid.TryParse(pilotIdClaim, out Guid pilotId))
+        {
+            return Unauthorized();
         }
 
         Pilot? pilot = await _aggregateRepository.Get<Pilot, Guid>(pilotId);
@@ -109,13 +106,18 @@ public class PilotCommandController : Controller
 
         return Ok();
     }
-    [HttpPut("api/pilot/{pilotId}/dateofbirth")]
-    public async Task<IActionResult> SetPilotDateOfBirthAsync([FromRoute] Guid pilotId,
-        [FromBody] SetPilotDateOfBirthRequest request)
+    [HttpPut("api/pilot/dateofbirth")]
+    public async Task<IActionResult> SetPilotDateOfBirthAsync([FromBody] SetPilotDateOfBirthRequest request)
     {
         if (!ModelState.IsValid)
         {
             return BadRequest(ModelState);
+        }
+
+        var pilotIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (!Guid.TryParse(pilotIdClaim, out Guid pilotId))
+        {
+            return Unauthorized();
         }
 
         Pilot? pilot = await _aggregateRepository.Get<Pilot, Guid>(pilotId);
@@ -150,7 +152,13 @@ public class PilotCommandController : Controller
             return BadRequest("Invalid 'validUntil' date");
         }
 
-        if(request.ValidatedByPilotId == pilotId)
+        var validatedByPilotIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (!Guid.TryParse(validatedByPilotIdClaim, out Guid validatedByPilotId))
+        {
+            return Unauthorized();
+        }
+
+        if (validatedByPilotId == pilotId)
         {
             return BadRequest("Pilot cannot validate themselves");
         }
@@ -162,9 +170,10 @@ public class PilotCommandController : Controller
         }
 
         bool hasAtLeastOneValidatingClubMembership = false;
-        await foreach(var clubMembership in _queryContext.ClubMember.GetPilotMembershipDetails(request.ValidatedByPilotId))
+        await foreach(var clubMembership in _queryContext.ClubMember.GetPilotMembershipDetails(validatedByPilotId))
         {
-            pilot.PeerValidatePilotGovernmentDocumentation(request.GovernmentDocument, request.ValidUntil, clubMembership.ClubId, pilotId, clubMembership.IsOnCommittee);
+            bool isTrustee = await _queryContext.ClubMember.HasClubMemberRole(clubMembership.ClubId, validatedByPilotId, nameof(ClubMemberRole.Trustee));
+            pilot.PeerValidatePilotGovernmentDocumentation(request.GovernmentDocument, request.ValidUntil, clubMembership.ClubId, pilotId, isTrustee);
             hasAtLeastOneValidatingClubMembership = true;
         }
 
@@ -197,7 +206,13 @@ public class PilotCommandController : Controller
             return BadRequest("Invalid 'validUntil' date");
         }
 
-        if (request.ValidatedByPilotId == pilotId)
+        var validatedByPilotIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (!Guid.TryParse(validatedByPilotIdClaim, out Guid validatedByPilotId))
+        {
+            return Unauthorized();
+        }
+
+        if (validatedByPilotId == pilotId)
         {
             return BadRequest("Pilot cannot validate themselves");
         }
@@ -209,9 +224,10 @@ public class PilotCommandController : Controller
         }
 
         bool hasAtLeastOneValidatingClubMembership = false;
-        await foreach (var clubMembership in _queryContext.ClubMember.GetPilotMembershipDetails(request.ValidatedByPilotId))
+        await foreach (var clubMembership in _queryContext.ClubMember.GetPilotMembershipDetails(validatedByPilotId))
         {
-            pilot.PeerValidatePilotInsurance(request.InsuranceProvider, request.ValidUntil, clubMembership.ClubId, pilotId, clubMembership.IsOnCommittee);
+            bool isTrustee = await _queryContext.ClubMember.HasClubMemberRole(clubMembership.ClubId, validatedByPilotId, nameof(ClubMemberRole.Trustee));
+            pilot.PeerValidatePilotInsurance(request.InsuranceProvider, request.ValidUntil, clubMembership.ClubId, pilotId, isTrustee);
             hasAtLeastOneValidatingClubMembership = true;
         }
 
@@ -226,15 +242,15 @@ public class PilotCommandController : Controller
     }
 
     [HttpPost("api/pilot/{pilotId}/dateofbirthvalidation")]
-    public async Task<IActionResult> PeerValidatePilotDateOfBirthAsync([FromRoute] Guid pilotId,
-        [FromBody] PeerValidatePilotDateOfBirthRequest request)
+    public async Task<IActionResult> PeerValidatePilotDateOfBirthAsync([FromRoute] Guid pilotId)
     {
-        if (!ModelState.IsValid)
+        var validatedByPilotIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (!Guid.TryParse(validatedByPilotIdClaim, out Guid validatedByPilotId))
         {
-            return BadRequest(ModelState);
+            return Unauthorized();
         }
 
-        if(request.ValidatedByPilotId == pilotId)
+        if (validatedByPilotId == pilotId)
         {
             return BadRequest("Pilot cannot validate themselves");
         }
@@ -246,9 +262,10 @@ public class PilotCommandController : Controller
         }
 
         bool hasAtLeastOneValidatingClubMembership = false;
-        await foreach (var clubMembership in _queryContext.ClubMember.GetPilotMembershipDetails(request.ValidatedByPilotId))
+        await foreach (var clubMembership in _queryContext.ClubMember.GetPilotMembershipDetails(validatedByPilotId))
         {
-            pilot.PeerValidatePilotDateOfBirth(clubMembership.ClubId, pilotId, clubMembership.IsOnCommittee);
+            bool isTrustee = await _queryContext.ClubMember.HasClubMemberRole(clubMembership.ClubId, validatedByPilotId, nameof(ClubMemberRole.Trustee));
+            pilot.PeerValidatePilotDateOfBirth(clubMembership.ClubId, pilotId, isTrustee);
             hasAtLeastOneValidatingClubMembership = true;
         }
 
@@ -260,5 +277,54 @@ public class PilotCommandController : Controller
         await _aggregateRepository.Save(pilot);
 
         return Created($"/api/pilot/{pilotId}/dateofbirthvalidation", null);
+    }
+
+    [HttpPost("api/pilot/follow/{clubId}")]
+    public async Task<IActionResult> FollowClubAsync([FromRoute] Guid clubId)
+    {
+        var pilotIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (!Guid.TryParse(pilotIdClaim, out Guid pilotId))
+        {
+            return Unauthorized();
+        }
+
+        if (!await _queryContext.ClubDetails.DoesClubExist(clubId))
+        {
+            return NotFound();
+        }
+
+        Pilot? pilot = await _aggregateRepository.Get<Pilot, Guid>(pilotId);
+        if (pilot == null)
+        {
+            return NotFound();
+        }
+
+        pilot.FollowClub(clubId);
+
+        await _aggregateRepository.Save(pilot);
+
+        return Ok();
+    }
+
+    [HttpDelete("api/pilot/follow/{clubId}")]
+    public async Task<IActionResult> UnfollowClubAsync([FromRoute] Guid clubId)
+    {
+        var pilotIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (!Guid.TryParse(pilotIdClaim, out Guid pilotId))
+        {
+            return Unauthorized();
+        }
+
+        Pilot? pilot = await _aggregateRepository.Get<Pilot, Guid>(pilotId);
+        if (pilot == null)
+        {
+            return NotFound();
+        }
+
+        pilot.UnfollowClub(clubId);
+
+        await _aggregateRepository.Save(pilot);
+
+        return Ok();
     }
 }
