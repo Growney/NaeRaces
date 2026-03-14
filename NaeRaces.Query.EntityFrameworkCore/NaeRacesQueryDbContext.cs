@@ -19,6 +19,7 @@ public class NaeRacesQueryDbContext : DbContext
     public DbSet<RaceDetails> RaceDetails => Set<RaceDetails>();
     public DbSet<ClubLocation> ClubLocations => Set<ClubLocation>();
     public DbSet<PilotSelectionPolicyDetails> PilotSelectionPolicyDetails => Set<PilotSelectionPolicyDetails>();
+    public DbSet<PilotPolicyStatement> PilotPolicyStatements => Set<PilotPolicyStatement>();
     public DbSet<PilotAgeValidation> PilotAgeValidations => Set<PilotAgeValidation>();
     public DbSet<PilotGovernmentDocumentValidation> PilotGovernmentDocumentValidations => Set<PilotGovernmentDocumentValidation>();
     public DbSet<PilotInsuranceProviderValidation> PilotInsuranceProviderValidations => Set<PilotInsuranceProviderValidation>();

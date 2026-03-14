@@ -463,7 +463,7 @@ public class ClubCommandController : Controller
     }
 
     [HttpDelete("api/club/{clubId}/membershiplevel/{membershipLevelId}/policy")]
-    public async Task<IActionResult> SetClubMembershipLevelMaximumAgeAsync([FromRoute] Guid clubId,
+    public async Task<IActionResult> ClearClubMembershipLevelPolicy([FromRoute] Guid clubId,
         [FromRoute] int membershipLevelId)
     {
         if (!ModelState.IsValid)

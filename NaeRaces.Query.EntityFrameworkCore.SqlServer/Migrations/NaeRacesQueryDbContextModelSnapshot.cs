@@ -413,6 +413,56 @@ namespace NaeRaces.Query.EntityFrameworkCore.SqlServer.Migrations
                     b.ToTable("PilotInsuranceProviderValidations");
                 });
 
+            modelBuilder.Entity("NaeRaces.Query.EntityFrameworkCore.Models.PilotPolicyStatement", b =>
+                {
+                    b.Property<Guid>("PolicyId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("StatementId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("GovernmentDocument")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("InsuranceProvider")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool?>("IsWithinBrackets")
+                        .HasColumnType("bit");
+
+                    b.Property<int?>("LeftHandStatementId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("MaximumAge")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("MinimumAge")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Operand")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid?>("RequiredClubId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int?>("RequiredMembershipLevelId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("RightHandStatementId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("StatementType")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ValidationPolicy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("PolicyId", "StatementId");
+
+                    b.ToTable("PilotPolicyStatements");
+                });
+
             modelBuilder.Entity("NaeRaces.Query.EntityFrameworkCore.Models.PilotRaceRegistration", b =>
                 {
                     b.Property<Guid>("PilotId")
@@ -448,6 +498,9 @@ namespace NaeRaces.Query.EntityFrameworkCore.SqlServer.Migrations
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<int?>("RootStatementId")
+                        .HasColumnType("int");
 
                     b.HasKey("Id");
 

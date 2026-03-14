@@ -229,6 +229,30 @@ namespace NaeRaces.Query.EntityFrameworkCore.SqlServer.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "PilotPolicyStatements",
+                columns: table => new
+                {
+                    PolicyId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    StatementId = table.Column<int>(type: "int", nullable: false),
+                    StatementType = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    LeftHandStatementId = table.Column<int>(type: "int", nullable: true),
+                    Operand = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    RightHandStatementId = table.Column<int>(type: "int", nullable: true),
+                    IsWithinBrackets = table.Column<bool>(type: "bit", nullable: true),
+                    MinimumAge = table.Column<int>(type: "int", nullable: true),
+                    MaximumAge = table.Column<int>(type: "int", nullable: true),
+                    InsuranceProvider = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    GovernmentDocument = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    RequiredClubId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    RequiredMembershipLevelId = table.Column<int>(type: "int", nullable: true),
+                    ValidationPolicy = table.Column<string>(type: "nvarchar(max)", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_PilotPolicyStatements", x => new { x.PolicyId, x.StatementId });
+                });
+
+            migrationBuilder.CreateTable(
                 name: "PilotRaceRegistrations",
                 columns: table => new
                 {
@@ -249,7 +273,8 @@ namespace NaeRaces.Query.EntityFrameworkCore.SqlServer.Migrations
                     ClubId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     Name = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     Description = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    LatestVersion = table.Column<long>(type: "bigint", nullable: false)
+                    LatestVersion = table.Column<long>(type: "bigint", nullable: false),
+                    RootStatementId = table.Column<int>(type: "int", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -412,6 +437,9 @@ namespace NaeRaces.Query.EntityFrameworkCore.SqlServer.Migrations
 
             migrationBuilder.DropTable(
                 name: "PilotInsuranceProviderValidations");
+
+            migrationBuilder.DropTable(
+                name: "PilotPolicyStatements");
 
             migrationBuilder.DropTable(
                 name: "PilotRaceRegistrations");

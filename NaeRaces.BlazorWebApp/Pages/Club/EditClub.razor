@@ -1,6 +1,7 @@
 @page "/club/edit/{ClubId:guid}"
 @attribute [Authorize]
 @using NaeRaces.WebAPI.Shared.Club
+@using NaeRaces.WebAPI.Shared.PilotSelectionPolicy
 @using System.ComponentModel.DataAnnotations
 @inject HttpClient Http
 @inject NavigationManager Navigation
@@ -336,6 +337,254 @@ else
             </EditForm>
         </div>
     </div>
+
+    <!-- Pilot Selection Policies -->
+    <div class="card mb-4">
+        <div class="card-header fw-bold">Pilot Selection Policies</div>
+        <div class="card-body">
+            @if (policies.Count == 0)
+            {
+                <p class="text-muted">No pilot selection policies yet.</p>
+            }
+            else
+            {
+                @foreach (var policy in policies)
+                {
+                    <div class="border rounded p-3 mb-3">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <strong>@policy.Name</strong>
+                                @if (!string.IsNullOrWhiteSpace(policy.Description))
+                                {
+                                    <br /><small class="text-muted">@policy.Description</small>
+                                }
+                            </div>
+                            <button class="btn btn-sm btn-outline-secondary" @onclick="() => ToggleManagePolicyAsync(policy.PolicyId)">
+                                @(managingPolicyId == policy.PolicyId ? "Done" : "Manage")
+                            </button>
+                        </div>
+
+                        @if (managingPolicyId == policy.PolicyId)
+                        {
+                            <hr />
+                            <h6>Statements</h6>
+                            @if (isPolicyStatementsLoading)
+                            {
+                                <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                            }
+                            else if (policyStatements.Count == 0)
+                            {
+                                <p class="text-muted">No statements added yet.</p>
+                            }
+                            else
+                            {
+                                @foreach (var stmt in policyStatements)
+                                {
+                                    <div class="d-flex justify-content-between align-items-center border rounded p-2 mb-2">
+                                        <div>
+                                            <strong>#@stmt.StatementId</strong>
+                                            @if (policy.RootStatementId == stmt.StatementId)
+                                            {
+                                                <span class="badge bg-primary ms-1">Root</span>
+                                            }
+                                            <span class="ms-2 text-muted">@GetStatementSummary(stmt)</span>
+                                        </div>
+                                        <div class="d-flex gap-1">
+                                            @if (policy.RootStatementId != stmt.StatementId)
+                                            {
+                                                <button class="btn btn-sm btn-outline-primary" @onclick="() => SetRootStatementAsync(policy.PolicyId, stmt.StatementId)">Set Root</button>
+                                            }
+                                            <button class="btn btn-sm btn-outline-danger" @onclick="() => RemoveStatementAsync(policy.PolicyId, stmt.StatementId)">Remove</button>
+                                        </div>
+                                    </div>
+                                }
+                            }
+
+                            <hr />
+                            <h6>Add Statement</h6>
+                            <div class="mb-2">
+                                <select class="form-select form-select-sm" @bind="selectedRequirementType">
+                                    <option value="">Select type...</option>
+                                    <option value="MinimumAge">Minimum Age</option>
+                                    <option value="MaximumAge">Maximum Age</option>
+                                    <option value="InsuranceProvider">Insurance Provider</option>
+                                    <option value="GovernmentDocument">Government Document</option>
+                                    <option value="Club">Club Membership</option>
+                                    <option value="ClubMembershipLevel">Club Membership Level</option>
+                                    <option value="Composite">Composite (AND/OR)</option>
+                                </select>
+                            </div>
+
+                            @if (selectedRequirementType == "MinimumAge")
+                            {
+                                <div class="row g-2 mb-2">
+                                    <div class="col-md-4">
+                                        <label class="form-label">Minimum Age</label>
+                                        <input type="number" class="form-control form-control-sm" @bind="minAgeModel.MinimumAge" />
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">Validation Policy</label>
+                                        <select class="form-select form-select-sm" @bind="minAgeModel.ValidationPolicy">
+                                            @foreach (var vp in validationPolicyOptions)
+                                            {
+                                                <option value="@vp.Key">@vp.Value</option>
+                                            }
+                                        </select>
+                                    </div>
+                                </div>
+                            }
+                            else if (selectedRequirementType == "MaximumAge")
+                            {
+                                <div class="row g-2 mb-2">
+                                    <div class="col-md-4">
+                                        <label class="form-label">Maximum Age</label>
+                                        <input type="number" class="form-control form-control-sm" @bind="maxAgeModel.MaximumAge" />
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">Validation Policy</label>
+                                        <select class="form-select form-select-sm" @bind="maxAgeModel.ValidationPolicy">
+                                            @foreach (var vp in validationPolicyOptions)
+                                            {
+                                                <option value="@vp.Key">@vp.Value</option>
+                                            }
+                                        </select>
+                                    </div>
+                                </div>
+                            }
+                            else if (selectedRequirementType == "InsuranceProvider")
+                            {
+                                <div class="row g-2 mb-2">
+                                    <div class="col-md-4">
+                                        <label class="form-label">Insurance Provider</label>
+                                        <input type="text" class="form-control form-control-sm" @bind="insuranceModel.InsuranceProvider" />
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">Validation Policy</label>
+                                        <select class="form-select form-select-sm" @bind="insuranceModel.ValidationPolicy">
+                                            @foreach (var vp in validationPolicyOptions)
+                                            {
+                                                <option value="@vp.Key">@vp.Value</option>
+                                            }
+                                        </select>
+                                    </div>
+                                </div>
+                            }
+                            else if (selectedRequirementType == "GovernmentDocument")
+                            {
+                                <div class="row g-2 mb-2">
+                                    <div class="col-md-4">
+                                        <label class="form-label">Government Document</label>
+                                        <input type="text" class="form-control form-control-sm" @bind="govDocModel.GovernmentDocument" />
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">Validation Policy</label>
+                                        <select class="form-select form-select-sm" @bind="govDocModel.ValidationPolicy">
+                                            @foreach (var vp in validationPolicyOptions)
+                                            {
+                                                <option value="@vp.Key">@vp.Value</option>
+                                            }
+                                        </select>
+                                    </div>
+                                </div>
+                            }
+                            else if (selectedRequirementType == "Club")
+                            {
+                                <div class="row g-2 mb-2">
+                                    <div class="col-md-6">
+                                        <label class="form-label">Required Club ID</label>
+                                        <input type="text" class="form-control form-control-sm" @bind="clubRequirementClubId" placeholder="GUID" />
+                                    </div>
+                                </div>
+                            }
+                            else if (selectedRequirementType == "ClubMembershipLevel")
+                            {
+                                <div class="row g-2 mb-2">
+                                    <div class="col-md-4">
+                                        <label class="form-label">Required Club ID</label>
+                                        <input type="text" class="form-control form-control-sm" @bind="clubLevelClubId" placeholder="GUID" />
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">Membership Level</label>
+                                        <input type="number" class="form-control form-control-sm" @bind="clubLevelModel.MembershipLevel" />
+                                    </div>
+                                </div>
+                            }
+                            else if (selectedRequirementType == "Composite")
+                            {
+                                <div class="row g-2 mb-2">
+                                    <div class="col-md-3">
+                                        <label class="form-label">Left Statement #</label>
+                                        <input type="number" class="form-control form-control-sm" @bind="compositeModel.LeftHandStatementId" />
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label">Operand</label>
+                                        <select class="form-select form-select-sm" @bind="compositeModel.Operand">
+                                            <option value="AND">AND</option>
+                                            <option value="OR">OR</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label">Right Statement #</label>
+                                        <input type="number" class="form-control form-control-sm" @bind="compositeModel.RightHandStatementId" />
+                                    </div>
+                                    <div class="col-md-3 d-flex align-items-end">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" @bind="compositeModel.IsWithinBrackets" id="bracketsCheck" />
+                                            <label class="form-check-label" for="bracketsCheck">Brackets</label>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+
+                            @if (!string.IsNullOrEmpty(selectedRequirementType))
+                            {
+                                @if (!string.IsNullOrEmpty(requirementMessage))
+                                {
+                                    <div class="alert @(requirementSuccess ? "alert-success" : "alert-danger") py-1 mb-2">@requirementMessage</div>
+                                }
+                                <button class="btn btn-sm btn-primary" disabled="@isAddingRequirement" @onclick="() => AddRequirementAsync(policy.PolicyId)">
+                                    @if (isAddingRequirement)
+                                    {
+                                        <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                                    }
+                                    Add Statement
+                                </button>
+                            }
+                        }
+                    </div>
+                }
+            }
+
+            @if (!string.IsNullOrEmpty(policyMessage))
+            {
+                <div class="alert @(policySuccess ? "alert-success" : "alert-danger") py-2">@policyMessage</div>
+            }
+
+            <hr />
+            <h6>Create New Policy</h6>
+            <EditForm Model="newPolicyModel" OnValidSubmit="CreatePolicyAsync">
+                <DataAnnotationsValidator />
+                <ValidationSummary class="text-danger" />
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label">Name <span class="text-danger">*</span></label>
+                        <InputText @bind-Value="newPolicyModel.Name" class="form-control" />
+                    </div>
+                    <div class="col-md-8">
+                        <label class="form-label">Description <span class="text-danger">*</span></label>
+                        <InputText @bind-Value="newPolicyModel.Description" class="form-control" />
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-success mt-3" disabled="@isCreatingPolicy">
+                    @if (isCreatingPolicy)
+                    {
+                        <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                    }
+                    Create Policy
+                </button>
+            </EditForm>
+        </div>
+    </div>
 }
 
 @code {
@@ -345,6 +594,7 @@ else
     private ClubOverviewResponse? overview;
     private List<ClubLocationResponse> locations = [];
     private List<ClubMembershipLevelResponse> membershipLevels = [];
+    private List<PilotSelectionPolicyResponse> policies = [];
 
     private UpdateClubDetailsRequest detailsModel = new();
     private bool isSavingDetails;
@@ -381,6 +631,40 @@ else
     private AddClubMembershipLevelRequest addLevelModel = new();
     private bool isAddingLevel;
 
+    // Pilot policies
+    private Guid? managingPolicyId;
+    private List<PilotPolicyStatementResponse> policyStatements = [];
+    private bool isPolicyStatementsLoading;
+    private string selectedRequirementType = string.Empty;
+    private bool isAddingRequirement;
+    private string? requirementMessage;
+    private bool requirementSuccess;
+    private string? policyMessage;
+    private bool policySuccess;
+
+    private AddMinimumAgeRequirementRequest minAgeModel = new() { ValidationPolicy = "ANY" };
+    private AddMaximumAgeRequirementRequest maxAgeModel = new() { ValidationPolicy = "ANY" };
+    private AddInsuranceProviderRequirementRequest insuranceModel = new() { ValidationPolicy = "ANY" };
+    private AddGovernmentDocumentValidationRequirementRequest govDocModel = new() { ValidationPolicy = "ANY" };
+    private string clubRequirementClubId = string.Empty;
+    private string clubLevelClubId = string.Empty;
+    private AddClubMembershipLevelRequirementRequest clubLevelModel = new();
+    private AddPolicyStatementRequest compositeModel = new() { Operand = "AND" };
+    private NewPolicyFormModel newPolicyModel = new();
+    private bool isCreatingPolicy;
+
+    private static readonly Dictionary<string, string> validationPolicyOptions = new()
+    {
+        ["NONE"] = "No validation",
+        ["ANY"] = "Any",
+        ["ANY_CLUB_MEMBER"] = "Any Club Member",
+        ["ANY_CLUB_COMMITTEE_MEMBER"] = "Any Club Committee Member",
+        ["POLICY_CLUB_MEMBER"] = "Policy Club Member",
+        ["POLICY_CLUB_COMMITTEE_MEMBER"] = "Policy Club Committee Member",
+        ["PILOT_CLUB_MEMBER"] = "Pilot Club Member",
+        ["PILOT_CLUB_COMMITTEE_MEMBER"] = "Pilot Club Committee Member"
+    };
+
     protected override async Task OnInitializedAsync()
     {
         await LoadDataAsync();
@@ -394,12 +678,14 @@ else
             var overviewTask = Http.GetFromJsonAsync<ClubOverviewResponse>($"api/club/{ClubId}/query/overview");
             var locationsTask = Http.GetFromJsonAsync<List<ClubLocationResponse>>($"api/club/{ClubId}/query/locations");
             var levelsTask = Http.GetFromJsonAsync<List<ClubMembershipLevelResponse>>($"api/club/{ClubId}/query/membershiplevels");
+            var policiesTask = Http.GetFromJsonAsync<List<PilotSelectionPolicyResponse>>($"api/club/{ClubId}/query/pilotpolicies");
 
-            await Task.WhenAll(overviewTask, locationsTask, levelsTask);
+            await Task.WhenAll(overviewTask, locationsTask, levelsTask, policiesTask);
 
             overview = overviewTask.Result;
             locations = locationsTask.Result ?? [];
             membershipLevels = levelsTask.Result ?? [];
+            policies = policiesTask.Result ?? [];
 
             if (overview != null)
             {
@@ -710,6 +996,160 @@ else
         membershipLevels = result ?? [];
     }
 
+    // Pilot policy methods
+    private async Task ToggleManagePolicyAsync(Guid policyId)
+    {
+        if (managingPolicyId == policyId)
+        {
+            managingPolicyId = null;
+            policyStatements = [];
+            requirementMessage = null;
+        }
+        else
+        {
+            managingPolicyId = policyId;
+            selectedRequirementType = string.Empty;
+            requirementMessage = null;
+            await LoadPolicyStatementsAsync(policyId);
+        }
+    }
+
+    private async Task LoadPolicyStatementsAsync(Guid policyId)
+    {
+        isPolicyStatementsLoading = true;
+        try
+        {
+            policyStatements = await Http.GetFromJsonAsync<List<PilotPolicyStatementResponse>>($"api/pilotselectionpolicy/{policyId}/query/statements") ?? [];
+        }
+        catch
+        {
+            policyStatements = [];
+        }
+        finally
+        {
+            isPolicyStatementsLoading = false;
+        }
+    }
+
+    private async Task CreatePolicyAsync()
+    {
+        isCreatingPolicy = true;
+        policyMessage = null;
+        try
+        {
+            var request = new CreatePilotSelectionPolicyRequest
+            {
+                PilotSelectionPolicyId = Guid.NewGuid(),
+                ClubId = ClubId,
+                Name = newPolicyModel.Name,
+                Description = newPolicyModel.Description
+            };
+            var response = await Http.PostAsJsonAsync("api/pilotselectionpolicy", request);
+            policySuccess = response.IsSuccessStatusCode;
+            policyMessage = response.IsSuccessStatusCode ? "Policy created." : "Failed to create policy.";
+            if (response.IsSuccessStatusCode)
+            {
+                newPolicyModel = new NewPolicyFormModel();
+                await RefreshPoliciesAsync();
+            }
+        }
+        catch
+        {
+            policySuccess = false;
+            policyMessage = "An error occurred.";
+        }
+        finally
+        {
+            isCreatingPolicy = false;
+        }
+    }
+
+    private async Task AddRequirementAsync(Guid policyId)
+    {
+        if (string.IsNullOrEmpty(selectedRequirementType)) return;
+        isAddingRequirement = true;
+        requirementMessage = null;
+        try
+        {
+            HttpResponseMessage response = selectedRequirementType switch
+            {
+                "MinimumAge" => await Http.PostAsJsonAsync($"api/pilotselectionpolicy/{policyId}/requirement/minimumage", minAgeModel),
+                "MaximumAge" => await Http.PostAsJsonAsync($"api/pilotselectionpolicy/{policyId}/requirement/maximumage", maxAgeModel),
+                "InsuranceProvider" => await Http.PostAsJsonAsync($"api/pilotselectionpolicy/{policyId}/requirement/insuranceprovider", insuranceModel),
+                "GovernmentDocument" => await Http.PostAsJsonAsync($"api/pilotselectionpolicy/{policyId}/requirement/governmentdocument", govDocModel),
+                "Club" => await Http.PostAsJsonAsync($"api/pilotselectionpolicy/{policyId}/requirement/club", new NaeRaces.WebAPI.Shared.PilotSelectionPolicy.AddClubRequirementRequest { ClubId = Guid.TryParse(clubRequirementClubId, out var cid) ? cid : Guid.Empty }),
+                "ClubMembershipLevel" => await Http.PostAsJsonAsync($"api/pilotselectionpolicy/{policyId}/requirement/clubmembershiplevel", new AddClubMembershipLevelRequirementRequest { ClubId = Guid.TryParse(clubLevelClubId, out var clid) ? clid : Guid.Empty, MembershipLevel = clubLevelModel.MembershipLevel }),
+                "Composite" => await Http.PostAsJsonAsync($"api/pilotselectionpolicy/{policyId}/statement", compositeModel),
+                _ => throw new InvalidOperationException()
+            };
+            requirementSuccess = response.IsSuccessStatusCode;
+            requirementMessage = response.IsSuccessStatusCode ? "Statement added." : "Failed to add statement.";
+            if (response.IsSuccessStatusCode)
+            {
+                ResetRequirementModels();
+                await LoadPolicyStatementsAsync(policyId);
+            }
+        }
+        catch
+        {
+            requirementSuccess = false;
+            requirementMessage = "An error occurred.";
+        }
+        finally
+        {
+            isAddingRequirement = false;
+        }
+    }
+
+    private void ResetRequirementModels()
+    {
+        minAgeModel = new() { ValidationPolicy = "ANY" };
+        maxAgeModel = new() { ValidationPolicy = "ANY" };
+        insuranceModel = new() { ValidationPolicy = "ANY" };
+        govDocModel = new() { ValidationPolicy = "ANY" };
+        clubRequirementClubId = string.Empty;
+        clubLevelClubId = string.Empty;
+        clubLevelModel = new();
+        compositeModel = new() { Operand = "AND" };
+    }
+
+    private async Task RemoveStatementAsync(Guid policyId, int statementId)
+    {
+        var response = await Http.DeleteAsync($"api/pilotselectionpolicy/{policyId}/statement/{statementId}");
+        if (response.IsSuccessStatusCode)
+        {
+            await LoadPolicyStatementsAsync(policyId);
+            await RefreshPoliciesAsync();
+        }
+    }
+
+    private async Task SetRootStatementAsync(Guid policyId, int statementId)
+    {
+        var response = await Http.PutAsJsonAsync($"api/pilotselectionpolicy/{policyId}/rootstatement", new SetRootStatementRequest { RootPolicyStatementId = statementId });
+        if (response.IsSuccessStatusCode)
+        {
+            await RefreshPoliciesAsync();
+        }
+    }
+
+    private async Task RefreshPoliciesAsync()
+    {
+        var result = await Http.GetFromJsonAsync<List<PilotSelectionPolicyResponse>>($"api/club/{ClubId}/query/pilotpolicies");
+        policies = result ?? [];
+    }
+
+    private static string GetStatementSummary(PilotPolicyStatementResponse stmt) => stmt.StatementType switch
+    {
+        "MinimumAge" => $"Min age \u2265 {stmt.MinimumAge} ({stmt.ValidationPolicy})",
+        "MaximumAge" => $"Max age \u2264 {stmt.MaximumAge} ({stmt.ValidationPolicy})",
+        "InsuranceProvider" => $"Insurance: {stmt.InsuranceProvider} ({stmt.ValidationPolicy})",
+        "GovernmentDocument" => $"Gov doc: {stmt.GovernmentDocument} ({stmt.ValidationPolicy})",
+        "ClubMembership" => $"Club member: {stmt.RequiredClubId}",
+        "ClubMembershipLevel" => $"Club {stmt.RequiredClubId} / level {stmt.RequiredMembershipLevelId}",
+        "Composite" => $"{(stmt.IsWithinBrackets == true ? "(" : "")}#{stmt.LeftHandStatementId} {stmt.Operand} #{stmt.RightHandStatementId}{(stmt.IsWithinBrackets == true ? ")" : "")}",
+        _ => stmt.StatementType
+    };
+
     private class LocationEditModel
     {
         [Required] public string Name { get; set; } = string.Empty;
@@ -719,5 +1159,11 @@ else
         [Required] public string City { get; set; } = string.Empty;
         [Required] public string Postcode { get; set; } = string.Empty;
         [Required] public string County { get; set; } = string.Empty;
+    }
+
+    private class NewPolicyFormModel
+    {
+        [Required] public string Name { get; set; } = string.Empty;
+        [Required] public string Description { get; set; } = string.Empty;
     }
 }
