@@ -49,9 +49,15 @@ public static class IServiceCollectionExtensions
         services.AddConstantReactionClass<PilotClubDetailsProjection>();
         services.AddConstantReactionClass<ClubMembershipProjection>();
         services.AddConstantReactionClass<ClubMembershipLevelProjection>();
+        services.AddConstantReactionClass<ClubLocationProjection>();
         services.AddConstantReactionClass<RacePackageProjection>();
         services.AddConstantReactionClass<RaceInformationProjection>();
+        services.AddConstantReactionClass<RaceDetailsProjection>();
+        services.AddConstantReactionClass<RaceDiscountProjection>();
         services.AddConstantReactionClass<PilotRaceRegistrationProjection>();
+        services.AddConstantReactionClass<PilotValidationProjection>();
+        services.AddConstantReactionClass<PilotSelectionPolicyDetailsProjection>();
+        services.AddConstantReactionClass<TeamMemberProjection>();
         services.AddConstantReactionClass<ClubOverviewProjection>();
 
         return services;

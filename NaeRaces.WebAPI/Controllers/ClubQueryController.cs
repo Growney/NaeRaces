@@ -1,6 +1,8 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using NaeRaces.Query.Abstractions;
 using NaeRaces.WebAPI.Shared.Club;
+using OpenIddict.Abstractions;
 
 namespace NaeRaces.WebAPI.Controllers;
 
@@ -9,15 +11,18 @@ public class ClubQueryController : Controller
     private readonly IClubOverviewQueryHandler _clubOverviewQueryHandler;
     private readonly IClubLocationQueryHandler _clubLocationQueryHandler;
     private readonly IClubMembershipLevelQueryHandler _clubMembershipLevelQueryHandler;
+    private readonly IClubMemberQueryHandler _clubMemberQueryHandler;
 
     public ClubQueryController(
         IClubOverviewQueryHandler clubOverviewQueryHandler,
         IClubLocationQueryHandler clubLocationQueryHandler,
-        IClubMembershipLevelQueryHandler clubMembershipLevelQueryHandler)
+        IClubMembershipLevelQueryHandler clubMembershipLevelQueryHandler,
+        IClubMemberQueryHandler clubMemberQueryHandler)
     {
         _clubOverviewQueryHandler = clubOverviewQueryHandler ?? throw new ArgumentNullException(nameof(clubOverviewQueryHandler));
         _clubLocationQueryHandler = clubLocationQueryHandler ?? throw new ArgumentNullException(nameof(clubLocationQueryHandler));
         _clubMembershipLevelQueryHandler = clubMembershipLevelQueryHandler ?? throw new ArgumentNullException(nameof(clubMembershipLevelQueryHandler));
+        _clubMemberQueryHandler = clubMemberQueryHandler ?? throw new ArgumentNullException(nameof(clubMemberQueryHandler));
     }
 
     [HttpGet("api/club/query/top/{count:int}")]
@@ -28,6 +33,7 @@ public class ClubQueryController : Controller
         {
             results.Add(new TopClubByMemberCountResponse
             {
+                ClubId = club.ClubId,
                 Code = club.Code,
                 Name = club.Name,
                 MemberCount = club.TotalMemberCount
@@ -44,6 +50,7 @@ public class ClubQueryController : Controller
         {
             results.Add(new ClubWithUpcomingRacesResponse
             {
+                ClubId = club.ClubId,
                 Code = club.Code,
                 Name = club.Name,
                 MemberCount = club.TotalMemberCount
@@ -65,6 +72,7 @@ public class ClubQueryController : Controller
         {
             results.Add(new ClubSearchResponse
             {
+                ClubId = club.ClubId,
                 Code = club.Code,
                 Name = club.Name,
                 MemberCount = club.TotalMemberCount
@@ -124,5 +132,19 @@ public class ClubQueryController : Controller
             });
         }
         return Ok(results);
+    }
+
+    [Authorize]
+    [HttpGet("api/club/{clubId:guid}/query/is-admin")]
+    public async Task<IActionResult> IsCurrentUserAdminAsync([FromRoute] Guid clubId)
+    {
+        var pilotIdClaim = User.FindFirst(OpenIddictConstants.Claims.Subject)?.Value;
+        if (!Guid.TryParse(pilotIdClaim, out Guid pilotId))
+        {
+            return Unauthorized();
+        }
+
+        var isAdmin = await _clubMemberQueryHandler.HasClubMemberRole(clubId, pilotId, nameof(WebAPI.Shared.Club.ClubMemberRole.Administrator));
+        return Ok(isAdmin);
     }
 }

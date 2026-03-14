@@ -1,0 +1,151 @@
+@page "/club/{ClubId:guid}"
+@using NaeRaces.WebAPI.Shared.Club
+@using Microsoft.AspNetCore.Components.Authorization
+@inject HttpClient Http
+@inject NavigationManager Navigation
+
+<PageTitle>@(overview?.Name ?? "Club")</PageTitle>
+
+@if (isLoading)
+{
+    <div class="d-flex align-items-center">
+        <span class="spinner-border me-2" role="status" aria-hidden="true"></span>
+        <em>Loading club...</em>
+    </div>
+}
+else if (overview == null)
+{
+    <div class="alert alert-warning">Club not found.</div>
+    <a href="/" class="btn btn-secondary">Back to Home</a>
+}
+else
+{
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h1 class="mb-0">@overview.Name</h1>
+            <span class="text-muted">@overview.Code &bull; @overview.MemberCount members</span>
+        </div>
+        <div class="d-flex gap-2">
+            @if (isAdmin)
+            {
+                <a href="/club/edit/@ClubId" class="btn btn-primary">Edit Club</a>
+            }
+            <a href="/" class="btn btn-outline-secondary">Back to Home</a>
+        </div>
+    </div>
+
+    <!-- Locations -->
+    <div class="card mb-3">
+        <div class="card-header fw-bold">Locations</div>
+        <div class="card-body">
+            @if (locations.Count == 0)
+            {
+                <p class="text-muted">No locations added yet.</p>
+            }
+            else
+            {
+                @foreach (var loc in locations)
+                {
+                    <div class="border rounded p-3 @(loc != locations[^1] ? "mb-3" : "")">
+                        <div>
+                            <strong>@loc.Name</strong>
+                            @if (loc.IsHomeLocation)
+                            {
+                                <span class="badge bg-primary ms-2">Home</span>
+                            }
+                            @if (!string.IsNullOrWhiteSpace(loc.Information))
+                            {
+                                <br /><small class="text-muted">@loc.Information</small>
+                            }
+                            <br />
+                            <small class="text-muted">
+                                @loc.AddressLine1@(loc.AddressLine2 != null ? ", " + loc.AddressLine2 : ""), @loc.City, @loc.Postcode, @loc.County
+                            </small>
+                        </div>
+                    </div>
+                }
+            }
+        </div>
+    </div>
+
+    <!-- Membership Levels -->
+    <div class="card mb-3">
+        <div class="card-header fw-bold">Membership Levels</div>
+        <div class="card-body">
+            @if (membershipLevels.Count == 0)
+            {
+                <p class="text-muted">No membership levels added yet.</p>
+            }
+            else
+            {
+                <ul class="list-group list-group-flush">
+                    @foreach (var level in membershipLevels)
+                    {
+                        <li class="list-group-item">@level.Name</li>
+                    }
+                </ul>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public Guid ClubId { get; set; }
+    [CascadingParameter] private Task<AuthenticationState> AuthenticationStateTask { get; set; } = default!;
+
+    private bool isLoading = true;
+    private ClubOverviewResponse? overview;
+    private List<ClubLocationResponse> locations = [];
+    private List<ClubMembershipLevelResponse> membershipLevels = [];
+    private bool isAdmin;
+
+    protected override async Task OnInitializedAsync()
+    {
+        isLoading = true;
+        try
+        {
+            var authState = await AuthenticationStateTask;
+
+            var overviewTask = Http.GetFromJsonAsync<ClubOverviewResponse>($"api/club/{ClubId}/query/overview");
+            var locationsTask = Http.GetFromJsonAsync<List<ClubLocationResponse>>($"api/club/{ClubId}/query/locations");
+            var levelsTask = Http.GetFromJsonAsync<List<ClubMembershipLevelResponse>>($"api/club/{ClubId}/query/membershiplevels");
+
+            if (authState.User.Identity?.IsAuthenticated == true)
+            {
+                var isAdminTask = FetchIsAdminAsync();
+                await Task.WhenAll(overviewTask, locationsTask, levelsTask, isAdminTask);
+                isAdmin = isAdminTask.Result;
+            }
+            else
+            {
+                await Task.WhenAll(overviewTask, locationsTask, levelsTask);
+            }
+
+            overview = overviewTask.Result;
+            locations = locationsTask.Result ?? [];
+            membershipLevels = levelsTask.Result ?? [];
+        }
+        catch
+        {
+            overview = null;
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task<bool> FetchIsAdminAsync()
+    {
+        try
+        {
+            var response = await Http.GetAsync($"api/club/{ClubId}/query/is-admin");
+            if (response.IsSuccessStatusCode)
+            {
+                return await response.Content.ReadFromJsonAsync<bool>();
+            }
+        }
+        catch { }
+        return false;
+    }
+}

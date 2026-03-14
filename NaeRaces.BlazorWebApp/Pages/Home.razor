@@ -1,6 +1,7 @@
 ﻿@page "/"
 @using NaeRaces.WebAPI.Shared.Club
 @inject HttpClient Http
+@inject NavigationManager Navigation
 
 <PageTitle>Home</PageTitle>
 <div class="row mt-4">
@@ -42,7 +43,7 @@
                     <tbody>
                         @foreach (var club in searchResults)
                         {
-                            <tr>
+                            <tr style="cursor: pointer" @onclick="() => NavigateToClub(club.ClubId)">
                                 <td>@club.Code</td>
                                 <td>@club.Name</td>
                                 <td>@club.MemberCount</td>
@@ -75,7 +76,7 @@
                 <tbody>
                     @foreach (var club in topClubs)
                     {
-                        <tr>
+                        <tr style="cursor: pointer" @onclick="() => NavigateToClub(club.ClubId)">
                             <td>@club.Code</td>
                             <td>@club.Name</td>
                             <td>@club.MemberCount</td>
@@ -108,7 +109,7 @@
                 <tbody>
                     @foreach (var club in clubsWithRaces)
                     {
-                        <tr>
+                        <tr style="cursor: pointer" @onclick="() => NavigateToClub(club.ClubId)">
                             <td>@club.Code</td>
                             <td>@club.Name</td>
                             <td>@club.MemberCount</td>
@@ -126,6 +127,11 @@
     private string searchTerm = string.Empty;
     private List<ClubSearchResponse>? searchResults;
     private bool isSearching;
+
+    private void NavigateToClub(Guid clubId)
+    {
+        Navigation.NavigateTo($"/club/{clubId}");
+    }
 
     protected override async Task OnInitializedAsync()
     {
