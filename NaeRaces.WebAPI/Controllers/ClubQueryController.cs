@@ -59,6 +59,23 @@ public class ClubQueryController : Controller
         return Ok(results);
     }
 
+    [HttpGet("api/club/query/all")]
+    public async Task<IActionResult> GetAllClubsAsync()
+    {
+        var results = new List<ClubSearchResponse>();
+        await foreach (var club in _clubOverviewQueryHandler.GetAllClubs())
+        {
+            results.Add(new ClubSearchResponse
+            {
+                ClubId = club.ClubId,
+                Code = club.Code,
+                Name = club.Name,
+                MemberCount = club.TotalMemberCount
+            });
+        }
+        return Ok(results);
+    }
+
     [HttpGet("api/club/query/search")]
     public async Task<IActionResult> SearchClubsAsync([FromQuery] string term)
     {

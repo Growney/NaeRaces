@@ -374,7 +374,7 @@ else
                             }
                             else if (policyStatements.Count == 0)
                             {
-                                <p class="text-muted">No statements added yet.</p>
+                                <p class="text-muted">No statements yet.</p>
                             }
                             else
                             {
@@ -387,169 +387,27 @@ else
                                             {
                                                 <span class="badge bg-primary ms-1">Root</span>
                                             }
-                                            <span class="ms-2 text-muted">@GetStatementSummary(stmt)</span>
+                                            <span class="ms-2 text-muted">@StatementBuilderModel.GetStatementSummary(stmt)</span>
                                         </div>
-                                        <div class="d-flex gap-1">
-                                            @if (policy.RootStatementId != stmt.StatementId)
-                                            {
-                                                <button class="btn btn-sm btn-outline-primary" @onclick="() => SetRootStatementAsync(policy.PolicyId, stmt.StatementId)">Set Root</button>
-                                            }
-                                            <button class="btn btn-sm btn-outline-danger" @onclick="() => RemoveStatementAsync(policy.PolicyId, stmt.StatementId)">Remove</button>
-                                        </div>
+                                        <button class="btn btn-sm btn-outline-danger" @onclick="() => RemoveStatementAsync(policy.PolicyId, stmt.StatementId)">Remove</button>
                                     </div>
                                 }
                             }
 
                             <hr />
-                            <h6>Add Statement</h6>
-                            <div class="mb-2">
-                                <select class="form-select form-select-sm" @bind="selectedRequirementType">
-                                    <option value="">Select type...</option>
-                                    <option value="MinimumAge">Minimum Age</option>
-                                    <option value="MaximumAge">Maximum Age</option>
-                                    <option value="InsuranceProvider">Insurance Provider</option>
-                                    <option value="GovernmentDocument">Government Document</option>
-                                    <option value="Club">Club Membership</option>
-                                    <option value="ClubMembershipLevel">Club Membership Level</option>
-                                    <option value="Composite">Composite (AND/OR)</option>
-                                </select>
-                            </div>
-
-                            @if (selectedRequirementType == "MinimumAge")
+                            <h6>@(policy.RootStatementId.HasValue ? "Replace Root Statement" : "Set Root Statement")</h6>
+                            <StatementBuilder Model="statementBuilderModel" Clubs="allClubs" AllStatements="policyStatements" />
+                            @if (!string.IsNullOrEmpty(rootSubmitMessage))
                             {
-                                <div class="row g-2 mb-2">
-                                    <div class="col-md-4">
-                                        <label class="form-label">Minimum Age</label>
-                                        <input type="number" class="form-control form-control-sm" @bind="minAgeModel.MinimumAge" />
-                                    </div>
-                                    <div class="col-md-4">
-                                        <label class="form-label">Validation Policy</label>
-                                        <select class="form-select form-select-sm" @bind="minAgeModel.ValidationPolicy">
-                                            @foreach (var vp in validationPolicyOptions)
-                                            {
-                                                <option value="@vp.Key">@vp.Value</option>
-                                            }
-                                        </select>
-                                    </div>
-                                </div>
+                                <div class="alert @(rootSubmitSuccess ? "alert-success" : "alert-danger") py-1 mt-2">@rootSubmitMessage</div>
                             }
-                            else if (selectedRequirementType == "MaximumAge")
-                            {
-                                <div class="row g-2 mb-2">
-                                    <div class="col-md-4">
-                                        <label class="form-label">Maximum Age</label>
-                                        <input type="number" class="form-control form-control-sm" @bind="maxAgeModel.MaximumAge" />
-                                    </div>
-                                    <div class="col-md-4">
-                                        <label class="form-label">Validation Policy</label>
-                                        <select class="form-select form-select-sm" @bind="maxAgeModel.ValidationPolicy">
-                                            @foreach (var vp in validationPolicyOptions)
-                                            {
-                                                <option value="@vp.Key">@vp.Value</option>
-                                            }
-                                        </select>
-                                    </div>
-                                </div>
-                            }
-                            else if (selectedRequirementType == "InsuranceProvider")
-                            {
-                                <div class="row g-2 mb-2">
-                                    <div class="col-md-4">
-                                        <label class="form-label">Insurance Provider</label>
-                                        <input type="text" class="form-control form-control-sm" @bind="insuranceModel.InsuranceProvider" />
-                                    </div>
-                                    <div class="col-md-4">
-                                        <label class="form-label">Validation Policy</label>
-                                        <select class="form-select form-select-sm" @bind="insuranceModel.ValidationPolicy">
-                                            @foreach (var vp in validationPolicyOptions)
-                                            {
-                                                <option value="@vp.Key">@vp.Value</option>
-                                            }
-                                        </select>
-                                    </div>
-                                </div>
-                            }
-                            else if (selectedRequirementType == "GovernmentDocument")
-                            {
-                                <div class="row g-2 mb-2">
-                                    <div class="col-md-4">
-                                        <label class="form-label">Government Document</label>
-                                        <input type="text" class="form-control form-control-sm" @bind="govDocModel.GovernmentDocument" />
-                                    </div>
-                                    <div class="col-md-4">
-                                        <label class="form-label">Validation Policy</label>
-                                        <select class="form-select form-select-sm" @bind="govDocModel.ValidationPolicy">
-                                            @foreach (var vp in validationPolicyOptions)
-                                            {
-                                                <option value="@vp.Key">@vp.Value</option>
-                                            }
-                                        </select>
-                                    </div>
-                                </div>
-                            }
-                            else if (selectedRequirementType == "Club")
-                            {
-                                <div class="row g-2 mb-2">
-                                    <div class="col-md-6">
-                                        <label class="form-label">Required Club ID</label>
-                                        <input type="text" class="form-control form-control-sm" @bind="clubRequirementClubId" placeholder="GUID" />
-                                    </div>
-                                </div>
-                            }
-                            else if (selectedRequirementType == "ClubMembershipLevel")
-                            {
-                                <div class="row g-2 mb-2">
-                                    <div class="col-md-4">
-                                        <label class="form-label">Required Club ID</label>
-                                        <input type="text" class="form-control form-control-sm" @bind="clubLevelClubId" placeholder="GUID" />
-                                    </div>
-                                    <div class="col-md-4">
-                                        <label class="form-label">Membership Level</label>
-                                        <input type="number" class="form-control form-control-sm" @bind="clubLevelModel.MembershipLevel" />
-                                    </div>
-                                </div>
-                            }
-                            else if (selectedRequirementType == "Composite")
-                            {
-                                <div class="row g-2 mb-2">
-                                    <div class="col-md-3">
-                                        <label class="form-label">Left Statement #</label>
-                                        <input type="number" class="form-control form-control-sm" @bind="compositeModel.LeftHandStatementId" />
-                                    </div>
-                                    <div class="col-md-3">
-                                        <label class="form-label">Operand</label>
-                                        <select class="form-select form-select-sm" @bind="compositeModel.Operand">
-                                            <option value="AND">AND</option>
-                                            <option value="OR">OR</option>
-                                        </select>
-                                    </div>
-                                    <div class="col-md-3">
-                                        <label class="form-label">Right Statement #</label>
-                                        <input type="number" class="form-control form-control-sm" @bind="compositeModel.RightHandStatementId" />
-                                    </div>
-                                    <div class="col-md-3 d-flex align-items-end">
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" @bind="compositeModel.IsWithinBrackets" id="bracketsCheck" />
-                                            <label class="form-check-label" for="bracketsCheck">Brackets</label>
-                                        </div>
-                                    </div>
-                                </div>
-                            }
-
-                            @if (!string.IsNullOrEmpty(selectedRequirementType))
-                            {
-                                @if (!string.IsNullOrEmpty(requirementMessage))
+                            <button class="btn btn-sm btn-primary mt-2" disabled="@(isSubmittingRoot || string.IsNullOrEmpty(statementBuilderModel.Type))" @onclick="() => SubmitRootStatementAsync(policy.PolicyId)">
+                                @if (isSubmittingRoot)
                                 {
-                                    <div class="alert @(requirementSuccess ? "alert-success" : "alert-danger") py-1 mb-2">@requirementMessage</div>
+                                    <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
                                 }
-                                <button class="btn btn-sm btn-primary" disabled="@isAddingRequirement" @onclick="() => AddRequirementAsync(policy.PolicyId)">
-                                    @if (isAddingRequirement)
-                                    {
-                                        <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
-                                    }
-                                    Add Statement
-                                </button>
-                            }
+                                @(policy.RootStatementId.HasValue ? "Replace Root Statement" : "Set as Root Statement")
+                            </button>
                         }
                     </div>
                 }
@@ -635,35 +493,15 @@ else
     private Guid? managingPolicyId;
     private List<PilotPolicyStatementResponse> policyStatements = [];
     private bool isPolicyStatementsLoading;
-    private string selectedRequirementType = string.Empty;
-    private bool isAddingRequirement;
-    private string? requirementMessage;
-    private bool requirementSuccess;
+    private bool isSubmittingRoot;
+    private string? rootSubmitMessage;
+    private bool rootSubmitSuccess;
     private string? policyMessage;
     private bool policySuccess;
-
-    private AddMinimumAgeRequirementRequest minAgeModel = new() { ValidationPolicy = "ANY" };
-    private AddMaximumAgeRequirementRequest maxAgeModel = new() { ValidationPolicy = "ANY" };
-    private AddInsuranceProviderRequirementRequest insuranceModel = new() { ValidationPolicy = "ANY" };
-    private AddGovernmentDocumentValidationRequirementRequest govDocModel = new() { ValidationPolicy = "ANY" };
-    private string clubRequirementClubId = string.Empty;
-    private string clubLevelClubId = string.Empty;
-    private AddClubMembershipLevelRequirementRequest clubLevelModel = new();
-    private AddPolicyStatementRequest compositeModel = new() { Operand = "AND" };
+    private StatementBuilderModel statementBuilderModel = new();
+    private List<ClubSearchResponse> allClubs = [];
     private NewPolicyFormModel newPolicyModel = new();
     private bool isCreatingPolicy;
-
-    private static readonly Dictionary<string, string> validationPolicyOptions = new()
-    {
-        ["NONE"] = "No validation",
-        ["ANY"] = "Any",
-        ["ANY_CLUB_MEMBER"] = "Any Club Member",
-        ["ANY_CLUB_COMMITTEE_MEMBER"] = "Any Club Committee Member",
-        ["POLICY_CLUB_MEMBER"] = "Policy Club Member",
-        ["POLICY_CLUB_COMMITTEE_MEMBER"] = "Policy Club Committee Member",
-        ["PILOT_CLUB_MEMBER"] = "Pilot Club Member",
-        ["PILOT_CLUB_COMMITTEE_MEMBER"] = "Pilot Club Committee Member"
-    };
 
     protected override async Task OnInitializedAsync()
     {
@@ -1003,13 +841,16 @@ else
         {
             managingPolicyId = null;
             policyStatements = [];
-            requirementMessage = null;
+            rootSubmitMessage = null;
+            statementBuilderModel = new();
         }
         else
         {
             managingPolicyId = policyId;
-            selectedRequirementType = string.Empty;
-            requirementMessage = null;
+            rootSubmitMessage = null;
+            statementBuilderModel = new();
+            if (allClubs.Count == 0)
+                allClubs = await Http.GetFromJsonAsync<List<ClubSearchResponse>>("api/club/query/all") ?? [];
             await LoadPolicyStatementsAsync(policyId);
         }
     }
@@ -1064,53 +905,69 @@ else
         }
     }
 
-    private async Task AddRequirementAsync(Guid policyId)
+    private async Task SubmitRootStatementAsync(Guid policyId)
     {
-        if (string.IsNullOrEmpty(selectedRequirementType)) return;
-        isAddingRequirement = true;
-        requirementMessage = null;
+        if (string.IsNullOrEmpty(statementBuilderModel.Type)) return;
+        isSubmittingRoot = true;
+        rootSubmitMessage = null;
         try
         {
-            HttpResponseMessage response = selectedRequirementType switch
+            int rootId = await SubmitStatementTreeAsync(policyId, statementBuilderModel);
+            var rootResponse = await Http.PutAsJsonAsync($"api/pilotselectionpolicy/{policyId}/rootstatement",
+                new SetRootStatementRequest { RootPolicyStatementId = rootId });
+            rootSubmitSuccess = rootResponse.IsSuccessStatusCode;
+            rootSubmitMessage = rootResponse.IsSuccessStatusCode ? "Root statement set successfully." : "Failed to set root statement.";
+            if (rootResponse.IsSuccessStatusCode)
             {
-                "MinimumAge" => await Http.PostAsJsonAsync($"api/pilotselectionpolicy/{policyId}/requirement/minimumage", minAgeModel),
-                "MaximumAge" => await Http.PostAsJsonAsync($"api/pilotselectionpolicy/{policyId}/requirement/maximumage", maxAgeModel),
-                "InsuranceProvider" => await Http.PostAsJsonAsync($"api/pilotselectionpolicy/{policyId}/requirement/insuranceprovider", insuranceModel),
-                "GovernmentDocument" => await Http.PostAsJsonAsync($"api/pilotselectionpolicy/{policyId}/requirement/governmentdocument", govDocModel),
-                "Club" => await Http.PostAsJsonAsync($"api/pilotselectionpolicy/{policyId}/requirement/club", new NaeRaces.WebAPI.Shared.PilotSelectionPolicy.AddClubRequirementRequest { ClubId = Guid.TryParse(clubRequirementClubId, out var cid) ? cid : Guid.Empty }),
-                "ClubMembershipLevel" => await Http.PostAsJsonAsync($"api/pilotselectionpolicy/{policyId}/requirement/clubmembershiplevel", new AddClubMembershipLevelRequirementRequest { ClubId = Guid.TryParse(clubLevelClubId, out var clid) ? clid : Guid.Empty, MembershipLevel = clubLevelModel.MembershipLevel }),
-                "Composite" => await Http.PostAsJsonAsync($"api/pilotselectionpolicy/{policyId}/statement", compositeModel),
-                _ => throw new InvalidOperationException()
-            };
-            requirementSuccess = response.IsSuccessStatusCode;
-            requirementMessage = response.IsSuccessStatusCode ? "Statement added." : "Failed to add statement.";
-            if (response.IsSuccessStatusCode)
-            {
-                ResetRequirementModels();
+                statementBuilderModel = new();
                 await LoadPolicyStatementsAsync(policyId);
+                await RefreshPoliciesAsync();
             }
         }
         catch
         {
-            requirementSuccess = false;
-            requirementMessage = "An error occurred.";
+            rootSubmitSuccess = false;
+            rootSubmitMessage = "An error occurred.";
         }
         finally
         {
-            isAddingRequirement = false;
+            isSubmittingRoot = false;
         }
     }
 
-    private void ResetRequirementModels()
+    private async Task<int> SubmitStatementTreeAsync(Guid policyId, StatementBuilderModel model)
     {
-        minAgeModel = new() { ValidationPolicy = "ANY" };
-        maxAgeModel = new() { ValidationPolicy = "ANY" };
-        insuranceModel = new() { ValidationPolicy = "ANY" };
-        govDocModel = new() { ValidationPolicy = "ANY" };
-        clubRequirementClubId = string.Empty;
-        clubLevelClubId = string.Empty;
-        clubLevelModel = new();
-        compositeModel = new() { Operand = "AND" };
+        if (model.Type == "ExistingStatement")
+            return model.ExistingStatementId;
+
+        if (model.Type == "Composite")
+        {
+            int leftId = await SubmitStatementTreeAsync(policyId, model.Left!);
+            int rightId = await SubmitStatementTreeAsync(policyId, model.Right!);
+            var response = await Http.PostAsJsonAsync($"api/pilotselectionpolicy/{policyId}/statement",
+                new AddPolicyStatementRequest { LeftHandStatementId = leftId, Operand = model.Operand, RightHandStatementId = rightId, IsWithinBrackets = model.IsWithinBrackets });
+            var created = await response.Content.ReadFromJsonAsync<StatementCreatedResponse>();
+            return created!.StatementId;
+        }
+
+        HttpResponseMessage leafResponse = model.Type switch
+        {
+            "MinimumAge" => await Http.PostAsJsonAsync($"api/pilotselectionpolicy/{policyId}/requirement/minimumage",
+                new AddMinimumAgeRequirementRequest { MinimumAge = model.MinimumAge, ValidationPolicy = model.ValidationPolicy }),
+            "MaximumAge" => await Http.PostAsJsonAsync($"api/pilotselectionpolicy/{policyId}/requirement/maximumage",
+                new AddMaximumAgeRequirementRequest { MaximumAge = model.MaximumAge, ValidationPolicy = model.ValidationPolicy }),
+            "InsuranceProvider" => await Http.PostAsJsonAsync($"api/pilotselectionpolicy/{policyId}/requirement/insuranceprovider",
+                new AddInsuranceProviderRequirementRequest { InsuranceProvider = model.InsuranceProvider, ValidationPolicy = model.ValidationPolicy }),
+            "GovernmentDocument" => await Http.PostAsJsonAsync($"api/pilotselectionpolicy/{policyId}/requirement/governmentdocument",
+                new AddGovernmentDocumentValidationRequirementRequest { GovernmentDocument = model.GovernmentDocument, ValidationPolicy = model.ValidationPolicy }),
+            "Club" => await Http.PostAsJsonAsync($"api/pilotselectionpolicy/{policyId}/requirement/club",
+                new NaeRaces.WebAPI.Shared.PilotSelectionPolicy.AddClubRequirementRequest { ClubId = model.RequiredClubId }),
+            "ClubMembershipLevel" => await Http.PostAsJsonAsync($"api/pilotselectionpolicy/{policyId}/requirement/clubmembershiplevel",
+                new AddClubMembershipLevelRequirementRequest { ClubId = model.RequiredClubId, MembershipLevel = model.RequiredMembershipLevelId }),
+            _ => throw new InvalidOperationException($"Unknown statement type: {model.Type}")
+        };
+        var leafCreated = await leafResponse.Content.ReadFromJsonAsync<StatementCreatedResponse>();
+        return leafCreated!.StatementId;
     }
 
     private async Task RemoveStatementAsync(Guid policyId, int statementId)
@@ -1123,32 +980,11 @@ else
         }
     }
 
-    private async Task SetRootStatementAsync(Guid policyId, int statementId)
-    {
-        var response = await Http.PutAsJsonAsync($"api/pilotselectionpolicy/{policyId}/rootstatement", new SetRootStatementRequest { RootPolicyStatementId = statementId });
-        if (response.IsSuccessStatusCode)
-        {
-            await RefreshPoliciesAsync();
-        }
-    }
-
     private async Task RefreshPoliciesAsync()
     {
         var result = await Http.GetFromJsonAsync<List<PilotSelectionPolicyResponse>>($"api/club/{ClubId}/query/pilotpolicies");
         policies = result ?? [];
     }
-
-    private static string GetStatementSummary(PilotPolicyStatementResponse stmt) => stmt.StatementType switch
-    {
-        "MinimumAge" => $"Min age \u2265 {stmt.MinimumAge} ({stmt.ValidationPolicy})",
-        "MaximumAge" => $"Max age \u2264 {stmt.MaximumAge} ({stmt.ValidationPolicy})",
-        "InsuranceProvider" => $"Insurance: {stmt.InsuranceProvider} ({stmt.ValidationPolicy})",
-        "GovernmentDocument" => $"Gov doc: {stmt.GovernmentDocument} ({stmt.ValidationPolicy})",
-        "ClubMembership" => $"Club member: {stmt.RequiredClubId}",
-        "ClubMembershipLevel" => $"Club {stmt.RequiredClubId} / level {stmt.RequiredMembershipLevelId}",
-        "Composite" => $"{(stmt.IsWithinBrackets == true ? "(" : "")}#{stmt.LeftHandStatementId} {stmt.Operand} #{stmt.RightHandStatementId}{(stmt.IsWithinBrackets == true ? ")" : "")}",
-        _ => stmt.StatementType
-    };
 
     private class LocationEditModel
     {

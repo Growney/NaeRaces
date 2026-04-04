@@ -1,0 +1,220 @@
+@using NaeRaces.WebAPI.Shared.Club
+@using NaeRaces.WebAPI.Shared.PilotSelectionPolicy
+@inject HttpClient Http
+
+<div class="@(Level > 0 ? "border-start border-2 ps-3 mt-2" : "")">
+    <div class="mb-2">
+        <select class="form-select form-select-sm" value="@Model.Type" @onchange="OnTypeChanged">
+            <option value="">-- Select statement type --</option>
+            <option value="MinimumAge">Minimum Age</option>
+            <option value="MaximumAge">Maximum Age</option>
+            <option value="InsuranceProvider">Insurance Provider</option>
+            <option value="GovernmentDocument">Government Document</option>
+            <option value="Club">Club Membership</option>
+            <option value="ClubMembershipLevel">Club Membership Level</option>
+            <option value="Composite">Composite (AND/OR)</option>
+            @if (AllStatements.Count > 0)
+            {
+                <option value="ExistingStatement">Use Existing Statement</option>
+            }
+        </select>
+    </div>
+
+    @if (Model.Type == "MinimumAge")
+    {
+        <div class="row g-2">
+            <div class="col-md-3">
+                <label class="form-label form-label-sm">Minimum Age</label>
+                <input type="number" class="form-control form-control-sm" @bind="Model.MinimumAge" />
+            </div>
+            <div class="col-md-5">
+                <label class="form-label form-label-sm">Validation Policy</label>
+                <select class="form-select form-select-sm" @bind="Model.ValidationPolicy">
+                    @foreach (var vp in StatementBuilderModel.ValidationPolicyOptions)
+                    {
+                        <option value="@vp.Key">@vp.Value</option>
+                    }
+                </select>
+            </div>
+        </div>
+    }
+    else if (Model.Type == "MaximumAge")
+    {
+        <div class="row g-2">
+            <div class="col-md-3">
+                <label class="form-label form-label-sm">Maximum Age</label>
+                <input type="number" class="form-control form-control-sm" @bind="Model.MaximumAge" />
+            </div>
+            <div class="col-md-5">
+                <label class="form-label form-label-sm">Validation Policy</label>
+                <select class="form-select form-select-sm" @bind="Model.ValidationPolicy">
+                    @foreach (var vp in StatementBuilderModel.ValidationPolicyOptions)
+                    {
+                        <option value="@vp.Key">@vp.Value</option>
+                    }
+                </select>
+            </div>
+        </div>
+    }
+    else if (Model.Type == "InsuranceProvider")
+    {
+        <div class="row g-2">
+            <div class="col-md-5">
+                <label class="form-label form-label-sm">Insurance Provider</label>
+                <input type="text" class="form-control form-control-sm" @bind="Model.InsuranceProvider" />
+            </div>
+            <div class="col-md-5">
+                <label class="form-label form-label-sm">Validation Policy</label>
+                <select class="form-select form-select-sm" @bind="Model.ValidationPolicy">
+                    @foreach (var vp in StatementBuilderModel.ValidationPolicyOptions)
+                    {
+                        <option value="@vp.Key">@vp.Value</option>
+                    }
+                </select>
+            </div>
+        </div>
+    }
+    else if (Model.Type == "GovernmentDocument")
+    {
+        <div class="row g-2">
+            <div class="col-md-5">
+                <label class="form-label form-label-sm">Government Document Type</label>
+                <input type="text" class="form-control form-control-sm" @bind="Model.GovernmentDocument" />
+            </div>
+            <div class="col-md-5">
+                <label class="form-label form-label-sm">Validation Policy</label>
+                <select class="form-select form-select-sm" @bind="Model.ValidationPolicy">
+                    @foreach (var vp in StatementBuilderModel.ValidationPolicyOptions)
+                    {
+                        <option value="@vp.Key">@vp.Value</option>
+                    }
+                </select>
+            </div>
+        </div>
+    }
+    else if (Model.Type == "Club")
+    {
+        <div class="row g-2">
+            <div class="col-md-7">
+                <label class="form-label form-label-sm">Required Club</label>
+                <select class="form-select form-select-sm" @bind="Model.RequiredClubId">
+                    <option value="@Guid.Empty">-- Select club --</option>
+                    @foreach (var club in Clubs)
+                    {
+                        <option value="@club.ClubId">@club.Code - @club.Name</option>
+                    }
+                </select>
+            </div>
+        </div>
+    }
+    else if (Model.Type == "ClubMembershipLevel")
+    {
+        <div class="row g-2">
+            <div class="col-md-5">
+                <label class="form-label form-label-sm">Club</label>
+                <select class="form-select form-select-sm" value="@_selectedLevelClubId" @onchange="OnClubSelectedForLevel">
+                    <option value="">-- Select club --</option>
+                    @foreach (var club in Clubs)
+                    {
+                        <option value="@club.ClubId">@club.Code - @club.Name</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-5">
+                <label class="form-label form-label-sm">Membership Level</label>
+                <select class="form-select form-select-sm" @bind="Model.RequiredMembershipLevelId" disabled="@(_membershipLevels.Count == 0)">
+                    <option value="0">-- Select level --</option>
+                    @foreach (var level in _membershipLevels)
+                    {
+                        <option value="@level.MembershipLevelId">@level.Name</option>
+                    }
+                </select>
+            </div>
+        </div>
+    }
+    else if (Model.Type == "Composite")
+    {
+        <div class="row g-2 mb-2">
+            <div class="col-md-3">
+                <label class="form-label form-label-sm">Operand</label>
+                <select class="form-select form-select-sm" @bind="Model.Operand">
+                    <option value="AND">AND</option>
+                    <option value="OR">OR</option>
+                </select>
+            </div>
+            <div class="col-md-3 d-flex align-items-end">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" @bind="Model.IsWithinBrackets" id="brackets-@_instanceId" />
+                    <label class="form-check-label" for="brackets-@_instanceId">Brackets</label>
+                </div>
+            </div>
+        </div>
+        <div class="mb-2">
+            <small class="fw-semibold text-muted">Left:</small>
+            <StatementBuilder Model="Model.Left!" Clubs="Clubs" AllStatements="AllStatements" Level="Level + 1" />
+        </div>
+        <div>
+            <small class="fw-semibold text-muted">Right:</small>
+            <StatementBuilder Model="Model.Right!" Clubs="Clubs" AllStatements="AllStatements" Level="Level + 1" />
+        </div>
+    }
+    else if (Model.Type == "ExistingStatement")
+    {
+        <div class="row g-2">
+            <div class="col-md-8">
+                <label class="form-label form-label-sm">Statement</label>
+                <select class="form-select form-select-sm" @bind="Model.ExistingStatementId">
+                    <option value="0">-- Select statement --</option>
+                    @foreach (var stmt in AllStatements)
+                    {
+                        <option value="@stmt.StatementId">#@stmt.StatementId: @StatementBuilderModel.GetStatementSummary(stmt)</option>
+                    }
+                </select>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public StatementBuilderModel Model { get; set; } = default!;
+    [Parameter, EditorRequired] public List<ClubSearchResponse> Clubs { get; set; } = default!;
+    [Parameter, EditorRequired] public List<PilotPolicyStatementResponse> AllStatements { get; set; } = default!;
+    [Parameter] public int Level { get; set; } = 0;
+
+    private List<ClubMembershipLevelResponse> _membershipLevels = [];
+    private string _selectedLevelClubId = string.Empty;
+    private readonly string _instanceId = Guid.NewGuid().ToString("N");
+
+    private void OnTypeChanged(ChangeEventArgs e)
+    {
+        Model.Type = e.Value?.ToString() ?? string.Empty;
+        if (Model.Type == "Composite")
+        {
+            Model.Left = new StatementBuilderModel();
+            Model.Right = new StatementBuilderModel();
+        }
+        else
+        {
+            Model.Left = null;
+            Model.Right = null;
+        }
+        _membershipLevels = [];
+        _selectedLevelClubId = string.Empty;
+    }
+
+    private async Task OnClubSelectedForLevel(ChangeEventArgs e)
+    {
+        _selectedLevelClubId = e.Value?.ToString() ?? string.Empty;
+        if (Guid.TryParse(_selectedLevelClubId, out var clubId) && clubId != Guid.Empty)
+        {
+            Model.RequiredClubId = clubId;
+            _membershipLevels = await Http.GetFromJsonAsync<List<ClubMembershipLevelResponse>>($"api/club/{clubId}/query/membershiplevels") ?? [];
+        }
+        else
+        {
+            Model.RequiredClubId = Guid.Empty;
+            _membershipLevels = [];
+        }
+        Model.RequiredMembershipLevelId = 0;
+    }
+}
