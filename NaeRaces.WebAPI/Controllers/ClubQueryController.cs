@@ -84,7 +84,8 @@ public class ClubQueryController : Controller
             });
         }
 
-        await foreach (var followed in _pilotFollowedClubQueryHandler.GetFollowedClubs(pilotId))
+        var followedClubIds = await _pilotFollowedClubQueryHandler.GetFollowedClubs(pilotId).ToListAsync();
+        foreach (var followed in followedClubIds)
         {
             if (memberClubIds.Contains(followed.ClubId))
                 continue;
@@ -110,7 +111,8 @@ public class ClubQueryController : Controller
         }
 
         string[] allRoles = ["Administrator", "RaceOrganiser", "Trustee"];
-        await foreach (var clubId in _clubMemberQueryHandler.GetClubIdsWithRoles(pilotId, allRoles))
+        var clubsWithRoles = await _clubMemberQueryHandler.GetClubIdsWithRoles(pilotId, allRoles).ToListAsync();
+        foreach (var clubId in clubsWithRoles)
         {
             if (memberClubIds.Contains(clubId))
                 continue;
