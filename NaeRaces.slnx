@@ -1,4 +1,7 @@
 <Solution>
+  <Folder Name="/Solution Items/">
+    <File Path="dev-database-init.sh" />
+  </Folder>
   <Folder Name="/src/">
     <Project Path="NaeRaces.BlazorWebApp/NaeRaces.BlazorWebApp.csproj" Id="299cf374-eb33-4bfa-a176-89d46435dcf5" />
     <Project Path="NaeRaces.Command/NaeRaces.Command.csproj" Id="1fdf9c2d-3c0e-4940-af5a-a7f3b145e05b" />

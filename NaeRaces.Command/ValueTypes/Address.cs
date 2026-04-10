@@ -31,8 +31,8 @@ public struct Address
             throw new ArgumentException("City cannot be longer than 100 characters.", nameof(city));
         if(county?.Length > 100)
             throw new ArgumentException("County cannot be longer than 100 characters.", nameof(county));
-        if(postcode?.Length > 10)
-            throw new ArgumentException("Postcode cannot be longer than 10 characters.", nameof(postcode));
+        if(postcode?.Length > 15)
+            throw new ArgumentException("Postcode cannot be longer than 15 characters.", nameof(postcode));
 
         if(string.IsNullOrWhiteSpace(postcode))
             throw new ArgumentException("Postcode cannot be null or whitespace.", nameof(postcode));

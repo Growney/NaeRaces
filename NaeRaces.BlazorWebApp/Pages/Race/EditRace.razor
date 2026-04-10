@@ -1,0 +1,1285 @@
+@page "/race/edit/{RaceId:guid}"
+@attribute [Authorize]
+@using NaeRaces.WebAPI.Shared.Race
+@using NaeRaces.WebAPI.Shared.Club
+@using NaeRaces.WebAPI.Shared.PilotSelectionPolicy
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.ComponentModel.DataAnnotations
+@inject HttpClient Http
+@inject NavigationManager Navigation
+
+<PageTitle>Edit Race</PageTitle>
+
+@if (isLoading)
+{
+    <div class="d-flex align-items-center">
+        <span class="spinner-border me-2" role="status" aria-hidden="true"></span>
+        <em>Loading race...</em>
+    </div>
+}
+else if (race == null)
+{
+    <div class="alert alert-warning">Race not found.</div>
+    <a href="/" class="btn btn-secondary">Back to Home</a>
+}
+else if (!isOrganiser)
+{
+    <div class="alert alert-warning">You do not have permission to edit this race.</div>
+    <a href="/race/@RaceId" class="btn btn-secondary">Back to Race</a>
+}
+else
+{
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h1 class="mb-0">@race.Name</h1>
+            @if (!string.IsNullOrWhiteSpace(race.ClubName))
+            {
+                <span class="text-muted">Organised by <a href="/club/@race.ClubId">@race.ClubName</a></span>
+            }
+        </div>
+        <a href="/race/@RaceId" class="btn btn-outline-secondary">Back to Race</a>
+    </div>
+
+    <!-- Description -->
+    <div class="card mb-3">
+        <div class="card-header fw-bold">Description</div>
+        <div class="card-body">
+            <EditForm Model="descriptionModel" OnValidSubmit="SaveDescriptionAsync">
+                <DataAnnotationsValidator />
+                <ValidationSummary class="text-danger" />
+                <div class="mb-3">
+                    <label class="form-label">Description</label>
+                    <InputTextArea @bind-Value="descriptionModel.Description" class="form-control" rows="4" />
+                </div>
+                @if (!string.IsNullOrEmpty(descriptionMessage))
+                {
+                    <div class="alert @(descriptionSuccess ? "alert-success" : "alert-danger") mb-2 py-2">@descriptionMessage</div>
+                }
+                <button type="submit" class="btn btn-primary" disabled="@isSavingDescription">
+                    @if (isSavingDescription)
+                    {
+                        <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                    }
+                    Save Description
+                </button>
+            </EditForm>
+        </div>
+    </div>
+
+    <!-- Race Dates -->
+    <div class="card mb-3">
+        <div class="card-header fw-bold">Race Dates</div>
+        <div class="card-body">
+            @if (raceDates.Count > 0)
+            {
+                <div class="table-responsive mb-3">
+                    <table class="table table-striped mb-0">
+                        <thead>
+                            <tr>
+                                <th>Start</th>
+                                <th>End</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var rd in raceDates)
+                            {
+                                <tr>
+                                    <td>@rd.Start.ToString("g")</td>
+                                    <td>@rd.End.ToString("g")</td>
+                                    <td>
+                                        <button class="btn btn-sm btn-danger"
+                                                disabled="@isRemovingDate"
+                                                @onclick="() => RemoveRaceDateAsync(rd.RaceDateId)">
+                                            Remove
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            else
+            {
+                <p class="text-muted mb-3">No dates scheduled yet.</p>
+            }
+
+            <h6>Add Date</h6>
+            <EditForm Model="raceDateModel" OnValidSubmit="AddRaceDateAsync">
+                <DataAnnotationsValidator />
+                <ValidationSummary class="text-danger" />
+                <div class="row g-3 mb-3">
+                    <div class="col-md-5">
+                        <label class="form-label">Start</label>
+                        <InputDate Type="InputDateType.DateTimeLocal" @bind-Value="raceDateModel.Start" class="form-control" />
+                    </div>
+                    <div class="col-md-5">
+                        <label class="form-label">End</label>
+                        <InputDate Type="InputDateType.DateTimeLocal" @bind-Value="raceDateModel.End" class="form-control" />
+                    </div>
+                    <div class="col-md-2 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary w-100" disabled="@isAddingDate">
+                            @if (isAddingDate)
+                            {
+                                <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                            }
+                            Add Date
+                        </button>
+                    </div>
+                </div>
+                @if (!string.IsNullOrEmpty(raceDateMessage))
+                {
+                    <div class="alert @(raceDateSuccess ? "alert-success" : "alert-danger") py-2">@raceDateMessage</div>
+                }
+            </EditForm>
+        </div>
+    </div>
+
+    <!-- Attendees -->
+    <div class="card mb-3">
+        <div class="card-header fw-bold">Attendees</div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <EditForm Model="minAttendeesModel" OnValidSubmit="SaveMinAttendeesAsync">
+                        <DataAnnotationsValidator />
+                        <label class="form-label">Minimum Attendees</label>
+                        <div class="input-group">
+                            <InputNumber @bind-Value="minAttendeesModel.Attendees" class="form-control" />
+                            <button type="submit" class="btn btn-primary" disabled="@isSavingMinAttendees">
+                                @if (isSavingMinAttendees)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                                }
+                                Save
+                            </button>
+                        </div>
+                    </EditForm>
+                </div>
+                <div class="col-md-6">
+                    <EditForm Model="maxAttendeesModel" OnValidSubmit="SaveMaxAttendeesAsync">
+                        <DataAnnotationsValidator />
+                        <label class="form-label">Maximum Attendees</label>
+                        <div class="input-group">
+                            <InputNumber @bind-Value="maxAttendeesModel.Attendees" class="form-control" />
+                            <button type="submit" class="btn btn-primary" disabled="@isSavingMaxAttendees">
+                                @if (isSavingMaxAttendees)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                                }
+                                Save
+                            </button>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+            @if (!string.IsNullOrEmpty(attendeesMessage))
+            {
+                <div class="alert @(attendeesSuccess ? "alert-success" : "alert-danger") mt-2 py-2">@attendeesMessage</div>
+            }
+        </div>
+    </div>
+
+    <!-- Packages -->
+    <div class="card mb-3">
+        <div class="card-header fw-bold">Packages</div>
+        <div class="card-body">
+            @if (packages.Count > 0)
+            {
+                <div class="table-responsive mb-3">
+                    <table class="table table-striped mb-0">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Cost</th>
+                                <th>Currency</th>
+                                <th>Discounts</th>
+                                <th>Registration Open</th>
+                                <th>Registration Close</th>
+                                <th>Pilot Policy</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var pkg in packages)
+                            {
+                                <tr>
+                                    <td>@pkg.Name</td>
+                                    <td>@pkg.Cost</td>
+                                    <td>@pkg.Currency</td>
+                                    <td>@(pkg.ApplyDiscounts ? "Yes" : "No")</td>
+                                    <td>@(pkg.RegistrationOpenDate?.ToString("g") ?? "—")</td>
+                                    <td>@(pkg.RegistrationCloseDate?.ToString("g") ?? "—")</td>
+                                    <td>@GetPolicyName(pkg.PilotPolicyId)</td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-primary me-1"
+                                                @onclick="() => ToggleEditPackage(pkg.RacePackageId)">
+                                            @(editingPackageId == pkg.RacePackageId ? "Close" : "Edit")
+                                        </button>
+                                        <button class="btn btn-sm btn-danger"
+                                                disabled="@isRemovingPackage"
+                                                @onclick="() => RemovePackageAsync(pkg.RacePackageId)">
+                                            Remove
+                                        </button>
+                                    </td>
+                                </tr>
+                                @if (editingPackageId == pkg.RacePackageId)
+                                {
+                                    <tr>
+                                        <td colspan="8">
+                                            <div class="p-3 bg-light rounded">
+                                                <div class="row g-3">
+                                                    <div class="col-md-3">
+                                                        <label class="form-label">Apply Discounts</label>
+                                                        <div class="input-group">
+                                                            <select class="form-select" @bind="editApplyDiscounts">
+                                                                <option value="true">Yes</option>
+                                                                <option value="false">No</option>
+                                                            </select>
+                                                            <button class="btn btn-primary" disabled="@isSavingPackageEdit"
+                                                                    @onclick="() => SavePackageDiscountStatusAsync(pkg.RacePackageId)">
+                                                                Save
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-3">
+                                                        <label class="form-label">Registration Open</label>
+                                                        <div class="input-group">
+                                                            <input type="datetime-local" class="form-control" @bind="editRegistrationOpen" />
+                                                            <button class="btn btn-primary" disabled="@isSavingPackageEdit"
+                                                                    @onclick="() => SavePackageRegistrationOpenAsync(pkg.RacePackageId)">
+                                                                Save
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-3">
+                                                        <label class="form-label">Registration Close</label>
+                                                        <div class="input-group">
+                                                            <input type="datetime-local" class="form-control" @bind="editRegistrationClose" />
+                                                            <button class="btn btn-primary" disabled="@isSavingPackageEdit"
+                                                                    @onclick="() => SavePackageRegistrationCloseAsync(pkg.RacePackageId)">
+                                                                Save
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-3">
+                                                        <label class="form-label">Pilot Selection Policy</label>
+                                                        <div class="input-group">
+                                                            <select class="form-select" @bind="editPilotPolicyId">
+                                                                <option value="">— None —</option>
+                                                                @foreach (var policy in clubPolicies)
+                                                                {
+                                                                    <option value="@policy.PolicyId">@policy.Name</option>
+                                                                }
+                                                            </select>
+                                                            <button class="btn btn-primary" disabled="@isSavingPackageEdit"
+                                                                    @onclick="() => SavePackagePilotPolicyAsync(pkg.RacePackageId)">
+                                                                Save
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                @if (!string.IsNullOrEmpty(packageEditMessage))
+                                                {
+                                                    <div class="alert @(packageEditSuccess ? "alert-success" : "alert-danger") mt-2 py-2">@packageEditMessage</div>
+                                                }
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            else
+            {
+                <p class="text-muted mb-3">No packages added yet.</p>
+            }
+
+            <h6>Add Package</h6>
+            <EditForm Model="addPackageModel" OnValidSubmit="AddPackageAsync">
+                <DataAnnotationsValidator />
+                <ValidationSummary class="text-danger" />
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label">Name</label>
+                        <InputText @bind-Value="addPackageModel.Name" class="form-control" />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Currency</label>
+                        <InputText @bind-Value="addPackageModel.Currency" class="form-control" />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Cost</label>
+                        <InputNumber @bind-Value="addPackageModel.Cost" class="form-control" />
+                    </div>
+                    <div class="col-md-2 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary w-100" disabled="@isAddingPackage">
+                            @if (isAddingPackage)
+                            {
+                                <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                            }
+                            Add
+                        </button>
+                    </div>
+                </div>
+            </EditForm>
+            @if (!string.IsNullOrEmpty(packageMessage))
+            {
+                <div class="alert @(packageSuccess ? "alert-success" : "alert-danger") mt-2 py-2">@packageMessage</div>
+            }
+        </div>
+    </div>
+
+    <!-- Team & Attendance Settings -->
+    <div class="card mb-3">
+        <div class="card-header fw-bold">Attendance Settings</div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <div class="d-grid gap-2">
+                        <label class="form-label fw-semibold">Individual Pilot Attendance</label>
+                        <button class="btn btn-outline-success" disabled="@isSavingAttendance"
+                                @onclick="PermitIndividualPilotAttendanceAsync">
+                            Permit
+                        </button>
+                        <button class="btn btn-outline-danger" disabled="@isSavingAttendance"
+                                @onclick="ProhibitIndividualPilotAttendanceAsync">
+                            Prohibit
+                        </button>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="d-grid gap-2">
+                        <label class="form-label fw-semibold">Team Attendance</label>
+                        <button class="btn btn-outline-success" disabled="@isSavingAttendance"
+                                @onclick="PermitTeamAttendanceAsync">
+                            Permit
+                        </button>
+                        <button class="btn btn-outline-danger" disabled="@isSavingAttendance"
+                                @onclick="ProhibitTeamAttendanceAsync">
+                            Prohibit
+                        </button>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="d-grid gap-2">
+                        <label class="form-label fw-semibold">Team Substitutions</label>
+                        <button class="btn btn-outline-success" disabled="@isSavingAttendance"
+                                @onclick="PermitTeamSubstitutionsAsync">
+                            Permit
+                        </button>
+                        <button class="btn btn-outline-danger" disabled="@isSavingAttendance"
+                                @onclick="ProhibitTeamSubstitutionsAsync">
+                            Prohibit
+                        </button>
+                    </div>
+                </div>
+            </div>
+            @if (!string.IsNullOrEmpty(attendanceMessage))
+            {
+                <div class="alert @(attendanceSuccess ? "alert-success" : "alert-danger") mt-3 py-2">@attendanceMessage</div>
+            }
+        </div>
+    </div>
+
+    <!-- Payment Deadline -->
+    <div class="card mb-3">
+        <div class="card-header fw-bold">Payment Deadline</div>
+        <div class="card-body">
+            <EditForm Model="paymentDeadlineModel" OnValidSubmit="SavePaymentDeadlineAsync">
+                <DataAnnotationsValidator />
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Payment Deadline</label>
+                        <InputDate Type="InputDateType.DateTimeLocal" @bind-Value="paymentDeadlineModel.Date" class="form-control" />
+                    </div>
+                    <div class="col-md-6 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary" disabled="@isSavingPaymentDeadline">
+                            @if (isSavingPaymentDeadline)
+                            {
+                                <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                            }
+                            Save Payment Deadline
+                        </button>
+                    </div>
+                </div>
+                @if (!string.IsNullOrEmpty(paymentDeadlineMessage))
+                {
+                    <div class="alert @(paymentDeadlineSuccess ? "alert-success" : "alert-danger") mt-2 py-2">@paymentDeadlineMessage</div>
+                }
+            </EditForm>
+        </div>
+    </div>
+
+    <!-- Go/No-Go Date -->
+    <div class="card mb-3">
+        <div class="card-header fw-bold">Go / No-Go Date</div>
+        <div class="card-body">
+            <EditForm Model="goNoGoModel" OnValidSubmit="SaveGoNoGoAsync">
+                <DataAnnotationsValidator />
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Go/No-Go Date</label>
+                        <InputDate Type="InputDateType.DateTimeLocal" @bind-Value="goNoGoModel.Date" class="form-control" />
+                    </div>
+                    <div class="col-md-6 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary" disabled="@isSavingGoNoGo">
+                            @if (isSavingGoNoGo)
+                            {
+                                <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                            }
+                            Save Go/No-Go Date
+                        </button>
+                    </div>
+                </div>
+                @if (!string.IsNullOrEmpty(goNoGoMessage))
+                {
+                    <div class="alert @(goNoGoSuccess ? "alert-success" : "alert-danger") mt-2 py-2">@goNoGoMessage</div>
+                }
+            </EditForm>
+        </div>
+    </div>
+
+    <!-- Publishing & Race Control -->
+    <div class="card mb-3">
+        <div class="card-header fw-bold">Publishing &amp; Race Control</div>
+        <div class="card-body">
+            <div class="d-flex flex-wrap gap-2">
+                <button class="btn btn-success" disabled="@isPublishing" @onclick="PublishDetailsAsync">
+                    @if (isPublishing)
+                    {
+                        <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                    }
+                    Publish Details
+                </button>
+                <button class="btn btn-success" disabled="@isPublishing" @onclick="PublishRaceAsync">
+                    @if (isPublishing)
+                    {
+                        <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                    }
+                    Publish Race
+                </button>
+                <button class="btn btn-warning" disabled="@isPublishing" @onclick="CloseRegistrationAsync">
+                    @if (isPublishing)
+                    {
+                        <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                    }
+                    Close Registration
+                </button>
+                <button class="btn btn-danger" disabled="@isPublishing" @onclick="CancelRaceAsync">
+                    @if (isPublishing)
+                    {
+                        <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                    }
+                    Cancel Race
+                </button>
+            </div>
+            @if (!string.IsNullOrEmpty(publishMessage))
+            {
+                <div class="alert @(publishSuccess ? "alert-success" : "alert-danger") mt-3 py-2">@publishMessage</div>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public Guid RaceId { get; set; }
+
+    private bool isLoading = true;
+    private bool isOrganiser;
+    private RaceInformationResponse? race;
+    private List<RacePackageResponse> packages = [];
+
+    // Description
+    private DescriptionModel descriptionModel = new();
+    private bool isSavingDescription;
+    private string? descriptionMessage;
+    private bool descriptionSuccess;
+
+    // Race Dates
+    private List<RaceDateResponse> raceDates = [];
+    private RaceDateModel raceDateModel = new();
+    private bool isAddingDate;
+    private bool isRemovingDate;
+    private string? raceDateMessage;
+    private bool raceDateSuccess;
+
+    // Attendees
+    private AttendeesModel minAttendeesModel = new();
+    private AttendeesModel maxAttendeesModel = new();
+    private bool isSavingMinAttendees;
+    private bool isSavingMaxAttendees;
+    private string? attendeesMessage;
+    private bool attendeesSuccess;
+
+    // Packages
+    private AddPackageModel addPackageModel = new();
+    private bool isAddingPackage;
+    private bool isRemovingPackage;
+    private string? packageMessage;
+    private bool packageSuccess;
+
+    // Package editing
+    private int? editingPackageId;
+    private bool editApplyDiscounts;
+    private DateTime editRegistrationOpen = DateTime.UtcNow;
+    private DateTime editRegistrationClose = DateTime.UtcNow;
+    private Guid? editPilotPolicyId;
+    private bool isSavingPackageEdit;
+    private string? packageEditMessage;
+    private bool packageEditSuccess;
+    private List<PilotSelectionPolicyResponse> clubPolicies = [];
+
+    // Attendance settings
+    private bool isSavingAttendance;
+    private string? attendanceMessage;
+    private bool attendanceSuccess;
+
+    // Payment Deadline
+    private DateModel paymentDeadlineModel = new();
+    private bool isSavingPaymentDeadline;
+    private string? paymentDeadlineMessage;
+    private bool paymentDeadlineSuccess;
+
+    // Go/No-Go
+    private DateModel goNoGoModel = new();
+    private bool isSavingGoNoGo;
+    private string? goNoGoMessage;
+    private bool goNoGoSuccess;
+
+    // Publishing
+    private bool isPublishing;
+    private string? publishMessage;
+    private bool publishSuccess;
+
+    protected override async Task OnInitializedAsync()
+    {
+        isLoading = true;
+        try
+        {
+            var raceTask = Http.GetFromJsonAsync<RaceInformationResponse>($"api/race/{RaceId}/query/information");
+            var organiserTask = Http.GetAsync($"api/race/{RaceId}/query/is-organiser");
+            var packagesTask = Http.GetFromJsonAsync<List<RacePackageResponse>>($"api/race/{RaceId}/query/packages");
+            var datesTask = Http.GetFromJsonAsync<List<RaceDateResponse>>($"api/race/{RaceId}/query/dates");
+
+            await Task.WhenAll(raceTask, organiserTask, packagesTask, datesTask);
+
+            race = raceTask.Result;
+
+            if (organiserTask.Result.IsSuccessStatusCode)
+            {
+                isOrganiser = await organiserTask.Result.Content.ReadFromJsonAsync<bool>();
+            }
+
+            packages = packagesTask.Result ?? [];
+            raceDates = datesTask.Result ?? [];
+
+            if (race != null)
+            {
+                clubPolicies = await Http.GetFromJsonAsync<List<PilotSelectionPolicyResponse>>($"api/club/{race.ClubId}/query/pilotpolicies") ?? [];
+
+                if (!string.IsNullOrEmpty(race.Description))
+                {
+                    descriptionModel.Description = race.Description;
+                }
+                if (race.MinimumPilots.HasValue)
+                {
+                    minAttendeesModel.Attendees = race.MinimumPilots.Value;
+                }
+                if (race.MaximumPilots.HasValue)
+                {
+                    maxAttendeesModel.Attendees = race.MaximumPilots.Value;
+                }
+                if (race.PaymentDeadline.HasValue)
+                {
+                    paymentDeadlineModel.Date = race.PaymentDeadline.Value;
+                }
+                if (race.GoNoGoDate.HasValue)
+                {
+                    goNoGoModel.Date = race.GoNoGoDate.Value;
+                }
+            }
+        }
+        catch
+        {
+            race = null;
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task SaveDescriptionAsync()
+    {
+        isSavingDescription = true;
+        descriptionMessage = null;
+        try
+        {
+            var request = new SetRaceDescriptionRequest { Description = descriptionModel.Description };
+            var response = await Http.PutAsJsonAsync($"api/race/{RaceId}/description", request);
+            if (response.IsSuccessStatusCode)
+            {
+                descriptionMessage = "Description saved.";
+                descriptionSuccess = true;
+            }
+            else
+            {
+                descriptionMessage = await GetErrorMessage(response);
+                descriptionSuccess = false;
+            }
+        }
+        catch
+        {
+            descriptionMessage = "An error occurred.";
+            descriptionSuccess = false;
+        }
+        finally
+        {
+            isSavingDescription = false;
+        }
+    }
+
+    private async Task AddRaceDateAsync()
+    {
+        isAddingDate = true;
+        raceDateMessage = null;
+        try
+        {
+            var request = new ScheduleRaceDateRequest { Start = raceDateModel.Start, End = raceDateModel.End };
+            var response = await Http.PostAsJsonAsync($"api/race/{RaceId}/date", request);
+            if (response.IsSuccessStatusCode)
+            {
+                raceDateMessage = "Race date added.";
+                raceDateSuccess = true;
+                raceDateModel = new();
+                await ReloadRaceDatesAsync();
+            }
+            else
+            {
+                raceDateMessage = await GetErrorMessage(response);
+                raceDateSuccess = false;
+            }
+        }
+        catch
+        {
+            raceDateMessage = "An error occurred.";
+            raceDateSuccess = false;
+        }
+        finally
+        {
+            isAddingDate = false;
+        }
+    }
+
+    private async Task RemoveRaceDateAsync(int raceDateId)
+    {
+        isRemovingDate = true;
+        raceDateMessage = null;
+        try
+        {
+            var response = await Http.DeleteAsync($"api/race/{RaceId}/date/{raceDateId}");
+            if (response.IsSuccessStatusCode)
+            {
+                raceDateMessage = "Race date removed.";
+                raceDateSuccess = true;
+                await ReloadRaceDatesAsync();
+            }
+            else
+            {
+                raceDateMessage = await GetErrorMessage(response);
+                raceDateSuccess = false;
+            }
+        }
+        catch
+        {
+            raceDateMessage = "An error occurred.";
+            raceDateSuccess = false;
+        }
+        finally
+        {
+            isRemovingDate = false;
+        }
+    }
+
+    private async Task ReloadRaceDatesAsync()
+    {
+        try
+        {
+            raceDates = await Http.GetFromJsonAsync<List<RaceDateResponse>>($"api/race/{RaceId}/query/dates") ?? [];
+        }
+        catch { }
+    }
+
+    private async Task SaveMinAttendeesAsync()
+    {
+        isSavingMinAttendees = true;
+        attendeesMessage = null;
+        try
+        {
+            var request = new SetAttendeesRequest { Attendees = minAttendeesModel.Attendees };
+            var response = await Http.PutAsJsonAsync($"api/race/{RaceId}/minimumattendees", request);
+            if (response.IsSuccessStatusCode)
+            {
+                attendeesMessage = "Minimum attendees saved.";
+                attendeesSuccess = true;
+            }
+            else
+            {
+                attendeesMessage = await GetErrorMessage(response);
+                attendeesSuccess = false;
+            }
+        }
+        catch
+        {
+            attendeesMessage = "An error occurred.";
+            attendeesSuccess = false;
+        }
+        finally
+        {
+            isSavingMinAttendees = false;
+        }
+    }
+
+    private async Task SaveMaxAttendeesAsync()
+    {
+        isSavingMaxAttendees = true;
+        attendeesMessage = null;
+        try
+        {
+            var request = new SetAttendeesRequest { Attendees = maxAttendeesModel.Attendees };
+            var response = await Http.PutAsJsonAsync($"api/race/{RaceId}/maximumattendees", request);
+            if (response.IsSuccessStatusCode)
+            {
+                attendeesMessage = "Maximum attendees saved.";
+                attendeesSuccess = true;
+            }
+            else
+            {
+                attendeesMessage = await GetErrorMessage(response);
+                attendeesSuccess = false;
+            }
+        }
+        catch
+        {
+            attendeesMessage = "An error occurred.";
+            attendeesSuccess = false;
+        }
+        finally
+        {
+            isSavingMaxAttendees = false;
+        }
+    }
+
+    private async Task AddPackageAsync()
+    {
+        isAddingPackage = true;
+        packageMessage = null;
+        try
+        {
+            var request = new AddRacePackageRequest
+            {
+                Name = addPackageModel.Name,
+                Currency = addPackageModel.Currency,
+                Cost = addPackageModel.Cost
+            };
+            var response = await Http.PostAsJsonAsync($"api/race/{RaceId}/package", request);
+            if (response.IsSuccessStatusCode)
+            {
+                packageMessage = "Package added.";
+                packageSuccess = true;
+                addPackageModel = new();
+                await ReloadPackagesAsync();
+            }
+            else
+            {
+                packageMessage = await GetErrorMessage(response);
+                packageSuccess = false;
+            }
+        }
+        catch
+        {
+            packageMessage = "An error occurred.";
+            packageSuccess = false;
+        }
+        finally
+        {
+            isAddingPackage = false;
+        }
+    }
+
+    private void ToggleEditPackage(int packageId)
+    {
+        if (editingPackageId == packageId)
+        {
+            editingPackageId = null;
+            packageEditMessage = null;
+            return;
+        }
+
+        editingPackageId = packageId;
+        packageEditMessage = null;
+        var pkg = packages.FirstOrDefault(p => p.RacePackageId == packageId);
+        if (pkg != null)
+        {
+            editApplyDiscounts = pkg.ApplyDiscounts;
+            editRegistrationOpen = pkg.RegistrationOpenDate ?? DateTime.UtcNow;
+            editRegistrationClose = pkg.RegistrationCloseDate ?? DateTime.UtcNow;
+            editPilotPolicyId = pkg.PilotPolicyId;
+        }
+    }
+
+    private string GetPolicyName(Guid? policyId)
+    {
+        if (policyId == null) return "—";
+        var policy = clubPolicies.FirstOrDefault(p => p.PolicyId == policyId.Value);
+        return policy?.Name ?? "—";
+    }
+
+    private async Task SavePackageDiscountStatusAsync(int packageId)
+    {
+        isSavingPackageEdit = true;
+        packageEditMessage = null;
+        try
+        {
+            var request = new SetRacePackageDiscountStatusRequest { ApplyDiscounts = editApplyDiscounts };
+            var response = await Http.PutAsJsonAsync($"api/race/{RaceId}/package/{packageId}/discountstatus", request);
+            if (response.IsSuccessStatusCode)
+            {
+                packageEditMessage = "Discount status saved.";
+                packageEditSuccess = true;
+                await ReloadPackagesAsync();
+            }
+            else
+            {
+                packageEditMessage = await GetErrorMessage(response);
+                packageEditSuccess = false;
+            }
+        }
+        catch
+        {
+            packageEditMessage = "An error occurred.";
+            packageEditSuccess = false;
+        }
+        finally
+        {
+            isSavingPackageEdit = false;
+        }
+    }
+
+    private async Task SavePackageRegistrationOpenAsync(int packageId)
+    {
+        isSavingPackageEdit = true;
+        packageEditMessage = null;
+        try
+        {
+            var request = new ScheduleDateRequest { Date = editRegistrationOpen };
+            var response = await Http.PutAsJsonAsync($"api/race/{RaceId}/package/{packageId}/registrationopendate", request);
+            if (response.IsSuccessStatusCode)
+            {
+                packageEditMessage = "Registration open date saved.";
+                packageEditSuccess = true;
+                await ReloadPackagesAsync();
+            }
+            else
+            {
+                packageEditMessage = await GetErrorMessage(response);
+                packageEditSuccess = false;
+            }
+        }
+        catch
+        {
+            packageEditMessage = "An error occurred.";
+            packageEditSuccess = false;
+        }
+        finally
+        {
+            isSavingPackageEdit = false;
+        }
+    }
+
+    private async Task SavePackageRegistrationCloseAsync(int packageId)
+    {
+        isSavingPackageEdit = true;
+        packageEditMessage = null;
+        try
+        {
+            var request = new ScheduleDateRequest { Date = editRegistrationClose };
+            var response = await Http.PutAsJsonAsync($"api/race/{RaceId}/package/{packageId}/registrationclosedate", request);
+            if (response.IsSuccessStatusCode)
+            {
+                packageEditMessage = "Registration close date saved.";
+                packageEditSuccess = true;
+                await ReloadPackagesAsync();
+            }
+            else
+            {
+                packageEditMessage = await GetErrorMessage(response);
+                packageEditSuccess = false;
+            }
+        }
+        catch
+        {
+            packageEditMessage = "An error occurred.";
+            packageEditSuccess = false;
+        }
+        finally
+        {
+            isSavingPackageEdit = false;
+        }
+    }
+
+    private async Task SavePackagePilotPolicyAsync(int packageId)
+    {
+        isSavingPackageEdit = true;
+        packageEditMessage = null;
+        try
+        {
+            if (editPilotPolicyId == null || editPilotPolicyId == Guid.Empty)
+            {
+                packageEditMessage = "Please select a pilot selection policy.";
+                packageEditSuccess = false;
+                return;
+            }
+
+            var request = new SetEarlyRegistrationPolicyRequest { PilotPolicyId = editPilotPolicyId.Value };
+            var response = await Http.PutAsJsonAsync($"api/race/{RaceId}/package/{packageId}/pilotpolicy", request);
+            if (response.IsSuccessStatusCode)
+            {
+                packageEditMessage = "Pilot selection policy saved.";
+                packageEditSuccess = true;
+                await ReloadPackagesAsync();
+            }
+            else
+            {
+                packageEditMessage = await GetErrorMessage(response);
+                packageEditSuccess = false;
+            }
+        }
+        catch
+        {
+            packageEditMessage = "An error occurred.";
+            packageEditSuccess = false;
+        }
+        finally
+        {
+            isSavingPackageEdit = false;
+        }
+    }
+
+    private async Task RemovePackageAsync(int packageId)
+    {
+        isRemovingPackage = true;
+        packageMessage = null;
+        try
+        {
+            var response = await Http.DeleteAsync($"api/race/{RaceId}/package/{packageId}");
+            if (response.IsSuccessStatusCode)
+            {
+                packageMessage = "Package removed.";
+                packageSuccess = true;
+                await ReloadPackagesAsync();
+            }
+            else
+            {
+                packageMessage = await GetErrorMessage(response);
+                packageSuccess = false;
+            }
+        }
+        catch
+        {
+            packageMessage = "An error occurred.";
+            packageSuccess = false;
+        }
+        finally
+        {
+            isRemovingPackage = false;
+        }
+    }
+
+    private async Task ReloadPackagesAsync()
+    {
+        try
+        {
+            packages = await Http.GetFromJsonAsync<List<RacePackageResponse>>($"api/race/{RaceId}/query/packages") ?? [];
+        }
+        catch { }
+    }
+
+    private Task PermitIndividualPilotAttendanceAsync() =>
+        SetAttendanceAsync($"api/race/{RaceId}/permitindividualpilotattendance");
+
+    private Task ProhibitIndividualPilotAttendanceAsync() =>
+        SetAttendanceAsync($"api/race/{RaceId}/prohibitindividualpilotattendance");
+
+    private Task PermitTeamAttendanceAsync() =>
+        SetAttendanceAsync($"api/race/{RaceId}/permitteamattendance");
+
+    private Task ProhibitTeamAttendanceAsync() =>
+        SetAttendanceAsync($"api/race/{RaceId}/prohibitteamattendance");
+
+    private Task PermitTeamSubstitutionsAsync() =>
+        SetAttendanceAsync($"api/race/{RaceId}/permitteamsubstitutions");
+
+    private Task ProhibitTeamSubstitutionsAsync() =>
+        SetAttendanceAsync($"api/race/{RaceId}/prohibitteamsubstitutions");
+
+    private async Task SetAttendanceAsync(string url)
+    {
+        isSavingAttendance = true;
+        attendanceMessage = null;
+        try
+        {
+            var response = await Http.PutAsync(url, null);
+            if (response.IsSuccessStatusCode)
+            {
+                attendanceMessage = "Setting saved.";
+                attendanceSuccess = true;
+            }
+            else
+            {
+                attendanceMessage = await GetErrorMessage(response);
+                attendanceSuccess = false;
+            }
+        }
+        catch
+        {
+            attendanceMessage = "An error occurred.";
+            attendanceSuccess = false;
+        }
+        finally
+        {
+            isSavingAttendance = false;
+        }
+    }
+
+    private async Task SavePaymentDeadlineAsync()
+    {
+        isSavingPaymentDeadline = true;
+        paymentDeadlineMessage = null;
+        try
+        {
+            var request = new ScheduleDateRequest { Date = paymentDeadlineModel.Date };
+            var response = await Http.PutAsJsonAsync($"api/race/{RaceId}/paymentdeadline", request);
+            if (response.IsSuccessStatusCode)
+            {
+                paymentDeadlineMessage = "Payment deadline saved.";
+                paymentDeadlineSuccess = true;
+            }
+            else
+            {
+                paymentDeadlineMessage = await GetErrorMessage(response);
+                paymentDeadlineSuccess = false;
+            }
+        }
+        catch
+        {
+            paymentDeadlineMessage = "An error occurred.";
+            paymentDeadlineSuccess = false;
+        }
+        finally
+        {
+            isSavingPaymentDeadline = false;
+        }
+    }
+
+    private async Task SaveGoNoGoAsync()
+    {
+        isSavingGoNoGo = true;
+        goNoGoMessage = null;
+        try
+        {
+            var request = new ScheduleDateRequest { Date = goNoGoModel.Date };
+            var response = await Http.PostAsJsonAsync($"api/race/{RaceId}/gonogo", request);
+            if (response.IsSuccessStatusCode)
+            {
+                goNoGoMessage = "Go/No-Go date saved.";
+                goNoGoSuccess = true;
+            }
+            else
+            {
+                goNoGoMessage = await GetErrorMessage(response);
+                goNoGoSuccess = false;
+            }
+        }
+        catch
+        {
+            goNoGoMessage = "An error occurred.";
+            goNoGoSuccess = false;
+        }
+        finally
+        {
+            isSavingGoNoGo = false;
+        }
+    }
+
+    private async Task PublishDetailsAsync()
+    {
+        isPublishing = true;
+        publishMessage = null;
+        try
+        {
+            var response = await Http.PostAsync($"api/race/{RaceId}/publishdetails", null);
+            if (response.IsSuccessStatusCode)
+            {
+                publishMessage = "Race details published.";
+                publishSuccess = true;
+            }
+            else
+            {
+                publishMessage = await GetErrorMessage(response);
+                publishSuccess = false;
+            }
+        }
+        catch
+        {
+            publishMessage = "An error occurred.";
+            publishSuccess = false;
+        }
+        finally
+        {
+            isPublishing = false;
+        }
+    }
+
+    private async Task PublishRaceAsync()
+    {
+        isPublishing = true;
+        publishMessage = null;
+        try
+        {
+            var response = await Http.PostAsync($"api/race/{RaceId}/publish", null);
+            if (response.IsSuccessStatusCode)
+            {
+                publishMessage = "Race published.";
+                publishSuccess = true;
+            }
+            else
+            {
+                publishMessage = await GetErrorMessage(response);
+                publishSuccess = false;
+            }
+        }
+        catch
+        {
+            publishMessage = "An error occurred.";
+            publishSuccess = false;
+        }
+        finally
+        {
+            isPublishing = false;
+        }
+    }
+
+    private async Task CloseRegistrationAsync()
+    {
+        isPublishing = true;
+        publishMessage = null;
+        try
+        {
+            var response = await Http.PostAsync($"api/race/{RaceId}/closeregistration", null);
+            if (response.IsSuccessStatusCode)
+            {
+                publishMessage = "Registration closed.";
+                publishSuccess = true;
+            }
+            else
+            {
+                publishMessage = await GetErrorMessage(response);
+                publishSuccess = false;
+            }
+        }
+        catch
+        {
+            publishMessage = "An error occurred.";
+            publishSuccess = false;
+        }
+        finally
+        {
+            isPublishing = false;
+        }
+    }
+
+    private async Task CancelRaceAsync()
+    {
+        isPublishing = true;
+        publishMessage = null;
+        try
+        {
+            var response = await Http.PostAsync($"api/race/{RaceId}/cancel", null);
+            if (response.IsSuccessStatusCode)
+            {
+                publishMessage = "Race cancelled.";
+                publishSuccess = true;
+            }
+            else
+            {
+                publishMessage = await GetErrorMessage(response);
+                publishSuccess = false;
+            }
+        }
+        catch
+        {
+            publishMessage = "An error occurred.";
+            publishSuccess = false;
+        }
+        finally
+        {
+            isPublishing = false;
+        }
+    }
+
+    private static async Task<string> GetErrorMessage(HttpResponseMessage response)
+    {
+        var body = await response.Content.ReadAsStringAsync();
+        return string.IsNullOrWhiteSpace(body)
+            ? $"Failed (HTTP {(int)response.StatusCode})."
+            : body;
+    }
+
+    private class DescriptionModel
+    {
+        [Required]
+        [MaxLength(3000)]
+        public string Description { get; set; } = string.Empty;
+    }
+
+    private class RaceDateModel
+    {
+        [Required]
+        public DateTime Start { get; set; } = DateTime.UtcNow;
+
+        [Required]
+        public DateTime End { get; set; } = DateTime.UtcNow.AddHours(1);
+    }
+
+    private class AttendeesModel
+    {
+        [Required]
+        [Range(1, int.MaxValue)]
+        public int Attendees { get; set; }
+    }
+
+    private class AddPackageModel
+    {
+        [Required]
+        public string Name { get; set; } = string.Empty;
+
+        [Required]
+        public string Currency { get; set; } = string.Empty;
+
+        [Required]
+        [Range(0, double.MaxValue)]
+        public decimal Cost { get; set; }
+    }
+
+    private class DateModel
+    {
+        [Required]
+        public DateTime Date { get; set; } = DateTime.UtcNow;
+    }
+}

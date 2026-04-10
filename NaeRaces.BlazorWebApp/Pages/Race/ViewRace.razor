@@ -1,0 +1,115 @@
+@page "/race/{RaceId:guid}"
+@using NaeRaces.WebAPI.Shared.Race
+@using Microsoft.AspNetCore.Components.Authorization
+@inject HttpClient Http
+@inject NavigationManager Navigation
+
+<PageTitle>@(race?.Name ?? "Race")</PageTitle>
+
+@if (isLoading)
+{
+    <div class="d-flex align-items-center">
+        <span class="spinner-border me-2" role="status" aria-hidden="true"></span>
+        <em>Loading race...</em>
+    </div>
+}
+else if (race == null)
+{
+    <div class="alert alert-warning">Race not found.</div>
+    <a href="/" class="btn btn-secondary">Back to Home</a>
+}
+else
+{
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h1 class="mb-0">@race.Name</h1>
+            @if (!string.IsNullOrWhiteSpace(race.ClubName))
+            {
+                <span class="text-muted">Organised by <a href="/club/@race.ClubId">@race.ClubName</a></span>
+            }
+        </div>
+        <div class="d-flex gap-2">
+            @if (isOrganiser)
+            {
+                <a href="/race/edit/@RaceId" class="btn btn-primary">Edit Race</a>
+            }
+            <a href="/" class="btn btn-outline-secondary">Back to Home</a>
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-header fw-bold">Race Details</div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <strong>Location</strong>
+                    <p class="text-muted mb-2">@(race.LocationName ?? "—")</p>
+                </div>
+                <div class="col-md-6">
+                    <strong>Registered Pilots</strong>
+                    <p class="text-muted mb-2">
+                        @race.RegisteredPilotCount
+                        @if (race.MaximumPilots.HasValue)
+                        {
+                            <text> / @race.MaximumPilots</text>
+                        }
+                    </p>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-6">
+                    <strong>First Race Date</strong>
+                    <p class="text-muted mb-2">
+                        @(race.FirstRaceDateStart != default ? race.FirstRaceDateStart.ToString("g") : "—")
+                    </p>
+                </div>
+                <div class="col-md-6">
+                    <strong>Last Race Date</strong>
+                    <p class="text-muted mb-0">
+                        @(race.LastRaceDateEnd != default ? race.LastRaceDateEnd.ToString("g") : "—")
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public Guid RaceId { get; set; }
+    [CascadingParameter] private Task<AuthenticationState> AuthenticationStateTask { get; set; } = default!;
+
+    private bool isLoading = true;
+    private bool isOrganiser;
+    private RaceInformationResponse? race;
+
+    protected override async Task OnInitializedAsync()
+    {
+        isLoading = true;
+        try
+        {
+            race = await Http.GetFromJsonAsync<RaceInformationResponse>($"api/race/{RaceId}/query/information");
+
+            var authState = await AuthenticationStateTask;
+            if (authState.User.Identity?.IsAuthenticated == true && race != null)
+            {
+                try
+                {
+                    var response = await Http.GetAsync($"api/race/{RaceId}/query/is-organiser");
+                    if (response.IsSuccessStatusCode)
+                    {
+                        isOrganiser = await response.Content.ReadFromJsonAsync<bool>();
+                    }
+                }
+                catch { }
+            }
+        }
+        catch
+        {
+            race = null;
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+}

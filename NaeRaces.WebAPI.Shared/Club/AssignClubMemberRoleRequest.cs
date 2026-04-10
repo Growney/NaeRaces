@@ -8,5 +8,5 @@ public class AssignClubMemberRoleRequest
     public Guid PilotId { get; set; }
 
     [Required]
-    public ClubMemberRole Role { get; set; }
+    public required string Role { get; set; }
 }

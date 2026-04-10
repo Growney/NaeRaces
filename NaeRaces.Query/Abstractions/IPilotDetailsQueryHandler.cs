@@ -7,4 +7,5 @@ namespace NaeRaces.Query.Abstractions;
 public interface IPilotDetailsQueryHandler
 {
     Task<bool> DoesPilotExist(Guid pilotId);
+    Task<string?> GetPilotDisplayName(Guid pilotId);
 }

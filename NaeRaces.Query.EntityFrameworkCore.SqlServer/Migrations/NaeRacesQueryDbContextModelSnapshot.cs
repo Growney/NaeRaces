@@ -17,7 +17,7 @@ namespace NaeRaces.Query.EntityFrameworkCore.SqlServer.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.5")
+                .HasAnnotation("ProductVersion", "10.0.3")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
@@ -31,10 +31,16 @@ namespace NaeRaces.Query.EntityFrameworkCore.SqlServer.Migrations
                     b.Property<string>("Code")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("EmailAddress")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<Guid>("FounderPilotId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Name")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("PhoneNumber")
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
@@ -90,6 +96,9 @@ namespace NaeRaces.Query.EntityFrameworkCore.SqlServer.Migrations
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("AutoRenew")
+                        .HasColumnType("bit");
 
                     b.Property<Guid>("ClubId")
                         .HasColumnType("uniqueidentifier");
@@ -507,6 +516,28 @@ namespace NaeRaces.Query.EntityFrameworkCore.SqlServer.Migrations
                     b.ToTable("PilotSelectionPolicyDetails");
                 });
 
+            modelBuilder.Entity("NaeRaces.Query.EntityFrameworkCore.Models.RaceDate", b =>
+                {
+                    b.Property<Guid>("RaceId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("RaceDateId")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("Cancelled")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime>("End")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("Start")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("RaceId", "RaceDateId");
+
+                    b.ToTable("RaceDates");
+                });
+
             modelBuilder.Entity("NaeRaces.Query.EntityFrameworkCore.Models.RaceDetails", b =>
                 {
                     b.Property<Guid>("Id")
@@ -567,8 +598,17 @@ namespace NaeRaces.Query.EntityFrameworkCore.SqlServer.Migrations
                     b.Property<string>("ClubName")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("Description")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<DateTime>("FirstRaceDateStart")
                         .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("GoNoGoDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsPublished")
+                        .HasColumnType("bit");
 
                     b.Property<DateTime>("LastRaceDateEnd")
                         .HasColumnType("datetime2");
@@ -582,11 +622,17 @@ namespace NaeRaces.Query.EntityFrameworkCore.SqlServer.Migrations
                     b.Property<int?>("MaximumPilots")
                         .HasColumnType("int");
 
+                    b.Property<int?>("MinimumPilots")
+                        .HasColumnType("int");
+
                     b.Property<string>("Name")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("NumberOfRaceDates")
                         .HasColumnType("int");
+
+                    b.Property<DateTime?>("PaymentDeadline")
+                        .HasColumnType("datetime2");
 
                     b.Property<int>("RegisteredPilotCount")
                         .HasColumnType("int");

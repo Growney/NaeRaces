@@ -74,12 +74,6 @@ public class ClubMembershipProjection
             _dbContext.ClubMembers.Remove(member);
         }
 
-        var roles = await _dbContext.ClubMemberRoles
-            .Where(x => x.ClubId == e.ClubId && x.PilotId == e.PilotId)
-            .ToListAsync();
-
-        _dbContext.ClubMemberRoles.RemoveRange(roles);
-
         await _dbContext.SaveChangesAsync();
     }
 
@@ -93,11 +87,57 @@ public class ClubMembershipProjection
             _dbContext.ClubMembers.Remove(member);
         }
 
-        var roles = await _dbContext.ClubMemberRoles
-            .Where(x => x.ClubId == e.ClubId && x.PilotId == e.PilotId)
-            .ToListAsync();
+        await _dbContext.SaveChangesAsync();
+    }
 
-        _dbContext.ClubMemberRoles.RemoveRange(roles);
+    private async Task When(PilotClubMembershipAutoRenewalSet e)
+    {
+        ClubMember? member = await _dbContext.ClubMembers
+            .SingleOrDefaultAsync(x => x.ClubId == e.ClubId && x.PilotId == e.PilotId);
+
+        if (member != null)
+        {
+            member.AutoRenew = e.AutoRenew;
+        }
+
+        await _dbContext.SaveChangesAsync();
+    }
+
+    private async Task When(PilotClubMembershipRenewed e)
+    {
+        ClubMember? member = await _dbContext.ClubMembers
+            .SingleOrDefaultAsync(x => x.ClubId == e.ClubId && x.PilotId == e.PilotId);
+
+        if (member != null)
+        {
+            member.RegistrationValidUntil = e.NewValidUntil;
+        }
+
+        await _dbContext.SaveChangesAsync();
+    }
+
+    private async Task When(PilotClubMembershipRenewalFailed e)
+    {
+        ClubMember? member = await _dbContext.ClubMembers
+            .SingleOrDefaultAsync(x => x.ClubId == e.ClubId && x.PilotId == e.PilotId);
+
+        if (member != null)
+        {
+            member.AutoRenew = false;
+        }
+
+        await _dbContext.SaveChangesAsync();
+    }
+
+    private async Task When(PilotClubMembershipExpired e)
+    {
+        ClubMember? member = await _dbContext.ClubMembers
+            .SingleOrDefaultAsync(x => x.ClubId == e.ClubId && x.PilotId == e.PilotId);
+
+        if (member != null)
+        {
+            _dbContext.ClubMembers.Remove(member);
+        }
 
         await _dbContext.SaveChangesAsync();
     }

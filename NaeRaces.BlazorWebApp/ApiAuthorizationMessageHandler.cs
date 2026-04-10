@@ -1,12 +1,30 @@
-﻿using Microsoft.AspNetCore.Components;
+﻿using System.Net.Http.Headers;
 using Microsoft.AspNetCore.Components.WebAssembly.Authentication;
 
 namespace NaeRaces.BlazorWebApp;
 
-class ApiAuthorizationMessageHandler : AuthorizationMessageHandler
+class ApiAuthorizationMessageHandler : DelegatingHandler
 {
-    public ApiAuthorizationMessageHandler(IAccessTokenProvider provider, NavigationManager navigation, string[] authorizedUrls) : base(provider, navigation)
+    private readonly IAccessTokenProvider _tokenProvider;
+    private readonly string[] _authorizedUrls;
+
+    public ApiAuthorizationMessageHandler(IAccessTokenProvider provider, string[] authorizedUrls)
     {
-        ConfigureHandler(authorizedUrls: authorizedUrls);
+        _tokenProvider = provider;
+        _authorizedUrls = authorizedUrls;
+    }
+
+    protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+    {
+        if (request.RequestUri is not null && _authorizedUrls.Any(url => request.RequestUri.AbsoluteUri.StartsWith(url, StringComparison.OrdinalIgnoreCase)))
+        {
+            var tokenResult = await _tokenProvider.RequestAccessToken();
+            if (tokenResult.TryGetToken(out var token))
+            {
+                request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token.Value);
+            }
+        }
+
+        return await base.SendAsync(request, cancellationToken);
     }
 }

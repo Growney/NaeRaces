@@ -135,6 +135,56 @@ public class RaceInformationProjection
         await _dbContext.SaveChangesAsync();
     }
 
+    private async Task When(RaceDescriptionSet e)
+    {
+        RaceInformation? info = await _dbContext.RaceInformation.SingleOrDefaultAsync(x => x.Id == e.RaceId);
+        if (info != null)
+        {
+            info.Description = e.Description;
+        }
+        await _dbContext.SaveChangesAsync();
+    }
+
+    private async Task When(RacePaymentDeadlineScheduled e)
+    {
+        RaceInformation? info = await _dbContext.RaceInformation.SingleOrDefaultAsync(x => x.Id == e.RaceId);
+        if (info != null)
+        {
+            info.PaymentDeadline = e.PaymentDeadline;
+        }
+        await _dbContext.SaveChangesAsync();
+    }
+
+    private async Task When(RaceGoNoGoScheduled e)
+    {
+        RaceInformation? info = await _dbContext.RaceInformation.SingleOrDefaultAsync(x => x.Id == e.RaceId);
+        if (info != null)
+        {
+            info.GoNoGoDate = e.GoNoGoDate;
+        }
+        await _dbContext.SaveChangesAsync();
+    }
+
+    private async Task When(RaceGoNoGoRescheduled e)
+    {
+        RaceInformation? info = await _dbContext.RaceInformation.SingleOrDefaultAsync(x => x.Id == e.RaceId);
+        if (info != null)
+        {
+            info.GoNoGoDate = e.GoNoGoDate;
+        }
+        await _dbContext.SaveChangesAsync();
+    }
+
+    private async Task When(RaceMinimumAttendeesSet e)
+    {
+        RaceInformation? info = await _dbContext.RaceInformation.SingleOrDefaultAsync(x => x.Id == e.RaceId);
+        if (info != null)
+        {
+            info.MinimumPilots = e.MinimumAttendees;
+        }
+        await _dbContext.SaveChangesAsync();
+    }
+
     private async Task When(RaceMaximumAttendeesSet e)
     {
         RaceInformation? info = await _dbContext.RaceInformation.SingleOrDefaultAsync(x => x.Id == e.RaceId);
@@ -171,6 +221,16 @@ public class RaceInformationProjection
         if (info != null)
         {
             info.RegisteredPilotCount--;
+        }
+        await _dbContext.SaveChangesAsync();
+    }
+
+    private async Task When(RacePublished e)
+    {
+        RaceInformation? info = await _dbContext.RaceInformation.SingleOrDefaultAsync(x => x.Id == e.RaceId);
+        if (info != null)
+        {
+            info.IsPublished = true;
         }
         await _dbContext.SaveChangesAsync();
     }

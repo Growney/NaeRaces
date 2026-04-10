@@ -1,0 +1,232 @@
+@page "/race/create"
+@attribute [Authorize]
+@using NaeRaces.WebAPI.Shared.Race
+@using NaeRaces.WebAPI.Shared.Club
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.ComponentModel.DataAnnotations
+@inject HttpClient Http
+@inject NavigationManager Navigation
+
+<PageTitle>Create Race</PageTitle>
+
+<h1>Create Race</h1>
+
+@if (isLoading)
+{
+    <div class="d-flex align-items-center">
+        <span class="spinner-border me-2" role="status" aria-hidden="true"></span>
+        <em>Loading...</em>
+    </div>
+}
+else if (clubs == null || clubs.Count == 0)
+{
+    <div class="alert alert-warning">
+        You do not have permission to create races for any clubs. You must be an Administrator or Race Organiser for a club.
+    </div>
+    <a href="/" class="btn btn-secondary">Back to Home</a>
+}
+else
+{
+    <div class="card">
+        <div class="card-body">
+            <EditForm Model="model" OnValidSubmit="SubmitAsync">
+                <DataAnnotationsValidator />
+                <ValidationSummary class="text-danger" />
+
+                <div class="mb-3">
+                    <label class="form-label">Club</label>
+                    <select class="form-select" value="@model.ClubId" @onchange="OnClubChangedAsync">
+                        @if (clubs.Count > 1)
+                        {
+                            <option value="">— Select a club —</option>
+                        }
+                        @foreach (var club in clubs)
+                        {
+                            <option value="@club.ClubId">@club.Name (@club.Code)</option>
+                        }
+                    </select>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Race Name</label>
+                    <InputText @bind-Value="model.Name" class="form-control" />
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Location</label>
+                    @if (isLoadingLocations)
+                    {
+                        <div class="d-flex align-items-center">
+                            <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                            <em>Loading locations...</em>
+                        </div>
+                    }
+                    else if (locations == null || locations.Count == 0)
+                    {
+                        <p class="text-muted">No locations available for this club.</p>
+                    }
+                    else
+                    {
+                        <select class="form-select" @bind="model.LocationId">
+                            <option value="0">— Select a location —</option>
+                            @foreach (var loc in locations)
+                            {
+                                <option value="@loc.LocationId">@loc.Name</option>
+                            }
+                        </select>
+                    }
+                </div>
+
+                @if (!string.IsNullOrEmpty(errorMessage))
+                {
+                    <div class="alert alert-danger">@errorMessage</div>
+                }
+
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary" disabled="@(isSubmitting || model.ClubId == Guid.Empty || model.LocationId == 0)">
+                        @if (isSubmitting)
+                        {
+                            <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                        }
+                        Create Race
+                    </button>
+                    <a href="/" class="btn btn-outline-secondary">Cancel</a>
+                </div>
+            </EditForm>
+        </div>
+    </div>
+}
+
+@code {
+    private bool isLoading = true;
+    private bool isLoadingLocations;
+    private bool isSubmitting;
+    private string? errorMessage;
+    private List<RaceOrganiserClubResponse>? clubs;
+    private List<ClubLocationResponse>? locations;
+    private CreateRaceModel model = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        isLoading = true;
+        try
+        {
+            clubs = await Http.GetFromJsonAsync<List<RaceOrganiserClubResponse>>("api/club/query/my-organiser-clubs");
+
+            if (clubs != null && clubs.Count == 1)
+            {
+                model.ClubId = clubs[0].ClubId;
+                await LoadLocationsAsync(model.ClubId);
+            }
+        }
+        catch
+        {
+            clubs = null;
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task OnClubChangedAsync(ChangeEventArgs e)
+    {
+        locations = null;
+        model.LocationId = 0;
+
+        if (Guid.TryParse(e.Value?.ToString(), out var clubId) && clubId != Guid.Empty)
+        {
+            model.ClubId = clubId;
+            await LoadLocationsAsync(clubId);
+        }
+        else
+        {
+            model.ClubId = Guid.Empty;
+        }
+    }
+
+    private async Task LoadLocationsAsync(Guid clubId)
+    {
+        isLoadingLocations = true;
+        try
+        {
+            locations = await Http.GetFromJsonAsync<List<ClubLocationResponse>>($"api/club/{clubId}/query/locations");
+        }
+        catch
+        {
+            locations = null;
+        }
+        finally
+        {
+            isLoadingLocations = false;
+        }
+    }
+
+    private async Task SubmitAsync()
+    {
+        errorMessage = null;
+
+        if (model.ClubId == Guid.Empty)
+        {
+            errorMessage = "Please select a club.";
+            return;
+        }
+
+        if (model.LocationId == 0)
+        {
+            errorMessage = "Please select a location.";
+            return;
+        }
+
+        isSubmitting = true;
+        try
+        {
+            var request = new PlanRaceRequest
+            {
+                RaceId = Guid.NewGuid(),
+                Name = model.Name,
+                ClubId = model.ClubId,
+                LocationId = model.LocationId
+            };
+
+            var response = await Http.PostAsJsonAsync("api/race", request);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<CreateRaceResponse>();
+                Navigation.NavigateTo($"/race/{result?.RaceId}");
+            }
+            else
+            {
+                var body = await response.Content.ReadAsStringAsync();
+                errorMessage = string.IsNullOrWhiteSpace(body)
+                    ? $"Failed to create race (HTTP {(int)response.StatusCode})."
+                    : body;
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "An error occurred while creating the race. Please try again.";
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+    private class CreateRaceModel
+    {
+        [Required]
+        public string Name { get; set; } = string.Empty;
+
+        public Guid ClubId { get; set; }
+
+        public int LocationId { get; set; }
+    }
+
+    private class CreateRaceResponse
+    {
+        public Guid RaceId { get; set; }
+    }
+}

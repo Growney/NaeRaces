@@ -26,7 +26,7 @@ public class AccountController : Controller
 
     [HttpPost("~/Identity/Account/Login")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Login(string email, string password, string? returnUrl = null)
+    public async Task<IActionResult> Login(string email, string password, bool rememberMe = false, string? returnUrl = null)
     {
         ViewData["ReturnUrl"] = returnUrl;
 
@@ -66,7 +66,12 @@ public class AccountController : Controller
         var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
         var principal = new ClaimsPrincipal(identity);
 
-        await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal);
+        var authProperties = new AuthenticationProperties
+        {
+            IsPersistent = rememberMe
+        };
+
+        await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal, authProperties);
 
         if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl))
         {

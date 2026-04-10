@@ -6,7 +6,6 @@ using Microsoft.AspNetCore.Mvc.ModelBinding;
 using NaeRaces.Command.Aggregates;
 using NaeRaces.Command.ValueTypes;
 using NaeRaces.Query.Abstractions;
-using NaeRaces.Query.Models;
 using NaeRaces.Query.Projections;
 using NaeRaces.WebAPI.Shared.Club;
 using OpenIddict.Abstractions;
@@ -18,11 +17,13 @@ public class ClubCommandController : Controller
 {
     private readonly IAggregateRepository _aggregateRepository;
     private readonly INaeRacesQueryContext _queryContext;
+    private readonly IClock _clock;
 
-    public ClubCommandController(IAggregateRepository aggregateRepository, INaeRacesQueryContext queryContext)
+    public ClubCommandController(IAggregateRepository aggregateRepository, INaeRacesQueryContext queryContext, IClock clock)
     {
         _aggregateRepository = aggregateRepository;
         _queryContext = queryContext;
+        _clock = clock;
     }
 
     [Authorize]
@@ -42,6 +43,7 @@ public class ClubCommandController : Controller
         var founderPilotIdClaim = User.FindFirst(OpenIddictConstants.Claims.Subject)?.Value;
         if (!Guid.TryParse(founderPilotIdClaim, out Guid founderPilotId))
         {
+   
             return Unauthorized();
         }
 
@@ -59,7 +61,7 @@ public class ClubCommandController : Controller
         }
 
         Club newClub = _aggregateRepository.CreateNew<Club>(() => new Club(request.ClubId, codeValueType, nameValueType, founderPilotId));
-        newClub.AssignClubMemberRole(founderPilotId, nameof(WebAPI.Shared.Club.ClubMemberRole.Administrator));
+        newClub.AssignClubMemberRole(founderPilotId, ClubMemberRole.Administrator);
         await _aggregateRepository.Save(newClub);
 
         return Created($"/api/club/{newClub.Id}", new { ClubId = newClub.Id });
@@ -73,7 +75,7 @@ public class ClubCommandController : Controller
             return Task.FromResult(false);
         }
 
-        return _queryContext.ClubMember.HasClubMemberRole(clubId, pilotId, nameof(WebAPI.Shared.Club.ClubMemberRole.Administrator));
+        return _queryContext.ClubMember.HasClubMemberRole(clubId, pilotId, ClubMemberRole.Administrator);
     }
 
     [Authorize]
@@ -370,11 +372,11 @@ public class ClubCommandController : Controller
         }
 
         Name nameValueType = Name.Create(request.Name);
-        club.AddClubMembershipLevel(nameValueType);
+        var membershipLevelId = club.AddClubMembershipLevel(nameValueType);
 
         await _aggregateRepository.Save(club);
 
-        return Created($"/api/club/{clubId}/membershiplevel", null);
+        return Created($"/api/club/{clubId}/membershiplevel/{membershipLevelId}", new { MembershipLevelId = membershipLevelId });
     }
 
     [HttpDelete("api/club/{clubId}/membershiplevel/{membershipLevelId}")]
@@ -448,7 +450,7 @@ public class ClubCommandController : Controller
             return NotFound();
         }
 
-        PilotSelectionPolicyDetails? policyDetails = await _queryContext.PilotSelectionPolicy.GetPolicyDetails(request.PilotSelectionPolicyId, clubId);
+        Query.Models.PilotSelectionPolicyDetails? policyDetails = await _queryContext.PilotSelectionPolicy.GetPolicyDetails(request.PilotSelectionPolicyId, clubId);
 
         if (policyDetails == null)
         {
@@ -671,15 +673,14 @@ public class ClubCommandController : Controller
             }
         }
 
-        Club? club = await _aggregateRepository.Get<Club, Guid>(clubId);
-        if (club == null)
+        if (await _queryContext.ClubMember.HasActiveOrPendingMembership(clubId, pilotId))
         {
-            return NotFound();
+            return Conflict("Pilot already has an active or pending membership for this club.");
         }
 
-        club.RegisterPilotForClubMembershipLevel(request.MembershipLevelId, request.PaymentOptionId, pilotId, request.RegistrationId);
+        ClubMembership membership = _aggregateRepository.CreateNew(() => new ClubMembership(request.RegistrationId, clubId, request.MembershipLevelId, request.PaymentOptionId, pilotId));
 
-        await _aggregateRepository.Save(club);
+        await _aggregateRepository.Save(membership);
 
         return Created($"/api/club/{clubId}/pilotmembership/{pilotId}", new { PilotId = pilotId, RegistrationId = request.RegistrationId });
     }
@@ -699,15 +700,15 @@ public class ClubCommandController : Controller
             return Unauthorized();
         }
 
-        Club? club = await _aggregateRepository.Get<Club, Guid>(clubId);
-        if (club == null)
+        ClubMembership? membership = await _aggregateRepository.Get<ClubMembership, Guid>(request.RegistrationId);
+        if (membership == null)
         {
             return NotFound();
         }
 
-        club.ConfirmPilotClubMembership(request.MembershipLevelId, request.PaymentOptionId, pilotId, request.RegistrationId, request.ValidUntil);
+        membership.Confirm(request.ValidUntil);
 
-        await _aggregateRepository.Save(club);
+        await _aggregateRepository.Save(membership);
 
         return Ok();
     }
@@ -732,26 +733,62 @@ public class ClubCommandController : Controller
             return BadRequest("Confirming pilot not found");
         }
 
-        Club? club = await _aggregateRepository.Get<Club, Guid>(clubId);
-        if (club == null)
+        if(request.ValidUntil <= _clock.UtcNow)
+        {
+            return BadRequest("Valid until must be in the future");
+        }
+
+        if (!await _queryContext.ClubMember.HasClubMemberRole(clubId, request.ConfirmedByPilotId, ClubMemberRole.Administrator, ClubMemberRole.Trustee))
+        {
+            return BadRequest("Confirming pilot is not an administrator or trustee.");
+        }
+
+        ClubMembership? membership = await _aggregateRepository.Get<ClubMembership, Guid>(request.RegistrationId);
+        if (membership == null)
         {
             return NotFound();
         }
 
-        club.ManuallyConfirmPilotClubMembership(request.MembershipLevelId, request.PaymentOptionId, pilotId, request.RegistrationId, request.ConfirmedByPilotId, request.ValidUntil);
+        membership.ManuallyConfirm(request.ConfirmedByPilotId, request.ValidUntil);
 
-        await _aggregateRepository.Save(club);
+        await _aggregateRepository.Save(membership);
 
         return Ok();
     }
 
-    [HttpDelete("api/club/{clubId}/pilotmembership/{pilotId}")]
-    public async Task<IActionResult> CancelPilotClubMembershipAsync([FromRoute] Guid clubId, [FromRoute] Guid pilotId)
+    [Authorize]
+    [HttpDelete("api/club/{clubId}/pilotmembership/{pilotId}/{registrationId}")]
+    public async Task<IActionResult> CancelPilotClubMembershipAsync([FromRoute] Guid clubId, [FromRoute] Guid pilotId, [FromRoute] Guid registrationId)
     {
-        Club? club = await _aggregateRepository.Get<Club, Guid>(clubId);
-        if (club == null)
+        var currentPilotIdClaim = User.FindFirst(OpenIddictConstants.Claims.Subject)?.Value;
+        bool isSelf = Guid.TryParse(currentPilotIdClaim, out Guid currentPilotId) && currentPilotId == pilotId;
+
+        if (!isSelf && !await IsCurrentUserAdmin(clubId))
+        {
+            return Unauthorized();
+        }
+
+        ClubMembership? membership = await _aggregateRepository.Get<ClubMembership, Guid>(registrationId);
+        if (membership == null)
         {
             return NotFound();
+        }
+
+        membership.Cancel();
+
+        await _aggregateRepository.Save(membership);
+
+        return Ok();
+    }
+
+    [Authorize]
+    [HttpDelete("api/club/{clubId}/pilotmembership/{pilotId}/{registrationId}/revoke")]
+    public async Task<IActionResult> RevokePilotClubMembershipAsync([FromRoute] Guid clubId, [FromRoute] Guid pilotId, [FromRoute] Guid registrationId)
+    {
+        var currentPilotIdClaim = User.FindFirst(OpenIddictConstants.Claims.Subject)?.Value;
+        if (!Guid.TryParse(currentPilotIdClaim, out Guid currentPilotId))
+        {
+            return Unauthorized();
         }
 
         if (!await IsCurrentUserAdmin(clubId))
@@ -759,9 +796,50 @@ public class ClubCommandController : Controller
             return Unauthorized();
         }
 
-        club.CancelPilotClubMembership(pilotId);
+        ClubMembership? membership = await _aggregateRepository.Get<ClubMembership, Guid>(registrationId);
+        if (membership == null)
+        {
+            return NotFound();
+        }
 
-        await _aggregateRepository.Save(club);
+        membership.Revoke(currentPilotId);
+
+        await _aggregateRepository.Save(membership);
+
+        return Ok();
+    }
+
+    [Authorize]
+    [HttpPut("api/club/{clubId}/pilotmembership/{pilotId}/autorenewal")]
+    public async Task<IActionResult> SetPilotClubMembershipAutoRenewalAsync([FromRoute] Guid clubId,
+        [FromRoute] Guid pilotId,
+        [FromBody] SetPilotClubMembershipAutoRenewalRequest request)
+    {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
+        var currentPilotIdClaim = User.FindFirst(OpenIddictConstants.Claims.Subject)?.Value;
+        if (!Guid.TryParse(currentPilotIdClaim, out Guid currentPilotId))
+        {
+            return Unauthorized();
+        }
+
+        if (currentPilotId != pilotId && !await IsCurrentUserAdmin(clubId))
+        {
+            return Unauthorized();
+        }
+
+        ClubMembership? membership = await _aggregateRepository.Get<ClubMembership, Guid>(request.RegistrationId);
+        if (membership == null)
+        {
+            return NotFound();
+        }
+
+        membership.SetAutoRenewal(request.AutoRenew);
+
+        await _aggregateRepository.Save(membership);
 
         return Ok();
     }
@@ -775,10 +853,7 @@ public class ClubCommandController : Controller
             return BadRequest(ModelState);
         }
 
-        if (!Enum.IsDefined<WebAPI.Shared.Club.ClubMemberRole>(request.Role))
-        {
-            return BadRequest("Invalid role.");
-        }
+        ClubMemberRole role = ClubMemberRole.Create(request.Role);
 
         if (!await IsCurrentUserAdmin(clubId))
         {
@@ -791,7 +866,7 @@ public class ClubCommandController : Controller
             return NotFound();
         }
 
-        club.AssignClubMemberRole(request.PilotId, request.Role.ToString());
+        club.AssignClubMemberRole(request.PilotId, role);
 
         await _aggregateRepository.Save(club);
 
@@ -801,12 +876,10 @@ public class ClubCommandController : Controller
     [HttpDelete("api/club/{clubId}/memberrole/{pilotId}/{role}")]
     public async Task<IActionResult> RevokeClubMemberRoleAsync([FromRoute] Guid clubId,
         [FromRoute] Guid pilotId,
-        [FromRoute] WebAPI.Shared.Club.ClubMemberRole role)
+        [FromRoute] string role)
     {
-        if (!Enum.IsDefined<WebAPI.Shared.Club.ClubMemberRole>(role))
-        {
-            return BadRequest("Invalid role.");
-        }
+
+        ClubMemberRole valueRole = ClubMemberRole.Create(role);
 
         if (!await IsCurrentUserAdmin(clubId))
         {
@@ -819,7 +892,7 @@ public class ClubCommandController : Controller
             return NotFound();
         }
 
-        club.RevokeClubMemberRole(pilotId, role.ToString());
+        club.RevokeClubMemberRole(pilotId, valueRole);
 
         await _aggregateRepository.Save(club);
 

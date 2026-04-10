@@ -10,4 +10,6 @@ public class ClubDetails
     public string? Code { get; set; }
     public string? Name { get; set; }
     public Guid FounderPilotId { get; set; }
+    public string? PhoneNumber { get; set; }
+    public string? EmailAddress { get; set; }
 }

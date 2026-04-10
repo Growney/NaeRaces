@@ -14,4 +14,5 @@ public class ClubMember
     public bool IsRegistrationConfirmed { get; set; }
     public Guid? RegistrationValidatedBy { get; set; }
     public DateTime? RegistrationValidUntil { get; set; }
+    public bool AutoRenew { get; set; }
 }

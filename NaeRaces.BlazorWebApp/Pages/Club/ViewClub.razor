@@ -1,5 +1,6 @@
 @page "/club/{ClubId:guid}"
 @using NaeRaces.WebAPI.Shared.Club
+@using NaeRaces.WebAPI.Shared.Race
 @using Microsoft.AspNetCore.Components.Authorization
 @inject HttpClient Http
 @inject NavigationManager Navigation
@@ -30,9 +31,55 @@ else
             {
                 <a href="/club/edit/@ClubId" class="btn btn-primary">Edit Club</a>
             }
+            @if (isAuthenticated && !isFollowing && !isMemberOrRegistered)
+            {
+                <button class="btn btn-outline-primary" disabled="@isTogglingFollow" @onclick="FollowClubAsync">
+                    @if (isTogglingFollow)
+                    {
+                        <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                    }
+                    Follow
+                </button>
+            }
+            else if (isAuthenticated && isFollowing)
+            {
+                <button class="btn btn-outline-secondary" disabled="@isTogglingFollow" @onclick="UnfollowClubAsync">
+                    @if (isTogglingFollow)
+                    {
+                        <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                    }
+                    Unfollow
+                </button>
+            }
             <a href="/" class="btn btn-outline-secondary">Back to Home</a>
         </div>
     </div>
+
+    <!-- Contact Details -->
+    @if (!string.IsNullOrWhiteSpace(contactDetails?.PhoneNumber) || !string.IsNullOrWhiteSpace(contactDetails?.EmailAddress))
+    {
+        <div class="card mb-3">
+            <div class="card-header fw-bold">Contact Details</div>
+            <div class="card-body">
+                <div class="row">
+                    @if (!string.IsNullOrWhiteSpace(contactDetails.PhoneNumber))
+                    {
+                        <div class="col-md-6">
+                            <strong>Phone Number</strong>
+                            <p class="text-muted mb-0">@contactDetails.PhoneNumber</p>
+                        </div>
+                    }
+                    @if (!string.IsNullOrWhiteSpace(contactDetails.EmailAddress))
+                    {
+                        <div class="col-md-6">
+                            <strong>Email Address</strong>
+                            <p class="text-muted mb-0">@contactDetails.EmailAddress</p>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    }
 
     <!-- Locations -->
     <div class="card mb-3">
@@ -78,12 +125,266 @@ else
             }
             else
             {
-                <ul class="list-group list-group-flush">
-                    @foreach (var level in membershipLevels)
-                    {
-                        <li class="list-group-item">@level.Name</li>
-                    }
-                </ul>
+                @foreach (var level in membershipLevels)
+                {
+                    <div class="border rounded p-3 @(level != membershipLevels[^1] ? "mb-3" : "")">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <strong>@level.Name</strong>
+                                @if (!string.IsNullOrWhiteSpace(level.PilotPolicyName))
+                                {
+                                    <br /><small class="text-muted">Policy: @level.PilotPolicyName</small>
+                                }
+                            </div>
+                        </div>
+                        @if (isAuthenticated && !isMemberOrRegistered && level.PaymentOptions.Count > 0)
+                        {
+                            <div class="mt-3">
+                                <h6 class="mb-2">Payment Options</h6>
+                                <div class="list-group">
+                                    @foreach (var option in level.PaymentOptions)
+                                    {
+                                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                                            <div>
+                                                <strong>@option.Name</strong>
+                                                <br />
+                                                <small class="text-muted">
+                                                    @option.Price @option.Currency
+                                                    (@option.PaymentType@if (option.PaymentInterval.HasValue) {<text>, every @option.PaymentInterval interval(s)</text>})
+                                                </small>
+                                            </div>
+                                            <button class="btn btn-sm btn-primary"
+                                                    disabled="@isRegistering"
+                                                    @onclick="() => RegisterForMembership(level.MembershipLevelId, option.PaymentOptionId)">
+                                                @if (isRegistering && registeringLevelId == level.MembershipLevelId && registeringOptionId == option.PaymentOptionId)
+                                                {
+                                                    <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                                                }
+                                                Register
+                                            </button>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+
+                @if (!string.IsNullOrEmpty(registrationError))
+                {
+                    <div class="alert alert-danger mt-3">@registrationError</div>
+                }
+                @if (registrationSuccess)
+                {
+                    <div class="alert alert-success mt-3">Registration submitted successfully!</div>
+                }
+            }
+        </div>
+    </div>
+
+    <!-- Pending Registrations (Admin only) -->
+    @if (isAdmin && pendingMembers.Count > 0)
+    {
+        <div class="card mb-3">
+            <div class="card-header fw-bold">Pending Registrations</div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped mb-0">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Valid Until</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var member in pendingMembers)
+                            {
+                                <tr>
+                                    <td>@member.DisplayName</td>
+                                    <td>
+                                        <input type="date"
+                                               class="form-control form-control-sm"
+                                               value="@(confirmValidUntil.TryGetValue(member.PilotId, out var d) ? d.ToString("yyyy-MM-dd") : "")"
+                                               @onchange="(e) => OnValidUntilChanged(member.PilotId, e)" />
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-sm btn-success"
+                                                disabled="@(isConfirming || !confirmValidUntil.ContainsKey(member.PilotId))"
+                                                @onclick="() => ConfirmRegistration(member)">
+                                            @if (isConfirming && confirmingPilotId == member.PilotId)
+                                            {
+                                                <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                                            }
+                                            Confirm
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                @if (!string.IsNullOrEmpty(confirmError))
+                {
+                    <div class="alert alert-danger mt-3">@confirmError</div>
+                }
+                @if (confirmSuccess)
+                {
+                    <div class="alert alert-success mt-3">Registration confirmed successfully!</div>
+                }
+            </div>
+        </div>
+    }
+
+    <!-- Members -->
+    <div class="card mb-3">
+        <div class="card-header fw-bold">Active Members</div>
+        <div class="card-body">
+            @if (confirmedMembers.Count == 0)
+            {
+                <p class="text-muted">No active members.</p>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-striped mb-0">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                @if (isAdmin || isMember)
+                                {
+                                    <th>Membership Tier</th>
+                                    <th>Expires</th>
+                                }
+                                        @if (isAdmin || isAuthenticated)
+                                        {
+                                            <th></th>
+                                        }
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var member in confirmedMembers)
+                                    {
+                                        <tr>
+                                            <td>@member.DisplayName</td>
+                                            @if (isAdmin || isMember)
+                                            {
+                                                <td>@(member.MembershipLevelName ?? "—")</td>
+                                                <td>@(member.MembershipExpiry?.ToString("d") ?? "—")</td>
+                                            }
+                                            @if (isAdmin && member.PilotId != currentPilotId)
+                                            {
+                                                <td>
+                                                    <button class="btn btn-sm btn-danger"
+                                                            disabled="@isRevokingMembership"
+                                                            @onclick="() => RevokeMembership(member)">
+                                                        @if (isRevokingMembership && revokingPilotId == member.PilotId)
+                                                        {
+                                                            <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                                                        }
+                                                        Revoke
+                                                    </button>
+                                                </td>
+                                            }
+                                            else if (isAuthenticated && member.PilotId == currentPilotId)
+                                            {
+                                                <td>
+                                                    <button class="btn btn-sm btn-danger"
+                                                            disabled="@isCancellingMembership"
+                                                            @onclick="() => CancelMembership(member)">
+                                                        @if (isCancellingMembership && cancellingPilotId == member.PilotId)
+                                                        {
+                                                            <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                                                        }
+                                                        Cancel
+                                                    </button>
+                                                </td>
+                                            }
+                                            else if (isAdmin || isAuthenticated)
+                                            {
+                                                <td></td>
+                                            }
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            @if (!string.IsNullOrEmpty(cancelMembershipError))
+            {
+                <div class="alert alert-danger mt-3">@cancelMembershipError</div>
+            }
+            @if (cancelMembershipSuccess)
+            {
+                <div class="alert alert-success mt-3">Membership cancelled successfully.</div>
+            }
+            @if (!string.IsNullOrEmpty(revokeMembershipError))
+            {
+                <div class="alert alert-danger mt-3">@revokeMembershipError</div>
+            }
+            @if (revokeMembershipSuccess)
+            {
+                <div class="alert alert-success mt-3">Membership revoked successfully.</div>
+            }
+        </div>
+    </div>
+
+    <!-- Races -->
+    <div class="card mb-3">
+        <div class="card-header fw-bold">Races</div>
+        <div class="card-body">
+            @if (displayedRaces.Count == 0)
+            {
+                <p class="text-muted">No races found for this club.</p>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-striped mb-0">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Location</th>
+                                <th>First Date</th>
+                                <th>Registered</th>
+                                @if (isAdmin)
+                                {
+                                    <th>Status</th>
+                                }
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var race in displayedRaces)
+                            {
+                                <tr style="cursor: pointer" @onclick="() => NavigateToRace(race.RaceId)">
+                                    <td>@race.Name</td>
+                                    <td>@(race.LocationName ?? "—")</td>
+                                    <td>@(race.FirstRaceDateStart != default ? race.FirstRaceDateStart.ToString("g") : "—")</td>
+                                    <td>
+                                        @race.RegisteredPilotCount
+                                        @if (race.MaximumPilots.HasValue)
+                                        {
+                                            <text> / @race.MaximumPilots</text>
+                                        }
+                                    </td>
+                                    @if (isAdmin)
+                                    {
+                                        <td>
+                                            @if (race.IsPublished)
+                                            {
+                                                <span class="badge bg-success">Published</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-secondary">Unpublished</span>
+                                            }
+                                        </td>
+                                    }
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
             }
         </div>
     </div>
@@ -95,9 +396,39 @@ else
 
     private bool isLoading = true;
     private ClubOverviewResponse? overview;
+    private ClubContactDetailsResponse? contactDetails;
     private List<ClubLocationResponse> locations = [];
     private List<ClubMembershipLevelResponse> membershipLevels = [];
+    private List<ClubMemberListResponse> members = [];
+    private List<ClubMemberListResponse> confirmedMembers = [];
+    private List<ClubMemberListResponse> pendingMembers = [];
     private bool isAdmin;
+    private bool isMember;
+    private bool isAuthenticated;
+    private bool isMemberOrRegistered;
+    private bool isFollowing;
+    private bool isTogglingFollow;
+    private bool isRegistering;
+    private int? registeringLevelId;
+    private int? registeringOptionId;
+    private string? registrationError;
+    private bool registrationSuccess;
+    private Guid? currentPilotId;
+    private bool isConfirming;
+    private Guid? confirmingPilotId;
+    private string? confirmError;
+    private bool confirmSuccess;
+    private Dictionary<Guid, DateTime> confirmValidUntil = [];
+    private bool isCancellingMembership;
+    private Guid? cancellingPilotId;
+    private string? cancelMembershipError;
+    private bool cancelMembershipSuccess;
+    private bool isRevokingMembership;
+    private Guid? revokingPilotId;
+    private string? revokeMembershipError;
+    private bool revokeMembershipSuccess;
+    private List<RaceInformationResponse> races = [];
+    private List<RaceInformationResponse> displayedRaces = [];
 
     protected override async Task OnInitializedAsync()
     {
@@ -107,23 +438,43 @@ else
             var authState = await AuthenticationStateTask;
 
             var overviewTask = Http.GetFromJsonAsync<ClubOverviewResponse>($"api/club/{ClubId}/query/overview");
+            var contactTask = Http.GetFromJsonAsync<ClubContactDetailsResponse>($"api/club/{ClubId}/query/contactdetails");
             var locationsTask = Http.GetFromJsonAsync<List<ClubLocationResponse>>($"api/club/{ClubId}/query/locations");
             var levelsTask = Http.GetFromJsonAsync<List<ClubMembershipLevelResponse>>($"api/club/{ClubId}/query/membershiplevels");
+            var membersTask = Http.GetFromJsonAsync<List<ClubMemberListResponse>>($"api/club/{ClubId}/query/members");
+            var racesTask = Http.GetFromJsonAsync<List<RaceInformationResponse>>($"api/race/query/club/{ClubId}");
 
             if (authState.User.Identity?.IsAuthenticated == true)
             {
+                isAuthenticated = true;
+                var sub = authState.User.FindFirst("sub")?.Value;
+                if (Guid.TryParse(sub, out var parsedPilotId))
+                {
+                    currentPilotId = parsedPilotId;
+                }
                 var isAdminTask = FetchIsAdminAsync();
-                await Task.WhenAll(overviewTask, locationsTask, levelsTask, isAdminTask);
+                var isMemberTask = FetchIsMemberAsync();
+                var isFollowingTask = FetchIsFollowingAsync();
+                await Task.WhenAll(overviewTask, contactTask, locationsTask, levelsTask, membersTask, racesTask, isAdminTask, isMemberTask, isFollowingTask);
                 isAdmin = isAdminTask.Result;
+                isMemberOrRegistered = isMemberTask.Result;
+                isFollowing = isFollowingTask.Result;
             }
             else
             {
-                await Task.WhenAll(overviewTask, locationsTask, levelsTask);
+                await Task.WhenAll(overviewTask, contactTask, locationsTask, levelsTask, membersTask, racesTask);
             }
 
             overview = overviewTask.Result;
+            contactDetails = contactTask.Result;
             locations = locationsTask.Result ?? [];
             membershipLevels = levelsTask.Result ?? [];
+            members = membersTask.Result ?? [];
+            races = racesTask.Result ?? [];
+            confirmedMembers = members.Where(m => m.IsRegistrationConfirmed).ToList();
+            pendingMembers = members.Where(m => !m.IsRegistrationConfirmed).ToList();
+            isMember = confirmedMembers.Any(m => m.MembershipLevelName != null || m.MembershipExpiry != null);
+            displayedRaces = isAdmin ? races : races.Where(r => r.IsPublished).ToList();
         }
         catch
         {
@@ -147,5 +498,243 @@ else
         }
         catch { }
         return false;
+    }
+
+    private void NavigateToRace(Guid raceId)
+    {
+        Navigation.NavigateTo($"/race/{raceId}");
+    }
+
+    private async Task<bool> FetchIsMemberAsync()
+    {
+        try
+        {
+            var response = await Http.GetAsync($"api/club/{ClubId}/query/is-member");
+            if (response.IsSuccessStatusCode)
+            {
+                return await response.Content.ReadFromJsonAsync<bool>();
+            }
+        }
+        catch { }
+        return false;
+    }
+
+    private async Task<bool> FetchIsFollowingAsync()
+    {
+        try
+        {
+            var response = await Http.GetAsync($"api/club/{ClubId}/query/is-following");
+            if (response.IsSuccessStatusCode)
+            {
+                return await response.Content.ReadFromJsonAsync<bool>();
+            }
+        }
+        catch { }
+        return false;
+    }
+
+    private async Task FollowClubAsync()
+    {
+        isTogglingFollow = true;
+        try
+        {
+            var response = await Http.PostAsync($"api/pilot/follow/{ClubId}", null);
+            if (response.IsSuccessStatusCode)
+            {
+                isFollowing = true;
+            }
+        }
+        catch { }
+        finally
+        {
+            isTogglingFollow = false;
+        }
+    }
+
+    private async Task UnfollowClubAsync()
+    {
+        isTogglingFollow = true;
+        try
+        {
+            var response = await Http.DeleteAsync($"api/pilot/follow/{ClubId}");
+            if (response.IsSuccessStatusCode)
+            {
+                isFollowing = false;
+            }
+        }
+        catch { }
+        finally
+        {
+            isTogglingFollow = false;
+        }
+    }
+
+    private async Task RegisterForMembership(int membershipLevelId, int paymentOptionId)
+    {
+        isRegistering = true;
+        registeringLevelId = membershipLevelId;
+        registeringOptionId = paymentOptionId;
+        registrationError = null;
+        registrationSuccess = false;
+
+        try
+        {
+            var request = new RegisterPilotForClubMembershipLevelRequest
+            {
+                MembershipLevelId = membershipLevelId,
+                PaymentOptionId = paymentOptionId,
+                RegistrationId = Guid.NewGuid()
+            };
+
+            var response = await Http.PostAsJsonAsync($"api/club/{ClubId}/pilotmembership", request);
+
+            if (response.IsSuccessStatusCode)
+            {
+                registrationSuccess = true;
+                isMemberOrRegistered = true;
+            }
+            else
+            {
+                registrationError = await response.Content.ReadAsStringAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            registrationError = "An error occurred while registering. Please try again.";
+        }
+        finally
+        {
+            isRegistering = false;
+            registeringLevelId = null;
+            registeringOptionId = null;
+        }
+    }
+
+    private void OnValidUntilChanged(Guid pilotId, ChangeEventArgs e)
+    {
+        if (DateTime.TryParse(e.Value?.ToString(), out var date))
+        {
+            confirmValidUntil[pilotId] = date;
+        }
+        else
+        {
+            confirmValidUntil.Remove(pilotId);
+        }
+    }
+
+    private async Task ConfirmRegistration(ClubMemberListResponse member)
+    {
+        if (!currentPilotId.HasValue || !member.RegistrationId.HasValue
+            || !confirmValidUntil.TryGetValue(member.PilotId, out var validUntil))
+            return;
+
+        isConfirming = true;
+        confirmingPilotId = member.PilotId;
+        confirmError = null;
+        confirmSuccess = false;
+
+        try
+        {
+            var request = new ManuallyConfirmPilotClubMembershipRequest
+            {
+                RegistrationId = member.RegistrationId.Value,
+                ConfirmedByPilotId = currentPilotId.Value,
+                ValidUntil = validUntil
+            };
+
+            var response = await Http.PutAsJsonAsync($"api/club/{ClubId}/pilotmembership/{member.PilotId}/manualconfirm", request);
+
+            if (response.IsSuccessStatusCode)
+            {
+                confirmSuccess = true;
+                member.IsRegistrationConfirmed = true;
+                pendingMembers.Remove(member);
+                confirmedMembers.Add(member);
+                confirmValidUntil.Remove(member.PilotId);
+            }
+            else
+            {
+                confirmError = await response.Content.ReadAsStringAsync();
+            }
+        }
+        catch
+        {
+            confirmError = "An error occurred while confirming. Please try again.";
+        }
+        finally
+        {
+            isConfirming = false;
+            confirmingPilotId = null;
+        }
+    }
+
+    private async Task CancelMembership(ClubMemberListResponse member)
+    {
+        if (!member.RegistrationId.HasValue)
+            return;
+
+        isCancellingMembership = true;
+        cancellingPilotId = member.PilotId;
+        cancelMembershipError = null;
+        cancelMembershipSuccess = false;
+
+        try
+        {
+            var response = await Http.DeleteAsync($"api/club/{ClubId}/pilotmembership/{member.PilotId}/{member.RegistrationId}");
+
+            if (response.IsSuccessStatusCode)
+            {
+                cancelMembershipSuccess = true;
+                confirmedMembers.Remove(member);
+            }
+            else
+            {
+                cancelMembershipError = await response.Content.ReadAsStringAsync();
+            }
+        }
+        catch
+        {
+            cancelMembershipError = "An error occurred while cancelling the membership. Please try again.";
+        }
+        finally
+        {
+            isCancellingMembership = false;
+            cancellingPilotId = null;
+        }
+    }
+
+    private async Task RevokeMembership(ClubMemberListResponse member)
+    {
+        if (!member.RegistrationId.HasValue)
+            return;
+
+        isRevokingMembership = true;
+        revokingPilotId = member.PilotId;
+        revokeMembershipError = null;
+        revokeMembershipSuccess = false;
+
+        try
+        {
+            var response = await Http.DeleteAsync($"api/club/{ClubId}/pilotmembership/{member.PilotId}/{member.RegistrationId}/revoke");
+
+            if (response.IsSuccessStatusCode)
+            {
+                revokeMembershipSuccess = true;
+                confirmedMembers.Remove(member);
+            }
+            else
+            {
+                revokeMembershipError = await response.Content.ReadAsStringAsync();
+            }
+        }
+        catch
+        {
+            revokeMembershipError = "An error occurred while revoking the membership. Please try again.";
+        }
+        finally
+        {
+            isRevokingMembership = false;
+            revokingPilotId = null;
+        }
     }
 }

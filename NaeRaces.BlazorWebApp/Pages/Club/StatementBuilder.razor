@@ -151,11 +151,11 @@
         </div>
         <div class="mb-2">
             <small class="fw-semibold text-muted">Left:</small>
-            <StatementBuilder Model="Model.Left!" Clubs="Clubs" AllStatements="AllStatements" Level="Level + 1" />
+            <StatementBuilder Model="Model.Left!" Clubs="Clubs" AllStatements="AllStatements" Level="Level + 1" OnChanged="OnChanged" />
         </div>
         <div>
             <small class="fw-semibold text-muted">Right:</small>
-            <StatementBuilder Model="Model.Right!" Clubs="Clubs" AllStatements="AllStatements" Level="Level + 1" />
+            <StatementBuilder Model="Model.Right!" Clubs="Clubs" AllStatements="AllStatements" Level="Level + 1" OnChanged="OnChanged" />
         </div>
     }
     else if (Model.Type == "ExistingStatement")
@@ -180,12 +180,13 @@
     [Parameter, EditorRequired] public List<ClubSearchResponse> Clubs { get; set; } = default!;
     [Parameter, EditorRequired] public List<PilotPolicyStatementResponse> AllStatements { get; set; } = default!;
     [Parameter] public int Level { get; set; } = 0;
+    [Parameter] public EventCallback OnChanged { get; set; }
 
     private List<ClubMembershipLevelResponse> _membershipLevels = [];
     private string _selectedLevelClubId = string.Empty;
     private readonly string _instanceId = Guid.NewGuid().ToString("N");
 
-    private void OnTypeChanged(ChangeEventArgs e)
+    private async Task OnTypeChanged(ChangeEventArgs e)
     {
         Model.Type = e.Value?.ToString() ?? string.Empty;
         if (Model.Type == "Composite")
@@ -200,6 +201,7 @@
         }
         _membershipLevels = [];
         _selectedLevelClubId = string.Empty;
+        await OnChanged.InvokeAsync();
     }
 
     private async Task OnClubSelectedForLevel(ChangeEventArgs e)

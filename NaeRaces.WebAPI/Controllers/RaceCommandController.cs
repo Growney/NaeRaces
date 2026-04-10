@@ -32,7 +32,7 @@ public class RaceCommandController : Controller
             return Task.FromResult(false);
         }
 
-        return _queryContext.ClubMember.HasClubMemberRole(pilotId, clubId, nameof(WebAPI.Shared.Club.ClubMemberRole.Administrator), nameof(WebAPI.Shared.Club.ClubMemberRole.RaceOrganiser));
+        return _queryContext.ClubMember.HasClubMemberRole(clubId, pilotId, nameof(Command.ValueTypes.ClubMemberRole.Administrator), nameof(Command.ValueTypes.ClubMemberRole.RaceOrganiser));
     }
     [HttpPost("api/race")]
     public async Task<IActionResult> PlanRaceAsync([FromBody] PlanRaceRequest request)

@@ -42,4 +42,15 @@ public class ClubDetailsProjection
         }
         await _dbContext.SaveChangesAsync();
     }
+
+    private async Task When(ClubContactDetailsSet e)
+    {
+        ClubDetails? details = await _dbContext.ClubDetails.SingleOrDefaultAsync(x => x.Id == e.ClubId);
+        if (details != null)
+        {
+            details.PhoneNumber = e.PhoneNumber;
+            details.EmailAddress = e.EmailAddress;
+        }
+        await _dbContext.SaveChangesAsync();
+    }
 }

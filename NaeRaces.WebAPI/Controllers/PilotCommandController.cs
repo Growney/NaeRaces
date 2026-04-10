@@ -5,7 +5,6 @@ using Microsoft.AspNetCore.Mvc.ModelBinding;
 using NaeRaces.Command.Aggregates;
 using NaeRaces.Command.ValueTypes;
 using NaeRaces.Query.Abstractions;
-using NaeRaces.WebAPI.Shared.Club;
 using NaeRaces.WebAPI.Shared.Pilot;
 using OpenIddict.Abstractions;
 using System.ComponentModel.DataAnnotations;

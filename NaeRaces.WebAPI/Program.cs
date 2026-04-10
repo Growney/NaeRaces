@@ -5,6 +5,7 @@ using OpenIddict.Validation.AspNetCore;
 using NaeRaces.Query.EntityFrameworkCore.Extensions;
 using NaeRaces.WebAPI;
 using NaeRaces.WebAPI.Data;
+using NaeRaces.WebAPI.Services;
 using OpenIddict.Abstractions;
 using static OpenIddict.Abstractions.OpenIddictConstants;
 
@@ -24,6 +25,7 @@ builder.Services.AddKurrentDbEventDbLite(x =>
 builder.Services.AddSqlServerNaeRacesQueryDbContext(builder.Configuration);
 builder.Services.AddNaeRacesEntityFrameworkCoreQueryReactions();
 builder.Services.AddNaeRacesEntityFrameworkCoreQueryHandlers();
+builder.Services.AddHostedService<ClubMembershipExpiryService>();
 
 // Configure the OpenIddict EF Core DbContext for token/application storage.
 builder.Services.AddDbContext<OpenIddictDbContext>(options =>
@@ -111,51 +113,6 @@ app.MapRazorPages();
 app.MapControllers();
 app.MapFallbackToFile("index.html");
 
-// Seed the OpenIddict application registration and ensure the DB is created.
-await using (var scope = app.Services.CreateAsyncScope())
-{
-    var context = scope.ServiceProvider.GetRequiredService<OpenIddictDbContext>();
-    await context.Database.EnsureCreatedAsync();
-
-    var manager = scope.ServiceProvider.GetRequiredService<IOpenIddictApplicationManager>();
-
-    var descriptor = new OpenIddictApplicationDescriptor
-    {
-        ClientId = "naeraces-blazor-client",
-        ConsentType = ConsentTypes.Implicit,
-        DisplayName = "NaeRaces Blazor Client",
-        ClientType = ClientTypes.Public,
-        PostLogoutRedirectUris =
-        {
-            new Uri("https://localhost:7229/authentication/logout-callback")
-        },
-        RedirectUris =
-        {
-            new Uri("https://localhost:7229/authentication/login-callback")
-        },
-        Permissions =
-        {
-            Permissions.Endpoints.Authorization,
-            Permissions.Endpoints.EndSession,
-            Permissions.Endpoints.Token,
-            Permissions.GrantTypes.AuthorizationCode,
-            Permissions.GrantTypes.RefreshToken,
-            Permissions.ResponseTypes.Code,
-            Permissions.Scopes.Email,
-            Permissions.Scopes.Profile,
-            Permissions.Scopes.Roles
-        },
-        Requirements =
-        {
-            Requirements.Features.ProofKeyForCodeExchange
-        }
-    };
-
-    var existing = await manager.FindByClientIdAsync(descriptor.ClientId!);
-    if (existing is not null)
-        await manager.DeleteAsync(existing);
-
-    await manager.CreateAsync(descriptor);
-}
+await app.SeedOpenIddictClientsAsync();
 
 await app.RunAsync();

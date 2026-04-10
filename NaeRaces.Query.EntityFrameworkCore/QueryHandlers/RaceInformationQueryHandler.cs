@@ -71,5 +71,5 @@ public class RaceInformationQueryHandler : IRaceInformationQueryHandler
             .AsAsyncEnumerable();
 
     private static Query.Models.RaceInformation ToQueryModel(RaceInformation info) =>
-        new(info.Id, info.Name ?? string.Empty, info.FirstRaceDateStart, info.LastRaceDateEnd, info.ClubName, info.LocationName, info.RegisteredPilotCount, info.MaximumPilots);
+        new(info.Id, info.Name ?? string.Empty, info.ClubId, info.FirstRaceDateStart, info.LastRaceDateEnd, info.ClubName, info.LocationName, info.RegisteredPilotCount, info.MinimumPilots, info.MaximumPilots, info.IsPublished, info.Description, info.PaymentDeadline, info.GoNoGoDate);
 }

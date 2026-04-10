@@ -26,8 +26,7 @@ public class Club : AggregateRoot<Guid>
     private readonly Dictionary<string, ValidationPolicy> _insuranceProviderRequirements = [];
     private readonly Dictionary<string, ValidationPolicy> _governmentDocumentRequirements = [];
     private readonly Dictionary<int, MembershipLevel> _membershipLevels = [];
-    private readonly Dictionary<Guid, PilotMembership> _pilotMemberships = [];
-    private readonly Dictionary<Guid, HashSet<string>> _memberRoles = [];
+    private readonly Dictionary<Guid, HashSet<ClubMemberRole>> _memberRoles = [];
     private readonly Dictionary<Tag, string> _raceTags = [];
 
     private class Location
@@ -50,13 +49,6 @@ public class Club : AggregateRoot<Guid>
         public Name Name { get; set; }
     }
 
-    private class PilotMembership
-    {
-        public int MembershipLevelId { get; set; }
-        public int PaymentOptionId { get; set; }
-        public Guid RegistrationId { get; set; }
-        public bool IsConfirmed { get; set; }
-    }
     public Club()
     {
         // Parameterless constructor for framework
@@ -154,7 +146,7 @@ public class Club : AggregateRoot<Guid>
 
         Raise(new ClubHomeLocationSet(Id, locationId));
     }
-    public void AddClubMembershipLevel(Name name)
+    public int AddClubMembershipLevel(Name name)
     {
         ThrowIfIdNotSet();
 
@@ -164,6 +156,8 @@ public class Club : AggregateRoot<Guid>
         var membershipLevelId = _membershipLevels.Any() ? _membershipLevels.Keys.Max() + 1 : 1;
 
         Raise(new ClubMembershipLevelAdded(Id, membershipLevelId, name.Value));
+
+        return membershipLevelId;
     }
 
     public void RemoveClubMembershipLevel(int membershipLevelId)
@@ -273,56 +267,9 @@ public class Club : AggregateRoot<Guid>
         Raise(new ClubMembershipLevelPaymentOptionRenamed(Id, membershipLevelId, paymentOptionId, newName.Value));
     }
 
-    public void RegisterPilotForClubMembershipLevel(int membershipLevelId, int paymentOptionId, Guid pilotId, Guid registrationId)
+    public void AssignClubMemberRole(Guid pilotId, ClubMemberRole role)
     {
         ThrowIfIdNotSet();
-        if (!_membershipLevels.ContainsKey(membershipLevelId))
-            throw new InvalidOperationException($"Membership level {membershipLevelId} does not exist.");
-        if (!_membershipLevels[membershipLevelId].PaymentOptions.ContainsKey(paymentOptionId))
-            throw new InvalidOperationException($"Payment option {paymentOptionId} does not exist.");
-        if (_pilotMemberships.ContainsKey(pilotId))
-            throw new InvalidOperationException($"Pilot {pilotId} is already registered.");
-
-        Raise(new PilotRegisteredForClubMembershipLevel(Id, membershipLevelId, paymentOptionId, pilotId, registrationId));
-    }
-
-    public void ConfirmPilotClubMembership(int membershipLevelId, int paymentOptionId, Guid pilotId, Guid registrationId, DateTime validUntil)
-    {
-        ThrowIfIdNotSet();
-        if (!_pilotMemberships.TryGetValue(pilotId, out var membership))
-            throw new InvalidOperationException($"Pilot {pilotId} is not registered.");
-        if (membership.IsConfirmed)
-            throw new InvalidOperationException($"Pilot {pilotId} membership is already confirmed.");
-
-        Raise(new PilotClubMembershipConfirmed(Id, membershipLevelId, paymentOptionId, pilotId, registrationId, validUntil));
-    }
-    public void ManuallyConfirmPilotClubMembership(int membershipLevelId, int paymentOptionId, Guid pilotId, Guid registrationId, Guid confirmedByPilotId, DateTime validUntil)
-    {
-        ThrowIfIdNotSet();
-        if (!_pilotMemberships.TryGetValue(pilotId, out var membership))
-            throw new InvalidOperationException($"Pilot {pilotId} is not registered.");
-        if (membership.IsConfirmed)
-            throw new InvalidOperationException($"Pilot {pilotId} membership is already confirmed.");
-
-        if (!_memberRoles.TryGetValue(confirmedByPilotId, out var confirmingRoles) || !confirmingRoles.Contains("Trustee"))
-            throw new InvalidOperationException($"Pilot {confirmedByPilotId} is not a trustee.");
-
-        Raise(new PilotClubMembershipManuallyConfirmed(Id, membershipLevelId, paymentOptionId, pilotId, registrationId, validUntil, confirmedByPilotId));
-    }
-    public void CancelPilotClubMembership(Guid pilotId)
-    {
-        ThrowIfIdNotSet();
-        if (!_pilotMemberships.ContainsKey(pilotId))
-            throw new InvalidOperationException($"Pilot {pilotId} is not a member.");
-
-        Raise(new PilotClubMembershipCancelled(Id, pilotId));
-    }
-
-    public void AssignClubMemberRole(Guid pilotId, string role)
-    {
-        ThrowIfIdNotSet();
-        if (pilotId != _founderId && (!_pilotMemberships.TryGetValue(pilotId, out var membership) || !membership.IsConfirmed))
-            throw new InvalidOperationException($"Pilot {pilotId} must be a confirmed member to be assigned a role. or must be the founder");
 
         if (_memberRoles.TryGetValue(pilotId, out var roles) && roles.Contains(role))
             return;
@@ -330,11 +277,11 @@ public class Club : AggregateRoot<Guid>
         Raise(new ClubMemberRoleAssigned(Id, pilotId, role));
     }
 
-    public void RevokeClubMemberRole(Guid pilotId, string role)
+    public void RevokeClubMemberRole(Guid pilotId, ClubMemberRole role)
     {
         ThrowIfIdNotSet();
         if (!_memberRoles.TryGetValue(pilotId, out var roles) || !roles.Contains(role))
-            throw new InvalidOperationException($"Pilot {pilotId} does not have the role '{role}'.");
+            return;
 
         Raise(new ClubMemberRoleRevoked(Id, pilotId, role));
     }
@@ -483,41 +430,22 @@ public class Club : AggregateRoot<Guid>
         _membershipLevels[e.MembershipLevelId].PaymentOptions[e.PaymentOptionId].Name = Name.Rehydrate(e.NewName);
     }
 
-    private void When(PilotRegisteredForClubMembershipLevel e)
-    {
-        _pilotMemberships[e.PilotId] = new PilotMembership
-        {
-            MembershipLevelId = e.MembershipLevelId,
-            PaymentOptionId = e.PaymentOptionId,
-            RegistrationId = e.RegistrationId,
-            IsConfirmed = false
-        };
-    }
-
-    private void When(PilotClubMembershipConfirmed e)
-    {
-        _pilotMemberships[e.PilotId].IsConfirmed = true;
-    }
-
-    private void When(PilotClubMembershipCancelled e)
-    {
-        _pilotMemberships.Remove(e.PilotId);
-        _memberRoles.Remove(e.PilotId);
-    }
-
     private void When(ClubMemberRoleAssigned e)
     {
         if (!_memberRoles.ContainsKey(e.PilotId))
             _memberRoles[e.PilotId] = [];
 
-        _memberRoles[e.PilotId].Add(e.Role);
+
+        ClubMemberRole role = ClubMemberRole.Rehydrate(e.Role);
+        _memberRoles[e.PilotId].Add(role);
     }
 
     private void When(ClubMemberRoleRevoked e)
     {
         if (_memberRoles.TryGetValue(e.PilotId, out var roles))
         {
-            roles.Remove(e.Role);
+            ClubMemberRole role = ClubMemberRole.Rehydrate(e.Role);
+            roles.Remove(role);
             if (roles.Count == 0)
                 _memberRoles.Remove(e.PilotId);
         }

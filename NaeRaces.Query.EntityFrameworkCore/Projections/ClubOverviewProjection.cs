@@ -139,4 +139,14 @@ public class ClubOverviewProjection
         }
         await _dbContext.SaveChangesAsync();
     }
+
+    private async Task When(PilotClubMembershipExpired e)
+    {
+        ClubOverview? overview = await _dbContext.ClubOverviews.SingleOrDefaultAsync(x => x.ClubId == e.ClubId);
+        if (overview != null && overview.TotalMemberCount > 0)
+        {
+            overview.TotalMemberCount--;
+        }
+        await _dbContext.SaveChangesAsync();
+    }
 }

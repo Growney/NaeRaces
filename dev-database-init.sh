@@ -1,0 +1,2 @@
+docker run -e "ACCEPT_EULA=Y" -e "MSSQL_SA_PASSWORD=&Password1234" -e "MSSQL_PID=Developer" -p 1433:1433  --name sql2025 --hostname sql2025 -d mcr.microsoft.com/mssql/server:2025-latest
+docker run --name kurrentdb-node -p 2113:2113 docker.kurrent.io/kurrent-latest/kurrentdb:latest --insecure --run-projections=All --enable-atom-pub-over-http

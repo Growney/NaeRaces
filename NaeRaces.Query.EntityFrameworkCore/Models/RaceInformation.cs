@@ -12,5 +12,10 @@ public class RaceInformation
     public int LocationId { get; set; }
     public string? LocationName { get; set; }
     public int RegisteredPilotCount { get; set; }
+    public int? MinimumPilots { get; set; }
     public int? MaximumPilots { get; set; }
+    public bool IsPublished { get; set; }
+    public string? Description { get; set; }
+    public DateTime? PaymentDeadline { get; set; }
+    public DateTime? GoNoGoDate { get; set; }
 }
