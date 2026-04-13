@@ -13,6 +13,18 @@ FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 COPY ["NaeRaces.WebAPI/NaeRaces.WebAPI.csproj", "NaeRaces.WebAPI/"]
+COPY ["EventDbLite/EventDbLite.KurrentDb/EventDbLite.KurrentDb.csproj", "EventDbLite/EventDbLite.KurrentDb/"]
+COPY ["EventDbLite/EventDbLite/EventDbLite.csproj", "EventDbLite/EventDbLite/"]
+COPY ["EventDbLite/EventDbLite.Handlers/EventDbLite.Handlers.csproj", "EventDbLite/EventDbLite.Handlers/"]
+COPY ["EventDbLite/EventDbLite.Serialization/EventDbLite.Serialization.csproj", "EventDbLite/EventDbLite.Serialization/"]
+COPY ["EventDbLite/EventDbLite.Abstractions/EventDbLite.Abstractions.csproj", "EventDbLite/EventDbLite.Abstractions/"]
+COPY ["EventDbLite/EventDbLite.Reactions.Abstractions/EventDbLite.Reactions.Abstractions.csproj", "EventDbLite/EventDbLite.Reactions.Abstractions/"]
+COPY ["NaeRaces.Command/NaeRaces.Command.csproj", "NaeRaces.Command/"]
+COPY ["NaeRaces.Events/NaeRaces.Events.csproj", "NaeRaces.Events/"]
+COPY ["NaeRaces.Query.EntityFrameworkCore.SqlServer/NaeRaces.Query.EntityFrameworkCore.SqlServer.csproj", "NaeRaces.Query.EntityFrameworkCore.SqlServer/"]
+COPY ["NaeRaces.Query.EntityFrameworkCore/NaeRaces.Query.EntityFrameworkCore.csproj", "NaeRaces.Query.EntityFrameworkCore/"]
+COPY ["NaeRaces.Query/NaeRaces.Query.csproj", "NaeRaces.Query/"]
+COPY ["NaeRaces.WebAPI.Shared/NaeRaces.WebAPI.Shared.csproj", "NaeRaces.WebAPI.Shared/"]
 RUN dotnet restore "./NaeRaces.WebAPI/NaeRaces.WebAPI.csproj"
 COPY . .
 WORKDIR "/src/NaeRaces.WebAPI"
