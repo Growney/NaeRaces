@@ -1,0 +1,153 @@
+@page "/unavailable"
+@layout EmptyLayout
+@using System.Web
+@using NaeRaces.BlazorWebApp.Services
+@inject ApiHealthService HealthService
+@inject NavigationManager Navigation
+@implements IDisposable
+
+<PageTitle>Service Unavailable</PageTitle>
+
+<div class="unavailable-container">
+    <div class="unavailable-card">
+        <div class="unavailable-icon">⚠️</div>
+        <h1>Service Unavailable</h1>
+        <p>We're having trouble connecting to the server. Please hang tight — we're checking automatically.</p>
+        <div class="unavailable-status">
+            @if (_checking)
+            {
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Checking...</span>
+                </div>
+                <span class="ms-2">Checking connection...</span>
+            }
+            else
+            {
+                <span class="text-muted">Next check in @_secondsUntilRetry second@(_secondsUntilRetry == 1 ? "" : "s")...</span>
+            }
+        </div>
+    </div>
+</div>
+
+<style>
+    .unavailable-container {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        background-color: #f8f9fa;
+        padding: 1rem;
+    }
+
+    .unavailable-card {
+        text-align: center;
+        background: #fff;
+        border-radius: 0.75rem;
+        box-shadow: 0 0.25rem 1rem rgba(0, 0, 0, 0.1);
+        padding: 3rem 2rem;
+        max-width: 480px;
+        width: 100%;
+    }
+
+    .unavailable-icon {
+        font-size: 4rem;
+        margin-bottom: 1rem;
+    }
+
+    .unavailable-card h1 {
+        font-size: 1.75rem;
+        margin-bottom: 0.75rem;
+    }
+
+    .unavailable-card p {
+        color: #6c757d;
+        margin-bottom: 1.5rem;
+    }
+
+    .unavailable-status {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 2.5rem;
+    }
+</style>
+
+@code {
+    private const int InitialDelaySeconds = 2;
+    private const int MaxDelaySeconds = 60;
+
+    private CancellationTokenSource? _cts;
+    private bool _checking;
+    private int _secondsUntilRetry;
+    private string _returnUrl = "/";
+
+    [Parameter]
+    public string? ReturnUrl { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!string.IsNullOrWhiteSpace(ReturnUrl))
+        {
+            _returnUrl = ReturnUrl;
+        }
+        else
+        {
+            var uri = Navigation.ToAbsoluteUri(Navigation.Uri);
+            var query = HttpUtility.ParseQueryString(uri.Query);
+            var returnUrl = query["returnUrl"];
+
+            if (!string.IsNullOrWhiteSpace(returnUrl))
+            {
+                _returnUrl = returnUrl;
+            }
+        }
+
+        _cts = new CancellationTokenSource();
+        await PollApiAsync(_cts.Token);
+    }
+
+    private async Task PollApiAsync(CancellationToken cancellationToken)
+    {
+        var delaySeconds = InitialDelaySeconds;
+
+        try
+        {
+            while (!cancellationToken.IsCancellationRequested)
+            {
+                _checking = true;
+                StateHasChanged();
+
+                var available = await HealthService.IsAvailableAsync(cancellationToken);
+
+                if (available)
+                {
+                    Navigation.NavigateTo(_returnUrl, forceLoad: true);
+                    return;
+                }
+
+                _checking = false;
+                _secondsUntilRetry = delaySeconds;
+                StateHasChanged();
+
+                while (_secondsUntilRetry > 0 && !cancellationToken.IsCancellationRequested)
+                {
+                    await Task.Delay(1000, cancellationToken);
+                    _secondsUntilRetry--;
+                    StateHasChanged();
+                }
+
+                delaySeconds = Math.Min(delaySeconds * 2, MaxDelaySeconds);
+            }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            // Component disposed, stop polling.
+        }
+    }
+
+    public void Dispose()
+    {
+        _cts?.Cancel();
+        _cts?.Dispose();
+    }
+}

@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Authentication;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using NaeRaces.BlazorWebApp;
+using NaeRaces.BlazorWebApp.Services;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");
@@ -22,6 +23,11 @@ builder.Services.AddScoped<ApiAuthorizationMessageHandler>(serviceProvider =>
 builder.Services.AddHttpClient("NaeRaces.ServerAPI")
     .ConfigureHttpClient(client => client.BaseAddress = new Uri(apiBaseAddress))
     .AddHttpMessageHandler<ApiAuthorizationMessageHandler>();
+
+builder.Services.AddHttpClient("NaeRaces.ServerAPI.Health")
+    .ConfigureHttpClient(client => client.BaseAddress = new Uri(apiBaseAddress));
+
+builder.Services.AddScoped<ApiHealthService>();
 
 builder.Services.AddScoped(provider =>
 {

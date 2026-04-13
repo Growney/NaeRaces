@@ -1,19 +1,56 @@
-﻿<CascadingAuthenticationState>
-    <Router AppAssembly="@typeof(App).Assembly">
-        <Found Context="routeData">
-            <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)">
-                <NotAuthorized>
-                    @if (context.User.Identity is not { IsAuthenticated: true })
-                    {
-                        <RedirectToLogin />
-                    }
-                    else
-                    {
-                        <p>You are not authorized to access this resource.</p>
-                    }
-                </NotAuthorized>
-            </AuthorizeRouteView>
-            <FocusOnNavigate RouteData="@routeData" Selector="h1" />
-        </Found>
-    </Router>
-</CascadingAuthenticationState>
+﻿@using NaeRaces.BlazorWebApp.Services
+
+@if (_apiAvailable)
+{
+    <ErrorBoundary>
+        <ChildContent>
+            <CascadingAuthenticationState>
+                <Router AppAssembly="@typeof(App).Assembly">
+                    <Found Context="routeData">
+                        <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)">
+                            <NotAuthorized>
+                                @if (context.User.Identity is not { IsAuthenticated: true })
+                                {
+                                    <RedirectToLogin />
+                                }
+                                else
+                                {
+                                    <p>You are not authorized to access this resource.</p>
+                                }
+                            </NotAuthorized>
+                        </AuthorizeRouteView>
+                        <FocusOnNavigate RouteData="@routeData" Selector="h1" />
+                    </Found>
+                </Router>
+            </CascadingAuthenticationState>
+        </ChildContent>
+        <ErrorContent>
+            <NaeRaces.BlazorWebApp.Pages.Unavailable ReturnUrl="@_returnUrl" />
+        </ErrorContent>
+    </ErrorBoundary>
+}
+else if (_checked)
+{
+    <NaeRaces.BlazorWebApp.Pages.Unavailable ReturnUrl="@_returnUrl" />
+}
+
+@code {
+    private bool _apiAvailable;
+    private bool _checked;
+    private string _returnUrl = "/";
+
+    [Inject]
+    private ApiHealthService HealthService { get; set; } = default!;
+
+    [Inject]
+    private NavigationManager Navigation { get; set; } = default!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _returnUrl = Navigation.ToBaseRelativePath(Navigation.Uri);
+        _returnUrl = string.IsNullOrEmpty(_returnUrl) ? "/" : $"/{_returnUrl}";
+
+        _apiAvailable = await HealthService.IsAvailableAsync();
+        _checked = true;
+    }
+}
