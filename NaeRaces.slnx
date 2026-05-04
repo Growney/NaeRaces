@@ -13,9 +13,9 @@
     <Project Path="NaeRaces.WebAPI/NaeRaces.WebAPI.csproj" Id="8bb43b89-e654-447f-bf11-adccd87f7825" />
   </Folder>
   <Folder Name="/src/lib/">
-    <Project Path="EventDbLite.Collections/EventDbLite.Collections.csproj" Id="0deb0e4e-e819-4bc5-87b2-4e0507d86f44" />
     <Project Path="EventDbLite/EventDb.Sqlite/EventDb.Sqlite.csproj" />
     <Project Path="EventDbLite/EventDbLite.Abstractions/EventDbLite.Abstractions.csproj" />
+    <Project Path="EventDbLite/EventDbLite.Collections/EventDbLite.Collections.csproj" />
     <Project Path="EventDbLite/EventDbLite.Handlers/EventDbLite.Handlers.csproj" />
     <Project Path="EventDbLite/EventDbLite.KurrentDb/EventDbLite.KurrentDb.csproj" Id="01841d00-bbee-4956-836c-c7aec7a7dadc" />
     <Project Path="EventDbLite/EventDbLite.Reactions.Abstractions/EventDbLite.Reactions.Abstractions.csproj" />
