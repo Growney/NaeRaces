@@ -135,6 +135,9 @@ public class Club : AggregateRoot<Guid>
         if (!_locations.ContainsKey(locationId))
             throw new InvalidOperationException($"Location {locationId} does not exist.");
 
+        if (_locations[locationId].Information.Equals(newLocationInformation))
+            return;
+
         Raise(new ClubLocationInformationChanged(Id, locationId, newLocationInformation));
     }
 

@@ -12,15 +12,15 @@ using NaeRaces.Query.EntityFrameworkCore;
 namespace NaeRaces.Query.EntityFrameworkCore.SqlServer.Migrations
 {
     [DbContext(typeof(NaeRacesQueryDbContext))]
-    [Migration("20260410123325_raceinformation_description_paymentdeadline_gonogodate")]
-    partial class raceinformation_description_paymentdeadline_gonogodate
+    [Migration("20260521184915_initial")]
+    partial class initial
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.3")
+                .HasAnnotation("ProductVersion", "10.0.8")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
@@ -692,8 +692,11 @@ namespace NaeRaces.Query.EntityFrameworkCore.SqlServer.Migrations
                     b.Property<string>("ReactionKey")
                         .HasColumnType("nvarchar(450)");
 
-                    b.Property<long>("GlobalPosition")
-                        .HasColumnType("bigint");
+                    b.Property<decimal>("CommitPosition")
+                        .HasColumnType("decimal(20,0)");
+
+                    b.Property<decimal>("PreparePosition")
+                        .HasColumnType("decimal(20,0)");
 
                     b.HasKey("ReactionKey");
 

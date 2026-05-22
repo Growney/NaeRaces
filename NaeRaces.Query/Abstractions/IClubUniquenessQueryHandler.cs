@@ -6,6 +6,6 @@ namespace NaeRaces.Query.Abstractions;
 
 public interface IClubUniquenessQueryHandler
 {
-    Task<bool> DoesClubCodeExist(string code);
-    Task<bool> DoesClubNameExist(string name);
+    Task<bool> DoesClubCodeExist(string code, Guid ignoreClubId);
+    Task<bool> DoesClubNameExist(string name, Guid ignoreClubId);
 }

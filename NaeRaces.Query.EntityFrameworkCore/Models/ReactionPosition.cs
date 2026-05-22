@@ -8,6 +8,7 @@ namespace NaeRaces.Query.EntityFrameworkCore.Models;
 public class ReactionPosition
 {
     [Key]
-    public string ReactionKey { get; set; } = null!;     
-    public long GlobalPosition { get; set; }
+    public required string ReactionKey { get; init; }     
+    public ulong PreparePosition { get; set; }
+    public ulong CommitPosition { get; set; }
 }

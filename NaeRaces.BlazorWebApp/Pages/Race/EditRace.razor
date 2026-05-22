@@ -137,51 +137,6 @@ else
         </div>
     </div>
 
-    <!-- Attendees -->
-    <div class="card mb-3">
-        <div class="card-header fw-bold">Attendees</div>
-        <div class="card-body">
-            <div class="row g-3">
-                <div class="col-md-6">
-                    <EditForm Model="minAttendeesModel" OnValidSubmit="SaveMinAttendeesAsync">
-                        <DataAnnotationsValidator />
-                        <label class="form-label">Minimum Attendees</label>
-                        <div class="input-group">
-                            <InputNumber @bind-Value="minAttendeesModel.Attendees" class="form-control" />
-                            <button type="submit" class="btn btn-primary" disabled="@isSavingMinAttendees">
-                                @if (isSavingMinAttendees)
-                                {
-                                    <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
-                                }
-                                Save
-                            </button>
-                        </div>
-                    </EditForm>
-                </div>
-                <div class="col-md-6">
-                    <EditForm Model="maxAttendeesModel" OnValidSubmit="SaveMaxAttendeesAsync">
-                        <DataAnnotationsValidator />
-                        <label class="form-label">Maximum Attendees</label>
-                        <div class="input-group">
-                            <InputNumber @bind-Value="maxAttendeesModel.Attendees" class="form-control" />
-                            <button type="submit" class="btn btn-primary" disabled="@isSavingMaxAttendees">
-                                @if (isSavingMaxAttendees)
-                                {
-                                    <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
-                                }
-                                Save
-                            </button>
-                        </div>
-                    </EditForm>
-                </div>
-            </div>
-            @if (!string.IsNullOrEmpty(attendeesMessage))
-            {
-                <div class="alert @(attendeesSuccess ? "alert-success" : "alert-danger") mt-2 py-2">@attendeesMessage</div>
-            }
-        </div>
-    </div>
-
     <!-- Packages -->
     <div class="card mb-3">
         <div class="card-header fw-bold">Packages</div>
@@ -338,6 +293,44 @@ else
     <div class="card mb-3">
         <div class="card-header fw-bold">Attendance Settings</div>
         <div class="card-body">
+            <div class="row g-3 mb-3">
+                <div class="col-md-6">
+                    <EditForm Model="minAttendeesModel" OnValidSubmit="SaveMinAttendeesAsync">
+                        <DataAnnotationsValidator />
+                        <label class="form-label">Minimum Attendees</label>
+                        <div class="input-group">
+                            <InputNumber @bind-Value="minAttendeesModel.Attendees" class="form-control" />
+                            <button type="submit" class="btn btn-primary" disabled="@isSavingMinAttendees">
+                                @if (isSavingMinAttendees)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                                }
+                                Save
+                            </button>
+                        </div>
+                    </EditForm>
+                </div>
+                <div class="col-md-6">
+                    <EditForm Model="maxAttendeesModel" OnValidSubmit="SaveMaxAttendeesAsync">
+                        <DataAnnotationsValidator />
+                        <label class="form-label">Maximum Attendees</label>
+                        <div class="input-group">
+                            <InputNumber @bind-Value="maxAttendeesModel.Attendees" class="form-control" />
+                            <button type="submit" class="btn btn-primary" disabled="@isSavingMaxAttendees">
+                                @if (isSavingMaxAttendees)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                                }
+                                Save
+                            </button>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+            @if (!string.IsNullOrEmpty(attendeesMessage))
+            {
+                <div class="alert @(attendeesSuccess ? "alert-success" : "alert-danger") mt-2 py-2">@attendeesMessage</div>
+            }
             <div class="row g-3">
                 <div class="col-md-4">
                     <div class="d-grid gap-2">

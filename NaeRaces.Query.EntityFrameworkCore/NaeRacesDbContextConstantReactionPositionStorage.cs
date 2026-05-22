@@ -17,7 +17,7 @@ internal class NaeRacesDbContextConstantReactionPositionStorage : IConstantReact
         _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
     }
 
-    public async Task<StreamPosition?> GetPositionAsync(string reactionKey)
+    public async Task<Position?> GetPositionAsync(string reactionKey)
     {
         ReactionPosition? reactionPosition = await _dbContext.ReactionPositions.AsNoTracking().SingleOrDefaultAsync(rp => rp.ReactionKey == reactionKey);
         if(reactionPosition == null)
@@ -25,10 +25,10 @@ internal class NaeRacesDbContextConstantReactionPositionStorage : IConstantReact
             return null;
         }
 
-        return StreamPosition.WithGlobalVersion(reactionPosition.GlobalPosition);
+        return new Position(reactionPosition.CommitPosition, reactionPosition.PreparePosition);
     }
 
-    public async Task SetPositionAsync(string reactionKey, long globalPosition)
+    public async Task SetPositionAsync(string reactionKey, Position position)
     {
         ReactionPosition? reactionPosition = await _dbContext.ReactionPositions.SingleOrDefaultAsync(rp => rp.ReactionKey == reactionKey);
         if (reactionPosition == null)
@@ -36,13 +36,15 @@ internal class NaeRacesDbContextConstantReactionPositionStorage : IConstantReact
             reactionPosition = new ReactionPosition
             {
                 ReactionKey = reactionKey,
-                GlobalPosition = globalPosition
+                CommitPosition = position.CommitPosition,
+                PreparePosition = position.PreparePosition
             };
             _dbContext.ReactionPositions.Add(reactionPosition);
         }
         else
         {
-            reactionPosition.GlobalPosition = globalPosition;
+            reactionPosition.CommitPosition = position.CommitPosition;
+            reactionPosition.PreparePosition = position.PreparePosition;
         }
 
         await _dbContext.SaveChangesAsync();

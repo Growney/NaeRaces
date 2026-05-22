@@ -15,9 +15,9 @@ public class ClubUniquenessQueryHandler : IClubUniquenessQueryHandler
         _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
     }
 
-    public Task<bool> DoesClubCodeExist(string code)
-        => _dbContext.ClubUniquenessDetails.AnyAsync(c => c.Code == code);
+    public Task<bool> DoesClubCodeExist(string code, Guid ignoreClubId)
+        => _dbContext.ClubUniquenessDetails.AnyAsync(c => c.Code == code && c.Id != ignoreClubId);
 
-    public Task<bool> DoesClubNameExist(string name)
-        => _dbContext.ClubUniquenessDetails.AnyAsync(c => c.Name == name);
+    public Task<bool> DoesClubNameExist(string name, Guid ignoreClubId)
+        => _dbContext.ClubUniquenessDetails.AnyAsync(c => c.Name == name && c.Id != ignoreClubId);
 }

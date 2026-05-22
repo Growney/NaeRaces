@@ -15,6 +15,10 @@ http {
         root /app/wwwroot;
         index index.html;
 
+        location /api-address {
+            return 200 "${WEB_API_ADDRESS}\n"
+        }
+
         location / {
             try_files $uri $uri/ /index.html =404;
         }

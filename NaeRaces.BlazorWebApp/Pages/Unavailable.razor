@@ -116,7 +116,7 @@
             {
                 _checking = true;
                 StateHasChanged();
-
+                Console.WriteLine("Poll API");
                 var available = await HealthService.IsAvailableAsync(cancellationToken);
 
                 if (available)

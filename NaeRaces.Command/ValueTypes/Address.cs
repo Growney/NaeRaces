@@ -1,10 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Text;
 
 namespace NaeRaces.Command.ValueTypes;
 
-public struct Address
+public record Address
 {
     public string? AddressLine1 { get; }
     public string? AddressLine2 { get; }

@@ -18,7 +18,9 @@ namespace NaeRaces.Query.EntityFrameworkCore.SqlServer.Migrations
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     Code = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     Name = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    FounderPilotId = table.Column<Guid>(type: "uniqueidentifier", nullable: false)
+                    FounderPilotId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    PhoneNumber = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    EmailAddress = table.Column<string>(type: "nvarchar(max)", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -71,7 +73,8 @@ namespace NaeRaces.Query.EntityFrameworkCore.SqlServer.Migrations
                     PaymentOptionId = table.Column<int>(type: "int", nullable: true),
                     IsRegistrationConfirmed = table.Column<bool>(type: "bit", nullable: false),
                     RegistrationValidatedBy = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
-                    RegistrationValidUntil = table.Column<DateTime>(type: "datetime2", nullable: true)
+                    RegistrationValidUntil = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    AutoRenew = table.Column<bool>(type: "bit", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -282,6 +285,21 @@ namespace NaeRaces.Query.EntityFrameworkCore.SqlServer.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "RaceDates",
+                columns: table => new
+                {
+                    RaceId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    RaceDateId = table.Column<int>(type: "int", nullable: false),
+                    Start = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    End = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    Cancelled = table.Column<bool>(type: "bit", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_RaceDates", x => new { x.RaceId, x.RaceDateId });
+                });
+
+            migrationBuilder.CreateTable(
                 name: "RaceDetails",
                 columns: table => new
                 {
@@ -318,7 +336,12 @@ namespace NaeRaces.Query.EntityFrameworkCore.SqlServer.Migrations
                     LocationId = table.Column<int>(type: "int", nullable: false),
                     LocationName = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     RegisteredPilotCount = table.Column<int>(type: "int", nullable: false),
-                    MaximumPilots = table.Column<int>(type: "int", nullable: true)
+                    MinimumPilots = table.Column<int>(type: "int", nullable: true),
+                    MaximumPilots = table.Column<int>(type: "int", nullable: true),
+                    IsPublished = table.Column<bool>(type: "bit", nullable: false),
+                    Description = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    PaymentDeadline = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    GoNoGoDate = table.Column<DateTime>(type: "datetime2", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -351,7 +374,8 @@ namespace NaeRaces.Query.EntityFrameworkCore.SqlServer.Migrations
                 columns: table => new
                 {
                     ReactionKey = table.Column<string>(type: "nvarchar(450)", nullable: false),
-                    GlobalPosition = table.Column<long>(type: "bigint", nullable: false)
+                    PreparePosition = table.Column<decimal>(type: "decimal(20,0)", nullable: false),
+                    CommitPosition = table.Column<decimal>(type: "decimal(20,0)", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -446,6 +470,9 @@ namespace NaeRaces.Query.EntityFrameworkCore.SqlServer.Migrations
 
             migrationBuilder.DropTable(
                 name: "PilotSelectionPolicyDetails");
+
+            migrationBuilder.DropTable(
+                name: "RaceDates");
 
             migrationBuilder.DropTable(
                 name: "RaceDetails");

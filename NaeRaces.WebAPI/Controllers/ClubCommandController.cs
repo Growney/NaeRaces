@@ -55,7 +55,7 @@ public class ClubCommandController : Controller
             return BadRequest("Founder pilot not found");
         }
 
-        if (await _queryContext.ClubUniqueness.DoesClubCodeExist(request.Code) || await _queryContext.ClubUniqueness.DoesClubNameExist(request.Code))
+        if (await _queryContext.ClubUniqueness.DoesClubCodeExist(request.Code, request.ClubId) || await _queryContext.ClubUniqueness.DoesClubNameExist(request.Code, request.ClubId))
         {
             return Conflict("A club with the same code or name already exists.");
         }
@@ -96,7 +96,7 @@ public class ClubCommandController : Controller
         Code codeValueType = Code.Create(request.Code);
         Name nameValueType = Name.Create(request.Name);
 
-        if (await _queryContext.ClubUniqueness.DoesClubCodeExist(request.Code) || await _queryContext.ClubUniqueness.DoesClubNameExist(request.Code))
+        if (await _queryContext.ClubUniqueness.DoesClubCodeExist(request.Code, clubId) || await _queryContext.ClubUniqueness.DoesClubNameExist(request.Code, clubId))
         {
             return Conflict("A club with the same code or name already exists.");
         }
@@ -288,7 +288,7 @@ public class ClubCommandController : Controller
             return NotFound();
         }
 
-        var address = Address.Create(request.AddressLine1, request.AddressLine2, request.City, request.Postcode, request.County);
+        var address = Address.Create(request.AddressLine1, request.AddressLine2, request.City, request.County, request.Postcode);
         club.ChangeClubLocationAddress(locationId, address);
 
         await _aggregateRepository.Save(club);

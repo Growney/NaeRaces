@@ -807,15 +807,15 @@ else
         locationMessage = null;
         try
         {
-            var nameTask = Http.PutAsJsonAsync(
+            var nameResponse = await Http.PutAsJsonAsync(
                 $"api/club/{ClubId}/location/{editingLocationId}/name",
                 new RenameClubLocationRequest { NewLocationName = locationEditModel.Name });
 
-            var infoTask = Http.PutAsJsonAsync(
+            var infoResponse = await Http.PutAsJsonAsync(
                 $"api/club/{ClubId}/location/{editingLocationId}/information",
                 new ChangeClubLocationInformationRequest { LocationInformation = locationEditModel.Information });
 
-            var addressTask = Http.PutAsJsonAsync(
+            var addressResponse = await Http.PutAsJsonAsync(
                 $"api/club/{ClubId}/location/{editingLocationId}/address",
                 new ChangeClubLocationAddressRequest
                 {
@@ -826,9 +826,7 @@ else
                     County = locationEditModel.County
                 });
 
-            await Task.WhenAll(nameTask, infoTask, addressTask);
-
-            if (nameTask.Result.IsSuccessStatusCode && infoTask.Result.IsSuccessStatusCode && addressTask.Result.IsSuccessStatusCode)
+            if (nameResponse.IsSuccessStatusCode && infoResponse.IsSuccessStatusCode && addressResponse.IsSuccessStatusCode)
             {
                 locationSuccess = true;
                 locationMessage = "Location saved successfully.";

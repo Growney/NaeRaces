@@ -1,6 +1,7 @@
 using EventDbLite.Abstractions;
 using EventDbLite.Aggregates;
 using NaeRaces.Query.Abstractions;
+using NaeRaces.Query.Models;
 using NaeRaces.Query.Projections;
 using System;
 using System.Threading.Tasks;
@@ -25,14 +26,14 @@ public class PilotPolicyValidationQueryHandler : IPilotPolicyValidationQueryHand
         var pilotValidationDetails = await _pilotValidationQueryHandler.GetPilotValidationDetails(pilotId);
 
         var streamName = GetPilotSelectionPolicyStreamName(policyId);
-        var policy = await _projectionProvider.Load<PilotSelectionPolicy>(streamName, StreamPosition.WithVersion(policyVersion));
+        var statementTree = await _projectionProvider.ClonePullReadPushAsync<PilotSelectionPolicyStatementTree?, PilotSelectionPolicy>(x=> x.StatementTree, streamName);
 
-        if (policy.StatementTree == null)
+        if (statementTree == null)
         {
             return "Policy has no validation rules defined";
         }
 
-        return policy.StatementTree.Statement.IsValidForPilot(pilotValidationDetails, onDate);
+        return statementTree.Statement.IsValidForPilot(pilotValidationDetails, onDate);
     }
 
     private static string GetPilotSelectionPolicyStreamName(Guid policyId) => $"PilotSelectionPolicy-{policyId}";

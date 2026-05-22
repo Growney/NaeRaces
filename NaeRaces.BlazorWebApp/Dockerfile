@@ -21,4 +21,4 @@ RUN dotnet publish "./NaeRaces.BlazorWebApp.csproj" -c $BUILD_CONFIGURATION -o /
 # This stage is used in production or when running from VS in regular mode (Default when not using the Debug configuration)
 FROM base AS final
 COPY --from=publish /app/publish /app
-COPY NaeRaces.BlazorWebApp/nginx.conf /etc/nginx/nginx.conf
+COPY NaeRaces.BlazorWebApp/default.conf.template /etc/nginx/templates/default.conf.template

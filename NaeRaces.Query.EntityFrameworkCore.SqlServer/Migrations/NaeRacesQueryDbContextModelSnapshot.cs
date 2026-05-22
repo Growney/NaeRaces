@@ -17,7 +17,7 @@ namespace NaeRaces.Query.EntityFrameworkCore.SqlServer.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.3")
+                .HasAnnotation("ProductVersion", "10.0.8")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
@@ -689,8 +689,11 @@ namespace NaeRaces.Query.EntityFrameworkCore.SqlServer.Migrations
                     b.Property<string>("ReactionKey")
                         .HasColumnType("nvarchar(450)");
 
-                    b.Property<long>("GlobalPosition")
-                        .HasColumnType("bigint");
+                    b.Property<decimal>("CommitPosition")
+                        .HasColumnType("decimal(20,0)");
+
+                    b.Property<decimal>("PreparePosition")
+                        .HasColumnType("decimal(20,0)");
 
                     b.HasKey("ReactionKey");
 

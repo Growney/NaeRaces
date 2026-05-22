@@ -10,11 +10,16 @@ public class ApiHealthService(IHttpClientFactory httpClientFactory)
         try
         {
             using var client = httpClientFactory.CreateClient("NaeRaces.ServerAPI.Health");
+
+            Console.WriteLine($"Health Check Poll: {client.BaseAddress}");
+
             var response = await client.GetFromJsonAsync<HealthCheckResponse>("api/health", cancellationToken);
+            Console.WriteLine("Checking health");
             return response?.IsHealthy == true;
         }
-        catch
+        catch(Exception ex)
         {
+            Console.WriteLine(ex.Message);
             return false;
         }
     }
