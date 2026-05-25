@@ -12,6 +12,9 @@ static class WebAssemblyHostBuilderExtensions
 
         Console.WriteLine($"API Address: {apiBaseAddress}");
 
+        // Store the resolved address so components (e.g. LoginDisplay) can read it from configuration
+        builder.Configuration["ApiSettings:BaseAddress"] = apiBaseAddress;
+
         builder.Services.AddScoped<ApiAuthorizationMessageHandler>(serviceProvider =>
         {
             var tokenProvider = serviceProvider.GetRequiredService<IAccessTokenProvider>();
