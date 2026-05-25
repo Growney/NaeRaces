@@ -34,7 +34,7 @@ services:
 
   # ── Blazor WebAssembly front-end ───────────────────────────────────────────
   blazor:
-    image: "${DOCKER_HUB_USERNAME}/naeraces-blazor:${IMAGE_TAG:-latest}"
+    image: "${DOCKER_HUB_USERNAME}/naeracesblazor:${IMAGE_TAG:-latest}"
     expose:
       - "80"
     environment:
@@ -45,7 +45,7 @@ services:
 
   # ── ASP.NET Core Web API ───────────────────────────────────────────────────
   webapi:
-    image: "${DOCKER_HUB_USERNAME}/naeraces-webapi:${IMAGE_TAG:-latest}"
+    image: "${DOCKER_HUB_USERNAME}/naeraceswebapi:${IMAGE_TAG:-latest}"
     expose:
       - "8080"
     environment:
