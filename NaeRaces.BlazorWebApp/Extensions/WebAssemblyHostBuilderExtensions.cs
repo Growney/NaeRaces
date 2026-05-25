@@ -57,6 +57,32 @@ static class WebAssemblyHostBuilderExtensions
 
     private static async Task<string> ResolveApiBaseAddressAsync(WebAssemblyHostBuilder builder)
     {
+        HttpRequestMessage apiRequest = new HttpRequestMessage(HttpMethod.Get, "/app/wwwroot/api-address");
+
+        using (HttpClient requestClient = new HttpClient())
+        {
+            requestClient.BaseAddress = new Uri(builder.HostEnvironment.BaseAddress);
+
+            HttpResponseMessage response = await requestClient.SendAsync(apiRequest);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var contentType = response.Content.Headers.ContentType?.MediaType ?? string.Empty;
+
+                // When served by Nginx, the response will be plain text.
+                // When served by the Blazor dev server, the SPA fallback returns text/html (index.html).
+                if (!contentType.Contains("text/html", StringComparison.OrdinalIgnoreCase))
+                {
+                    string apiAddress = (await response.Content.ReadAsStringAsync()).Trim();
+
+                    if (Uri.TryCreate(apiAddress, UriKind.Absolute, out _))
+                    {
+                        Console.WriteLine($"Requested Address: {apiAddress}");
+                        return apiAddress;
+                    }
+                }
+            }
+        }
         var configured = builder.Configuration["ApiSettings:BaseAddress"];
 
         return string.IsNullOrWhiteSpace(configured)

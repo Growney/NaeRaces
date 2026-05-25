@@ -15,7 +15,8 @@ http {
         root /app/wwwroot;
         index index.html;
 
-        location /api-address {
+        location /app/wwwroot/api-address {
+            default_type text/plain;
             return 200 "${WEB_API_ADDRESS}\n"
         }
 
