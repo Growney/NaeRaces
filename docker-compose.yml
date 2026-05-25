@@ -34,9 +34,7 @@ services:
 
   # ── Blazor WebAssembly front-end ───────────────────────────────────────────
   blazor:
-    build:
-      context: .
-      dockerfile: NaeRaces.BlazorWebApp/Dockerfile
+    image: "${DOCKER_HUB_USERNAME}/naeraces-blazor:${IMAGE_TAG:-latest}"
     expose:
       - "80"
     environment:
@@ -47,9 +45,7 @@ services:
 
   # ── ASP.NET Core Web API ───────────────────────────────────────────────────
   webapi:
-    build:
-      context: .
-      dockerfile: NaeRaces.WebAPI/Dockerfile
+    image: "${DOCKER_HUB_USERNAME}/naeraces-webapi:${IMAGE_TAG:-latest}"
     expose:
       - "8080"
     environment:
