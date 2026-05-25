@@ -7,9 +7,18 @@ using NaeRaces.WebAPI;
 using NaeRaces.WebAPI.Data;
 using NaeRaces.WebAPI.Services;
 using OpenIddict.Abstractions;
+using Microsoft.AspNetCore.HttpOverrides;
 using static OpenIddict.Abstractions.OpenIddictConstants;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Trust forwarded headers from Traefik (X-Forwarded-For, X-Forwarded-Proto, etc.)
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    options.KnownNetworks.Clear();
+    options.KnownProxies.Clear();
+});
 
 // Add services to the container.
 
@@ -81,7 +90,8 @@ builder.Services.AddOpenIddict()
                .EnableAuthorizationEndpointPassthrough()
                .EnableEndSessionEndpointPassthrough()
                .EnableStatusCodePagesIntegration()
-               .EnableTokenEndpointPassthrough();
+               .EnableTokenEndpointPassthrough()
+               .DisableTransportSecurityRequirement();
     })
     .AddValidation(options =>
     {
@@ -91,6 +101,8 @@ builder.Services.AddOpenIddict()
 
 var app = builder.Build();
 
+app.UseForwardedHeaders();
+
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
@@ -98,7 +110,8 @@ if (app.Environment.IsDevelopment())
     app.UseWebAssemblyDebugging();
 }
 
-app.UseHttpsRedirection();
+// SSL is terminated at Traefik, so no HTTPS redirection is needed.
+// app.UseHttpsRedirection();
 app.UseBlazorFrameworkFiles();
 app.UseStaticFiles();
 
