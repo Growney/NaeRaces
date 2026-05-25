@@ -1,0 +1,50 @@
+types {
+    application/wasm wasm;
+}
+
+server {
+    listen 80;
+    server_name ${SERVER_NAME};
+
+    root /app/wwwroot;
+    index index.html;
+
+    location /app/wwwroot/api-address {
+        default_type text/plain;
+        return 200 "${WEB_API_ADDRESS}\n";
+    }
+
+    # --- Blazor framework assets ---
+    location /_framework/ {
+        try_files $uri =404;
+    }
+
+    # --- Blazor library assets (Razor Class Libraries etc.) ---
+    location /_content/ {
+        try_files $uri =404;
+    }
+
+    # --- PWA (if used) ---
+    location = /service-worker.js {
+        try_files $uri =404;
+    }
+
+    location = /manifest.json {
+        try_files $uri =404;
+    }
+
+    # --- Static assets (CSS, JS, images, etc.) ---
+    location ~* \.(js|css|png|jpg|jpeg|gif|ico|wasm|dat|dll|blat|bin)$ {
+        try_files $uri =404;
+        expires 5m;
+        add_header Cache-Control "public, immutable";
+    }
+
+    # --- SPA fallback ONLY for app routes ---
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    gzip on;
+    gzip_types text/plain text/css application/json application/javascript text/xml application/xml application/xml+rss text/javascript application/wasm application/octet-stream;
+}
