@@ -84,6 +84,8 @@ services:
   kurrentdb:
     image: docker.kurrent.io/kurrent-latest/kurrentdb:latest
     command: --insecure --run-projections=All --enable-atom-pub-over-http
+    environment:
+      KURRENTDB_DEFAULT_ADMIN_PASSWORD: "${KURRENTDB_PASSWORD}"
     ports:
       - "2113:2113"
     volumes:
