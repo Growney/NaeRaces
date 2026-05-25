@@ -2,14 +2,35 @@ services:
 
   # ── Reverse proxy ──────────────────────────────────────────────────────────
   nginx:
-    image: nginx:mainline-alpine
+    build: ./nginx
+    container_name: naeraces-nginx
     ports:
       - "80:80"
+      - "443:443"
     volumes:
       - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - certs:/etc/nginx/certs
     depends_on:
       - webapi
       - blazor
+
+  # ── Let's Encrypt certificate manager ─────────────────────────────────────
+  acme:
+    image: neilpang/acme.sh
+    container_name: naeraces-acme
+    entrypoint: ["/bin/sh", "/init.sh"]
+    volumes:
+      - ./acme/init.sh:/init.sh:ro
+      - certs:/certs
+      - acme-data:/acme.sh
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      ACME_EMAIL: "${ACME_EMAIL}"
+      NAMECHEAP_USERNAME: "${NAMECHEAP_USERNAME}"
+      NAMECHEAP_API_KEY: "${NAMECHEAP_API_KEY}"
+      NAMECHEAP_SOURCEIP: "${NAMECHEAP_SOURCEIP}"
+    depends_on:
+      - nginx
 
   # ── Blazor WebAssembly front-end ───────────────────────────────────────────
   blazor:
@@ -75,3 +96,5 @@ services:
 volumes:
   sqlserver-data:
   kurrentdb-data:
+  certs:
+  acme-data:
