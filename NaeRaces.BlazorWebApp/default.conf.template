@@ -1,37 +1,48 @@
-events { }
+types {
+    application/wasm wasm;
+}
 
-http {
-    include       mime.types;
-    default_type  application/octet-stream;
+server {
+    listen 80;
+    server_name ${SERVER_NAME};
 
-    types {
-        application/wasm wasm;
+    root /app/wwwroot;
+    index index.html;
+
+    location /app/wwwroot/api-address {
+        default_type text/plain;
+        return 200 "${WEB_API_ADDRESS}\n";
     }
 
-    server {
-        listen      80;
-        server_name _;
+    # --- Blazor framework assets ---
+    location /_framework/ {
+        try_files $uri =404;
+    }
 
-        root /app/wwwroot;
-        index index.html;
+    # --- Blazor library assets (Razor Class Libraries etc.) ---
+    location /_content/ {
+        try_files $uri =404;
+    }
 
-        location /app/wwwroot/api-address {
-            default_type text/plain;
-            return 200 "${WEB_API_ADDRESS}\n"
-        }
+    # --- PWA (if used) ---
+    location = /service-worker.js {
+        try_files $uri =404;
+    }
 
-        location / {
-            try_files $uri $uri/ /index.html =404;
-        }
+    location = /manifest.json {
+        try_files $uri =404;
+    }
 
-        # Enable compression
-        gzip on;
-        gzip_types text/plain text/css application/json application/javascript text/xml application/xml application/xml+rss text/javascript application/wasm application/octet-stream;
+    # --- SPA fallback ONLY for app routes ---
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
 
-        # Cache static assets
-        location ~* \.(js|css|png|jpg|jpeg|gif|ico|wasm|dat|dll|blat|bin)$ {
-            expires 1y;
-            add_header Cache-Control "public, immutable";
-        }
+    gzip on;
+    gzip_types text/plain text/css application/json application/javascript text/xml application/xml application/xml+rss text/javascript application/wasm application/octet-stream;
+
+    location ~* \.(js|css|png|jpg|jpeg|gif|ico|wasm|dat|dll|blat|bin)$ {
+        expires 5m;
+        add_header Cache-Control "public, immutable";
     }
 }
