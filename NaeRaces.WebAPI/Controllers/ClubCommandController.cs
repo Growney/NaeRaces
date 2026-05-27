@@ -204,7 +204,7 @@ public class ClubCommandController : Controller
             return NotFound();
         }
 
-        var address = Address.Create(request.AddressLine1, request.AddressLine2, request.City, request.Postcode, request.County);
+        var address = Address.Create(request.AddressLine1, request.AddressLine2, request.City, request.County, request.Postcode);
         var locationId = club.AddClubLocation(request.LocationName, request.LocationInformation, address);
 
         await _aggregateRepository.Save(club);
