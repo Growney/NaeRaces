@@ -1,0 +1,121 @@
+name: Build & Deploy
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+env:
+  image_name_blazor: ryantodd/naeraces-blazor
+  image_name_webapi: ryantodd/naeraces-webapi
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout this repo
+        uses: actions/checkout@v4
+        with:
+          path: app_repo
+
+      - name: Calculate image tag
+        working-directory: app_repo
+        run: |
+          short_commit=$(git rev-parse --short "$GITHUB_SHA")
+          echo "short_commit: ${short_commit}"
+
+          image_version="${{ github.run_number }}-${short_commit}"
+          echo "image_version: ${image_version}"
+
+          echo "IMAGE_REF_BLAZOR=${{ env.image_name_blazor }}:${image_version}"
+          echo "IMAGE_REF_WEBAPI=${{ env.image_name_webapi }}:${image_version}"
+
+      - name: Login to dockerhub
+        uses: docker/login-action@v3
+        with:
+         username: ${{ secrets.DOCKERHUB_USERNAME }}
+         password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push to dockerhub - blazor
+        uses: docker/build-push-action@v5
+        with:
+         context: app_repo
+         file: app_repo/NaeRaces.BlazorWebApp/Dockerfile
+         push: true
+         tags: ${{ env.IMAGE_REF_BLAZOR }}
+
+      - name: Build and push to dockerhub - webapi
+        uses: docker/build-push-action@v5
+        with:
+         context: app_repo
+         file: app_repo/NaeRaces.WebAPI/Dockerfile
+         push: true
+         tags: ${{ env.IMAGE_REF_WEBAPI }}
+
+  deploy_to_test:
+    name: Deploy to Test
+    needs: build
+    env:
+      compose_path: sites/staging/docker-compose.yaml
+    environment:
+      name: staging
+      url: https://staging.naeraces.co.uk
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout site-root
+        uses: actions/checkout@v4
+        with:
+          path: gitops_repo
+          repository: Growney/naeraces.co.uk
+          token: ${{ secrets.SITE_ROOT_PAT }}
+
+      - name: Set image refs
+        run: |
+          yq -i '(.services.blazor.image) = "${{ env.IMAGE_REF_BLAZOR }}"' gitops_repo/${{ env.compose_path }}
+          yq -i '(.services.webapi.image) = "${{ env.IMAGE_REF_WEBAPI }}"' gitops_repo/${{ env.compose_path }}
+
+      - name: Commit changes
+        run: |
+          cd gitops_repo
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .
+          git commit -m "Auto commit from NaeRace's Deploy to Test, run: ${{ github.run_number }}"
+          git push
+
+  # deploy_to_prod:
+  #   name: Deploy to Prod
+  #   needs: deploy_to_test
+  #   env:
+  #     compose_path: sites/live/docker-compose.yaml
+  #   environment:
+  #     name: prod
+  #     url: https://naeraces.co.uk
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Checkout site-root
+  #       uses: actions/checkout@v4
+  #       with:
+  #         path: gitops_repo
+  #         repository: Growney/naeraces.co.uk
+  #         token: ${{ secrets.SITE_ROOT_PAT }}
+
+  #     - name: Set image tag
+  #       run: |
+  #         yq -i '(.services.blazor.image) = "${{ env.IMAGE_REF_BLAZOR }}"' gitops_repo/${{ env.compose_path }}
+  #         yq -i '(.services.webapi.image) = "${{ env.IMAGE_REF_WEBAPI }}"' gitops_repo/${{ env.compose_path }}
+
+  #     - name: Commit changes
+  #       run: |
+  #         cd gitops_repo
+  #         git config user.name "github-actions[bot]"
+  #         git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+  #         git add .
+  #         git commit -m "Auto commit from NaeRace's Deploy to Prod, run: ${{ github.run_number }}"
+  #         git push
