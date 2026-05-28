@@ -27,17 +27,20 @@ public class NaeRacesEntityFrameworkSnapshotRepository : ISnapshotRepository
         {
             await _dbContext.Database.BeginTransactionAsync();
 
-            ulong maxStreamPosition = await _dbContext.Snapshots.Where(x => x.SnapshotKey == snapshotKey).MaxAsync(x => x.StreamPosition);
-            ulong maxPrepare = await _dbContext.Snapshots.Where(x => x.SnapshotKey == snapshotKey).MaxAsync(x => x.PreparePosition);
-            ulong maxCommit = await _dbContext.Snapshots.Where(x => x.SnapshotKey == snapshotKey).MaxAsync(x => x.CommitPosition);
-
-            ulong maxCurrent = Math.Max(Math.Max(maxStreamPosition, maxPrepare), maxCommit);
-
-            ulong newMax = Math.Max(Math.Max(snapshot.StreamPosition.Position, snapshot.Position.PreparePosition), snapshot.Position.CommitPosition);
-
-            if (newMax <= maxCurrent)
+            if(await _dbContext.Snapshots.Where(x=>x.SnapshotKey == snapshotKey).AnyAsync())
             {
-                return;
+                ulong maxStreamPosition = await _dbContext.Snapshots.Where(x => x.SnapshotKey == snapshotKey).MaxAsync(x => x.StreamPosition);
+                ulong maxPrepare = await _dbContext.Snapshots.Where(x => x.SnapshotKey == snapshotKey).MaxAsync(x => x.PreparePosition);
+                ulong maxCommit = await _dbContext.Snapshots.Where(x => x.SnapshotKey == snapshotKey).MaxAsync(x => x.CommitPosition);
+
+                ulong maxCurrent = Math.Max(Math.Max(maxStreamPosition, maxPrepare), maxCommit);
+
+                ulong newMax = Math.Max(Math.Max(snapshot.StreamPosition.Position, snapshot.Position.PreparePosition), snapshot.Position.CommitPosition);
+
+                if (newMax <= maxCurrent)
+                {
+                    return;
+                }
             }
 
             _dbContext.Snapshots.Add(new Models.ProjectionSnapshot()
