@@ -33,7 +33,7 @@ jobs:
           short_commit=$(git rev-parse --short "$GITHUB_SHA")
           echo "short_commit: ${short_commit}"
 
-          image_version="${{ github.run_number }}-${short_commit}"
+          image_version="$(date +'%Y.%m.%d').${short_commit}-${{ github.run_number }}"
           echo "image_version: ${image_version}"
 
           echo "IMAGE_TAG=${image_version}" >> $GITHUB_ENV
