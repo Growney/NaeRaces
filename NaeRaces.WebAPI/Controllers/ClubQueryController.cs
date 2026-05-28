@@ -17,6 +17,7 @@ public class ClubQueryController : Controller
     private readonly IPilotSelectionPolicyQueryHandler _pilotSelectionPolicyQueryHandler;
     private readonly IPilotDetailsQueryHandler _pilotDetailsQueryHandler;
     private readonly IPilotFollowedClubQueryHandler _pilotFollowedClubQueryHandler;
+    private readonly IPilotRelevantClubQueryHandler _pilotRelevantClubQueryHandler;
 
     public ClubQueryController(
         IClubOverviewQueryHandler clubOverviewQueryHandler,
@@ -26,7 +27,8 @@ public class ClubQueryController : Controller
         IClubDetailsQueryHandler clubDetailsQueryHandler,
         IPilotSelectionPolicyQueryHandler pilotSelectionPolicyQueryHandler,
         IPilotDetailsQueryHandler pilotDetailsQueryHandler,
-        IPilotFollowedClubQueryHandler pilotFollowedClubQueryHandler)
+        IPilotFollowedClubQueryHandler pilotFollowedClubQueryHandler,
+        IPilotRelevantClubQueryHandler pilotRelevantClubQueryHandler)
     {
         _clubOverviewQueryHandler = clubOverviewQueryHandler ?? throw new ArgumentNullException(nameof(clubOverviewQueryHandler));
         _clubLocationQueryHandler = clubLocationQueryHandler ?? throw new ArgumentNullException(nameof(clubLocationQueryHandler));
@@ -36,6 +38,7 @@ public class ClubQueryController : Controller
         _pilotSelectionPolicyQueryHandler = pilotSelectionPolicyQueryHandler ?? throw new ArgumentNullException(nameof(pilotSelectionPolicyQueryHandler));
         _pilotDetailsQueryHandler = pilotDetailsQueryHandler ?? throw new ArgumentNullException(nameof(pilotDetailsQueryHandler));
         _pilotFollowedClubQueryHandler = pilotFollowedClubQueryHandler ?? throw new ArgumentNullException(nameof(pilotFollowedClubQueryHandler));
+        _pilotRelevantClubQueryHandler = pilotRelevantClubQueryHandler ?? throw new ArgumentNullException(nameof(pilotRelevantClubQueryHandler));
     }
 
     [Authorize]
@@ -48,94 +51,7 @@ public class ClubQueryController : Controller
             return Unauthorized();
         }
 
-        var results = new List<MyClubMembershipResponse>();
-        var memberClubIds = new HashSet<Guid>();
-        var memberships = await _clubMemberQueryHandler.GetPilotMembershipDetails(pilotId).ToListAsync();
-        foreach (var membership in memberships)
-        {
-            if (!membership.IsRegistrationConfirmed)
-                continue;
-
-            var club = await _clubOverviewQueryHandler.GetClubOverview(membership.ClubId);
-            if (club == null)
-                continue;
-
-            memberClubIds.Add(club.ClubId);
-
-            string? levelName = null;
-            if (membership.MembershipLevelId.HasValue)
-            {
-                var level = await _clubMembershipLevelQueryHandler.GetClubMembershipLevel(membership.ClubId, membership.MembershipLevelId.Value);
-                levelName = level?.Name;
-            }
-
-            var roles = await _clubMemberQueryHandler.GetClubMemberRoles(club.ClubId, pilotId)
-                .Select(r => r.Role)
-                .ToListAsync();
-
-            results.Add(new MyClubMembershipResponse
-            {
-                ClubId = club.ClubId,
-                ClubCode = club.Code,
-                ClubName = club.Name,
-                MembershipLevelName = levelName,
-                MembershipExpiry = membership.RegistrationValidUntil,
-                Roles = roles
-            });
-        }
-
-        var followedClubIds = await _pilotFollowedClubQueryHandler.GetFollowedClubs(pilotId).ToListAsync();
-        foreach (var followed in followedClubIds)
-        {
-            if (memberClubIds.Contains(followed.ClubId))
-                continue;
-
-            var club = await _clubOverviewQueryHandler.GetClubOverview(followed.ClubId);
-            if (club == null)
-                continue;
-
-            memberClubIds.Add(club.ClubId);
-
-            var roles = await _clubMemberQueryHandler.GetClubMemberRoles(club.ClubId, pilotId)
-                .Select(r => r.Role)
-                .ToListAsync();
-
-            results.Add(new MyClubMembershipResponse
-            {
-                ClubId = club.ClubId,
-                ClubCode = club.Code,
-                ClubName = club.Name,
-                IsFollowing = true,
-                Roles = roles
-            });
-        }
-
-        string[] allRoles = ["Administrator", "RaceOrganiser", "Trustee"];
-        var clubsWithRoles = await _clubMemberQueryHandler.GetClubIdsWithRoles(pilotId, allRoles).ToListAsync();
-        foreach (var clubId in clubsWithRoles)
-        {
-            if (memberClubIds.Contains(clubId))
-                continue;
-
-            var club = await _clubOverviewQueryHandler.GetClubOverview(clubId);
-            if (club == null)
-                continue;
-
-            memberClubIds.Add(clubId);
-
-            var roles = await _clubMemberQueryHandler.GetClubMemberRoles(clubId, pilotId)
-                .Select(r => r.Role)
-                .ToListAsync();
-
-            results.Add(new MyClubMembershipResponse
-            {
-                ClubId = club.ClubId,
-                ClubCode = club.Code,
-                ClubName = club.Name,
-                Roles = roles
-            });
-        }
-
+        var results = await _pilotRelevantClubQueryHandler.GetPilotRelevantClubs(pilotId).ToListAsync();
         return Ok(results);
     }
 

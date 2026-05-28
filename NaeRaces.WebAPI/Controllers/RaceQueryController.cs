@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using NaeRaces.Query.Abstractions;
+using NaeRaces.Query.Models;
 using NaeRaces.WebAPI.Shared.Race;
 using OpenIddict.Abstractions;
 
@@ -12,27 +13,63 @@ public class RaceQueryController : Controller
     private readonly IRacePackageQueryHandler _racePackageQueryHandler;
     private readonly IRaceDateQueryHandler _raceDateQueryHandler;
     private readonly IClubMemberQueryHandler _clubMemberQueryHandler;
+    private readonly IPilotRelevantClubQueryHandler _pilotRelevantClubQueryHandler;
 
     public RaceQueryController(
         IRaceInformationQueryHandler raceInformationQueryHandler,
         IRacePackageQueryHandler racePackageQueryHandler,
         IRaceDateQueryHandler raceDateQueryHandler,
-        IClubMemberQueryHandler clubMemberQueryHandler)
+        IClubMemberQueryHandler clubMemberQueryHandler,
+        IPilotRelevantClubQueryHandler pilotRelevantClubQueryHandler)
     {
         _raceInformationQueryHandler = raceInformationQueryHandler ?? throw new ArgumentNullException(nameof(raceInformationQueryHandler));
         _racePackageQueryHandler = racePackageQueryHandler ?? throw new ArgumentNullException(nameof(racePackageQueryHandler));
         _raceDateQueryHandler = raceDateQueryHandler ?? throw new ArgumentNullException(nameof(raceDateQueryHandler));
         _clubMemberQueryHandler = clubMemberQueryHandler ?? throw new ArgumentNullException(nameof(clubMemberQueryHandler));
+        _pilotRelevantClubQueryHandler = pilotRelevantClubQueryHandler ?? throw new ArgumentNullException(nameof(pilotRelevantClubQueryHandler));
     }
 
-    [HttpGet("api/race/{raceId:guid}/query/information")]
-    public async Task<IActionResult> GetRaceInformationAsync([FromRoute] Guid raceId)
+    [HttpGet("api/race/query/relevant")]
+    public async Task<IActionResult> GetRelevantRacesAsync(int? max)
     {
-        var info = await _raceInformationQueryHandler.GetRaceInformation(raceId);
-        if (info == null)
-            return NotFound();
+        var pilotIdClaim = User.FindFirst(OpenIddictConstants.Claims.Subject)?.Value;
 
-        return Ok(new RaceInformationResponse
+        if(Guid.TryParse(pilotIdClaim, out var pilotId))
+        {
+            var pilotClubIds = await _pilotRelevantClubQueryHandler.GetPilotRelevantClubs(pilotId).Select(x => x.ClubId).ToListAsync();
+
+            if (pilotClubIds.Any())
+            {
+                IEnumerable<RaceInformation> races = await _raceInformationQueryHandler.GetRaceInformationForClubsAfterDate(pilotClubIds,DateTime.Now).ToListAsync();
+
+                if (max.HasValue)
+                {
+                    races = races.OrderBy(x => x.FirstRaceDateStart).Take(max.Value);
+                }
+
+                if (races.Any())
+                {
+                    return Ok(races.Select(x => MapToDto(x)));
+                }
+            }
+        }
+
+        var results = new List<RaceInformationResponse>();
+
+        await foreach(var raceInfo in _raceInformationQueryHandler.GetRaceInformationAfterDate(DateTime.Now)) 
+        {
+            if(results.Count > (max ?? 10))
+            {
+                break;
+            }
+            results.Add(MapToDto(raceInfo));
+        }
+
+        return Ok(results);
+    }
+
+    private RaceInformationResponse MapToDto(RaceInformation info) =>
+        new()
         {
             RaceId = info.RaceId,
             Name = info.Name,
@@ -48,7 +85,16 @@ public class RaceQueryController : Controller
             Description = info.Description,
             PaymentDeadline = info.PaymentDeadline,
             GoNoGoDate = info.GoNoGoDate
-        });
+        };
+
+    [HttpGet("api/race/{raceId:guid}/query/information")]
+    public async Task<IActionResult> GetRaceInformationAsync([FromRoute] Guid raceId)
+    {
+        var info = await _raceInformationQueryHandler.GetRaceInformation(raceId);
+        if (info == null)
+            return NotFound();
+
+        return Ok(MapToDto(info));
     }
 
     [HttpGet("api/race/query/club/{clubId:guid}")]
@@ -57,23 +103,7 @@ public class RaceQueryController : Controller
         var results = new List<RaceInformationResponse>();
         await foreach (var info in _raceInformationQueryHandler.GetRaceInformationForClub(clubId))
         {
-            results.Add(new RaceInformationResponse
-            {
-                RaceId = info.RaceId,
-                Name = info.Name,
-                ClubId = info.ClubId,
-                ClubName = info.ClubName,
-                LocationName = info.LocationName,
-                FirstRaceDateStart = info.FirstRaceDateStart,
-                LastRaceDateEnd = info.LastRaceDateEnd,
-                RegisteredPilotCount = info.RegisteredPilotCount,
-                MinimumPilots = info.MinimumPilots,
-                MaximumPilots = info.MaximumPilots,
-                IsPublished = info.IsPublished,
-                Description = info.Description,
-                PaymentDeadline = info.PaymentDeadline,
-                GoNoGoDate = info.GoNoGoDate
-            });
+            results.Add(MapToDto(info));
         }
         return Ok(results);
     }

@@ -28,6 +28,7 @@ public class RaceInformationQueryHandler : IRaceInformationQueryHandler
     public IAsyncEnumerable<Query.Models.RaceInformation> GetRaceInformationAfterDate(DateTime afterDate) =>
         _dbContext.RaceInformation
             .Where(x => x.LastRaceDateEnd > afterDate)
+            .OrderBy(x=> x.LastRaceDateEnd)
             .Select(info => ToQueryModel(info))
             .AsAsyncEnumerable();
 
@@ -46,6 +47,7 @@ public class RaceInformationQueryHandler : IRaceInformationQueryHandler
     public IAsyncEnumerable<Query.Models.RaceInformation> GetRaceInformationForClubsAfterDate(IEnumerable<Guid> clubIds, DateTime afterDate) =>
         _dbContext.RaceInformation
             .Where(x => clubIds.Contains(x.ClubId) && x.LastRaceDateEnd > afterDate)
+            .OrderBy(x => x.LastRaceDateEnd)
             .Select(info => ToQueryModel(info))
             .AsAsyncEnumerable();
 
@@ -67,6 +69,7 @@ public class RaceInformationQueryHandler : IRaceInformationQueryHandler
                 info => info.Id,
                 (reg, info) => info)
             .Where(info => info.LastRaceDateEnd > afterDate)
+            .OrderBy(x => x.LastRaceDateEnd)
             .Select(info => ToQueryModel(info))
             .AsAsyncEnumerable();
 

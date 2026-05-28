@@ -2,6 +2,7 @@
 using NaeRaces.Query.Abstractions;
 using NaeRaces.Query.EntityFrameworkCore.Projections;
 using NaeRaces.Query.EntityFrameworkCore.QueryHandlers;
+using NaeRaces.Query.QueryHandlers;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -32,6 +33,7 @@ public static class IServiceCollectionExtensions
         services.AddScoped<IPilotRegistrationQueryHandler, PilotRegistrationQueryHandler>();
         services.AddScoped<IClubOverviewQueryHandler, ClubOverviewQueryHandler>();
         services.AddScoped<INaeRacesQueryContext, NaeRacesQueryContext>();
+        services.AddScoped<IPilotRelevantClubQueryHandler, PilotRelevantClubQueryHandler>();
 
         services.AddTransient<IClock, Clock>();
 
