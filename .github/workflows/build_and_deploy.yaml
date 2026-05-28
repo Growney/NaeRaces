@@ -33,8 +33,8 @@ jobs:
           image_version="${{ github.run_number }}-${short_commit}"
           echo "image_version: ${image_version}"
 
-          echo "IMAGE_REF_BLAZOR=${{ env.image_name_blazor }}:${image_version}"
-          echo "IMAGE_REF_WEBAPI=${{ env.image_name_webapi }}:${image_version}"
+          echo "IMAGE_REF_BLAZOR=${{ env.image_name_blazor }}:${image_version}" >> $GITHUB_ENV
+          echo "IMAGE_REF_WEBAPI=${{ env.image_name_webapi }}:${image_version}" >> $GITHUB_ENV
 
       - name: Login to dockerhub
         uses: docker/login-action@v3
@@ -45,18 +45,22 @@ jobs:
       - name: Build and push to dockerhub - blazor
         uses: docker/build-push-action@v5
         with:
-         context: app_repo
-         file: app_repo/NaeRaces.BlazorWebApp/Dockerfile
-         push: true
-         tags: ${{ env.IMAGE_REF_BLAZOR }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          context: app_repo
+          file: app_repo/NaeRaces.BlazorWebApp/Dockerfile
+          push: true
+          tags: ${{ env.IMAGE_REF_BLAZOR }}
 
       - name: Build and push to dockerhub - webapi
         uses: docker/build-push-action@v5
         with:
-         context: app_repo
-         file: app_repo/NaeRaces.WebAPI/Dockerfile
-         push: true
-         tags: ${{ env.IMAGE_REF_WEBAPI }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          context: app_repo
+          file: app_repo/NaeRaces.WebAPI/Dockerfile
+          push: true
+          tags: ${{ env.IMAGE_REF_WEBAPI }}
 
   deploy_to_test:
     name: Deploy to Test
