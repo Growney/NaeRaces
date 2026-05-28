@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1
 FROM nginx:mainline-alpine3.23-perl AS base
 EXPOSE 80
 
