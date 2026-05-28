@@ -52,8 +52,8 @@ jobs:
       - name: Build and push to dockerhub - blazor
         uses: docker/build-push-action@v5
         with:
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          # cache-from: type=gha
+          # cache-to: type=gha,mode=max
           context: app_repo
           file: app_repo/NaeRaces.BlazorWebApp/Dockerfile
           push: true
@@ -62,8 +62,8 @@ jobs:
       - name: Build and push to dockerhub - webapi
         uses: docker/build-push-action@v5
         with:
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          # cache-from: type=gha
+          # cache-to: type=gha,mode=max
           context: app_repo
           file: app_repo/NaeRaces.WebAPI/Dockerfile
           push: true
