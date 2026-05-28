@@ -70,7 +70,7 @@ jobs:
     name: Deploy to Test
     needs: build
     env:
-      compose_path: sites/staging/docker-compose.yaml
+      compose_path: sites/staging/docker-compose.yml
     environment:
       name: staging
       url: https://staging.naeraces.co.uk
@@ -101,7 +101,7 @@ jobs:
   #   name: Deploy to Prod
   #   needs: deploy_to_test
   #   env:
-  #     compose_path: sites/live/docker-compose.yaml
+  #     compose_path: sites/live/docker-compose.yml
   #   environment:
   #     name: prod
   #     url: https://naeraces.co.uk
