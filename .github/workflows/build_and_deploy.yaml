@@ -17,6 +17,9 @@ defaults:
 jobs:
   build:
     name: Build
+    outputs:
+      IMAGE_REF_BLAZOR: ${{ steps.outputs.outputs.IMAGE_REF_BLAZOR }}
+      IMAGE_REF_WEBAPI: ${{ steps.outputs.outputs.IMAGE_REF_WEBAPI }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout this repo
@@ -66,6 +69,12 @@ jobs:
           push: true
           tags: ${{ env.IMAGE_REF_WEBAPI }}
 
+      - name: Output variables
+        id: outputs
+        run: |
+          echo "IMAGE_REF_BLAZOR=${{ env.IMAGE_REF_BLAZOR }}" >> $GITHUB_OUTPUT
+          echo "IMAGE_REF_WEBAPI=${{ env.IMAGE_REF_WEBAPI }}" >> $GITHUB_OUTPUT
+
   deploy_to_test:
     name: Deploy to Test
     needs: build
@@ -85,16 +94,23 @@ jobs:
 
       - name: Set image refs
         run: |
-          yq -i '(.services.blazor.image) = "${{ env.IMAGE_REF_BLAZOR }}"' gitops_repo/${{ env.compose_path }}
-          yq -i '(.services.webapi.image) = "${{ env.IMAGE_REF_WEBAPI }}"' gitops_repo/${{ env.compose_path }}
+          yq -i '(.services.blazor.image) = "${{ needs.build.outputs.IMAGE_REF_BLAZOR }}"' gitops_repo/${{ env.compose_path }}
+          yq -i '(.services.webapi.image) = "${{ needs.build.outputs.IMAGE_REF_WEBAPI }}"' gitops_repo/${{ env.compose_path }}
 
       - name: Commit changes
         run: |
           cd gitops_repo
+          
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add .
           git commit -m "Auto commit from NaeRace's Deploy to Test, run: ${{ github.run_number }}"
+          
+          # TODO - add shared workflow for retrying this
+          echo "Doing a pull --rebase"
+          git pull --rebase
+
+          echo "Pushing"
           git push
 
   # deploy_to_prod:
