@@ -7,8 +7,8 @@ on:
   workflow_dispatch:
 
 env:
-  image_name_blazor: ryantodd/naeraces-blazor
-  image_name_webapi: ryantodd/naeraces-webapi
+  image_name_blazor: growneytron/naeracesblazor
+  image_name_webapi: growneytron/naeraceswebapi
 
 defaults:
   run:
