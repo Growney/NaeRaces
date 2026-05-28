@@ -6,19 +6,19 @@ using System.Text;
 
 namespace NaeRaces.Query.EntityFrameworkCore;
 
-public class SnapshotRepository : ISnapshotRepository
+public class NaeRacesEntityFrameworkSnapshotRepository : ISnapshotRepository
 {
     private readonly NaeRacesQueryDbContext _dbContext;
 
-    public SnapshotRepository(NaeRacesQueryDbContext dbContext)
+    public NaeRacesEntityFrameworkSnapshotRepository(NaeRacesQueryDbContext dbContext)
     {
         _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
     }
     public IAsyncEnumerable<Snapshot> GetSnapshots(string snapshotKey)
     {
-        return _dbContext.Snapshots.Where(x => x.SnapshotKey == snapshotKey)
+        return _dbContext.Snapshots.Where(x => x.SnapshotKey == snapshotKey).AsAsyncEnumerable()
             .OrderByDescending(x => new { x.StreamPosition, x.CommitPosition, x.PreparePosition })
-            .Select(x => new Snapshot(x.Data, x.Identifier, new Position(x.CommitPosition, x.PreparePosition), new StreamPosition(x.StreamPosition))).AsAsyncEnumerable();
+            .Select(x => new Snapshot(x.Data, x.Identifier, new Position(x.CommitPosition, x.PreparePosition), new StreamPosition(x.StreamPosition)));
     }
 
     public async Task StoreSnapshot(string snapshotKey, Snapshot snapshot)

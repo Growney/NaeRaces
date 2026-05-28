@@ -56,6 +56,8 @@ public class ClubQueryController : Controller
             return Unauthorized();
         }
 
+        var test = await _projectionProvider.ClonePullReadPushAsync<IEnumerable<PilotRelevantClubsProjection.PilotRelevantClub>, PilotRelevantClubsProjection>(x => x.GetRelevantClubs(pilotId));
+
         var results = await _pilotRelevantClubQueryHandler.GetPilotRelevantClubs(pilotId).ToListAsync();
         return Ok(results);
     }

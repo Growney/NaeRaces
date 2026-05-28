@@ -9,6 +9,8 @@ using NaeRaces.WebAPI.Services;
 using OpenIddict.Abstractions;
 using Microsoft.AspNetCore.HttpOverrides;
 using static OpenIddict.Abstractions.OpenIddictConstants;
+using EventDbLite.Abstractions;
+using NaeRaces.Query.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -27,9 +29,10 @@ builder.Services.AddSingleton<ICorsPolicyProvider, OpenIddictCorsPolicyProvider>
 builder.Services.AddControllersWithViews();
 builder.Services.AddRazorPages();
 builder.Services.AddOpenApi();
+builder.Services.AddTransient<ISnapshotRepository, NaeRacesEntityFrameworkSnapshotRepository>();
 builder.Services.AddKurrentDbEventDbLite(x =>
 {
-
+    
 });
 builder.Services.AddSqlServerNaeRacesQueryDbContext(builder.Configuration);
 builder.Services.AddNaeRacesEntityFrameworkCoreQueryReactions();
