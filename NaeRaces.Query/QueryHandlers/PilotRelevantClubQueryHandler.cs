@@ -24,7 +24,7 @@ public class PilotRelevantClubQueryHandler : IPilotRelevantClubQueryHandler
         var seenClubIds = new HashSet<Guid>();
 
         // Clubs where the pilot is a confirmed member
-        await foreach (var membership in _clubMemberQueryHandler.GetPilotMembershipDetails(pilotId))
+        foreach (var membership in await _clubMemberQueryHandler.GetPilotMembershipDetails(pilotId).ToListAsync())
         {
             if (!membership.IsRegistrationConfirmed)
                 continue;
@@ -40,7 +40,7 @@ public class PilotRelevantClubQueryHandler : IPilotRelevantClubQueryHandler
         }
 
         // Clubs the pilot follows
-        await foreach (var followed in _pilotFollowedClubQueryHandler.GetFollowedClubs(pilotId))
+        foreach (var followed in await _pilotFollowedClubQueryHandler.GetFollowedClubs(pilotId).ToListAsync())
         {
             if (!seenClubIds.Add(followed.ClubId))
                 continue;
@@ -54,7 +54,7 @@ public class PilotRelevantClubQueryHandler : IPilotRelevantClubQueryHandler
 
         // Clubs where the pilot holds a role
         string[] allRoles = ["Administrator", "RaceOrganiser", "Trustee"];
-        await foreach (var clubId in _clubMemberQueryHandler.GetClubIdsWithRoles(pilotId, allRoles))
+        foreach (var clubId in await _clubMemberQueryHandler.GetClubIdsWithRoles(pilotId, allRoles).ToListAsync())
         {
             if (!seenClubIds.Add(clubId))
                 continue;
