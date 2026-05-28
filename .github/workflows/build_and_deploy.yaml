@@ -18,8 +18,7 @@ jobs:
   build:
     name: Build
     outputs:
-      IMAGE_REF_BLAZOR: ${{ steps.outputs.outputs.IMAGE_REF_BLAZOR }}
-      IMAGE_REF_WEBAPI: ${{ steps.outputs.outputs.IMAGE_REF_WEBAPI }}
+      IMAGE_TAG: ${{ steps.outputs.outputs.IMAGE_TAG }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout this repo
@@ -37,6 +36,7 @@ jobs:
           image_version="${{ github.run_number }}-${short_commit}"
           echo "image_version: ${image_version}"
 
+          echo "IMAGE_TAG=${image_version}" >> $GITHUB_ENV
           echo "IMAGE_REF_BLAZOR=${{ env.image_name_blazor }}:${image_version}" >> $GITHUB_ENV
           echo "IMAGE_REF_WEBAPI=${{ env.image_name_webapi }}:${image_version}" >> $GITHUB_ENV
 
@@ -72,8 +72,7 @@ jobs:
       - name: Output variables
         id: outputs
         run: |
-          echo "IMAGE_REF_BLAZOR=${{ env.IMAGE_REF_BLAZOR }}" >> $GITHUB_OUTPUT
-          echo "IMAGE_REF_WEBAPI=${{ env.IMAGE_REF_WEBAPI }}" >> $GITHUB_OUTPUT
+          echo "IMAGE_TAG=${{ env.IMAGE_TAG }}" >> $GITHUB_OUTPUT
 
   deploy_to_test:
     name: Deploy to Test
@@ -92,10 +91,15 @@ jobs:
           repository: Growney/naeraces.co.uk
           token: ${{ secrets.SITE_ROOT_PAT }}
 
+      - name: Set up variables
+        run: |
+          echo "IMAGE_REF_BLAZOR=${{ env.image_name_blazor }}:${{ needs.build.outputs.IMAGE_TAG }}" >> $GITHUB_ENV
+          echo "IMAGE_REF_WEBAPI=${{ env.image_name_webapi }}:${{ needs.build.outputs.IMAGE_TAG }}" >> $GITHUB_ENV
+
       - name: Set image refs
         run: |
-          yq -i '(.services.blazor.image) = "${{ needs.build.outputs.IMAGE_REF_BLAZOR }}"' gitops_repo/${{ env.compose_path }}
-          yq -i '(.services.webapi.image) = "${{ needs.build.outputs.IMAGE_REF_WEBAPI }}"' gitops_repo/${{ env.compose_path }}
+          yq -i '(.services.blazor.image) = "${{ env.IMAGE_REF_BLAZOR }}"' gitops_repo/${{ env.compose_path }}
+          yq -i '(.services.webapi.image) = "${{ env.IMAGE_REF_WEBAPI }}"' gitops_repo/${{ env.compose_path }}
 
       - name: Commit changes
         run: |
