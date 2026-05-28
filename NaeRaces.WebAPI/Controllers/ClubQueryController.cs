@@ -1,7 +1,9 @@
+using EventDbLite.Abstractions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using NaeRaces.Query.Abstractions;
 using NaeRaces.Query.Models;
+using NaeRaces.Query.Projections;
 using NaeRaces.WebAPI.Shared.Club;
 using OpenIddict.Abstractions;
 
@@ -18,6 +20,7 @@ public class ClubQueryController : Controller
     private readonly IPilotDetailsQueryHandler _pilotDetailsQueryHandler;
     private readonly IPilotFollowedClubQueryHandler _pilotFollowedClubQueryHandler;
     private readonly IPilotRelevantClubQueryHandler _pilotRelevantClubQueryHandler;
+    private readonly IProjectionProvider _projectionProvider;
 
     public ClubQueryController(
         IClubOverviewQueryHandler clubOverviewQueryHandler,
@@ -28,7 +31,8 @@ public class ClubQueryController : Controller
         IPilotSelectionPolicyQueryHandler pilotSelectionPolicyQueryHandler,
         IPilotDetailsQueryHandler pilotDetailsQueryHandler,
         IPilotFollowedClubQueryHandler pilotFollowedClubQueryHandler,
-        IPilotRelevantClubQueryHandler pilotRelevantClubQueryHandler)
+        IPilotRelevantClubQueryHandler pilotRelevantClubQueryHandler,
+        IProjectionProvider projectionProvider)
     {
         _clubOverviewQueryHandler = clubOverviewQueryHandler ?? throw new ArgumentNullException(nameof(clubOverviewQueryHandler));
         _clubLocationQueryHandler = clubLocationQueryHandler ?? throw new ArgumentNullException(nameof(clubLocationQueryHandler));
@@ -39,6 +43,7 @@ public class ClubQueryController : Controller
         _pilotDetailsQueryHandler = pilotDetailsQueryHandler ?? throw new ArgumentNullException(nameof(pilotDetailsQueryHandler));
         _pilotFollowedClubQueryHandler = pilotFollowedClubQueryHandler ?? throw new ArgumentNullException(nameof(pilotFollowedClubQueryHandler));
         _pilotRelevantClubQueryHandler = pilotRelevantClubQueryHandler ?? throw new ArgumentNullException(nameof(pilotRelevantClubQueryHandler));
+        _projectionProvider = projectionProvider ?? throw new ArgumentNullException(nameof(projectionProvider));
     }
 
     [Authorize]
