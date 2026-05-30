@@ -16,6 +16,7 @@ defaults:
 
 jobs:
   build:
+    if: github.repository_owner == 'Growney'
     name: Build
     outputs:
       IMAGE_TAG: ${{ steps.outputs.outputs.IMAGE_TAG }}
@@ -74,7 +75,8 @@ jobs:
         run: |
           echo "IMAGE_TAG=${{ env.IMAGE_TAG }}" >> $GITHUB_OUTPUT
 
-  deploy_to_test:
+  deploy_to_test:    
+    if: github.repository_owner == 'Growney'
     name: Deploy to Test
     needs: build
     env:
@@ -118,6 +120,7 @@ jobs:
           git push
 
   # deploy_to_prod:
+  #   if: github.repository_owner == 'Growney'
   #   name: Deploy to Prod
   #   needs: deploy_to_test
   #   env:
