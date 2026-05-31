@@ -26,7 +26,7 @@
         }
 
         var baseUri = apiBase.TrimEnd('/');
-        Navigation.NavigateTo($"{baseUri}/Identity/Account/Register", forceLoad: true);
+        Navigation.NavigateTo($"{baseUri}/Identity/Account/Register?returnUrl={Navigation.BaseUri}", forceLoad: true);
     }
 
     private void BeginSignOut(MouseEventArgs args)
