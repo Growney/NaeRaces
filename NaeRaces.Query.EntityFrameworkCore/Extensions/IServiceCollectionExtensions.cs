@@ -2,6 +2,7 @@
 using NaeRaces.Query.Abstractions;
 using NaeRaces.Query.EntityFrameworkCore.Projections;
 using NaeRaces.Query.EntityFrameworkCore.QueryHandlers;
+using NaeRaces.Query.Projections;
 using NaeRaces.Query.QueryHandlers;
 using System;
 using System.Collections.Generic;
@@ -63,6 +64,8 @@ public static class IServiceCollectionExtensions
         services.AddConstantReactionClass<PilotSelectionPolicyDetailsProjection>();
         services.AddConstantReactionClass<TeamMemberProjection>();
         services.AddConstantReactionClass<ClubOverviewProjection>();
+
+        services.AddTrackedAllStreamProjection<PilotRelevantClubsProjection>();
 
         return services;
     }

@@ -26,7 +26,8 @@ public class PilotPolicyValidationQueryHandler : IPilotPolicyValidationQueryHand
         var pilotValidationDetails = await _pilotValidationQueryHandler.GetPilotValidationDetails(pilotId);
 
         var streamName = GetPilotSelectionPolicyStreamName(policyId);
-        var statementTree = await _projectionProvider.ClonePullReadPushAsync<PilotSelectionPolicyStatementTree?, PilotSelectionPolicy>(x=> x.StatementTree, streamName);
+
+        var statementTree = await _projectionProvider.ClonePullReadPushAsync<PilotSelectionPolicyStatementTree?, PilotSelectionPolicy>(x=> x.StatementTree, streamName, StreamPosition.At((ulong)policyVersion));
 
         if (statementTree == null)
         {
