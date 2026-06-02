@@ -16,8 +16,11 @@ public class NaeRacesEntityFrameworkSnapshotRepository : ISnapshotRepository
     }
     public IAsyncEnumerable<Snapshot> GetSnapshots(string snapshotKey)
     {
-        return _dbContext.Snapshots.Where(x => x.SnapshotKey == snapshotKey).AsAsyncEnumerable()
-            .OrderByDescending(x => new { x.StreamPosition, x.CommitPosition, x.PreparePosition })
+        return _dbContext.Snapshots.Where(x => x.SnapshotKey == snapshotKey)
+            .OrderByDescending(x => x.StreamPosition)
+            .ThenByDescending(x => x.CommitPosition)
+            .ThenByDescending(x => x.PreparePosition)
+            .AsAsyncEnumerable()
             .Select(x => new Snapshot(x.Data, x.Identifier, new Position(x.CommitPosition, x.PreparePosition), new StreamPosition(x.StreamPosition)));
     }
 
