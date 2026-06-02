@@ -57,10 +57,20 @@ public class ClubQueryController : Controller
         }
         var projection = await _projectionProvider.CloneAsync<PilotRelevantClubsProjection>();
 
-        var test = projection.Object.GetRelevantClubs(pilotId);
+        var relevantClubs = projection.Object.GetRelevantClubs(pilotId);
 
-        var results = await _pilotRelevantClubQueryHandler.GetPilotRelevantClubs(pilotId).ToListAsync();
-        return Ok(results);
+        var responses = relevantClubs.Select(x => new MyClubMembershipResponse()
+        {
+            ClubId = x.ClubId,
+            ClubCode = x.ClubCode,
+            ClubName = x.ClubName,
+            IsFollowing = x.Relationship.IsFollowing,
+            Roles = x.Relationship.Roles.ToList(),
+            MembershipExpiry = x.Relationship.Membership?.Expiry,
+            MembershipLevelName = x.Relationship.Membership?.MembershipName,
+        });
+
+        return Ok(responses);
     }
 
     [Authorize]
