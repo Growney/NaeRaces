@@ -79,13 +79,19 @@ public class ClubMemberPopularity
         club.Followers.Remove(unfollow.PilotId);
     }
 
+    private void When(PilotClubMembershipConfirmed eventObj) => AddMember(eventObj.ClubId, eventObj.PilotId);
+    private void When(PilotClubMembershipManuallyConfirmed eventObj) => AddMember(eventObj.ClubId, eventObj.PilotId);
+    private void When(PilotClubMembershipCancelled eventObj) => RemoveMember(eventObj.ClubId, eventObj.PilotId);
+    private void When(PilotClubMembershipExpired eventObj) => RemoveMember(eventObj.ClubId, eventObj.PilotId);
+    private void When(PilotClubMembershipRevoked eventObj) => RemoveMember(eventObj.ClubId, eventObj.PilotId);
+
     private void AddMember(Guid clubId, Guid memberId)
     {
         var club = _details[clubId];
 
-        if (!club.Followers.Contains(memberId))
+        if (!club.Members.Contains(memberId))
         {
-            club.Followers.Add(memberId);
+            club.Members.Add(memberId);
         }
     }
     private void RemoveMember(Guid clubId, Guid memberId)

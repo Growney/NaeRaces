@@ -29,6 +29,7 @@ builder.Services.AddSingleton<ICorsPolicyProvider, OpenIddictCorsPolicyProvider>
 builder.Services.AddControllersWithViews();
 builder.Services.AddRazorPages();
 builder.Services.AddOpenApi();
+builder.Services.AddNaeRacesTrackedProjections();
 builder.Services.AddTransient<ISnapshotRepository, NaeRacesEntityFrameworkSnapshotRepository>();
 builder.Services.AddKurrentDbEventDbLite(x =>
 {

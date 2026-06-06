@@ -4,11 +4,11 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace NaeRaces.Query.Extensions;
+namespace Microsoft.Extensions.DependencyInjection;
 
 public static class IServiceCollectionExtensions
 {
-    public static IServiceCollection AddNaeRacesEntityFrameworkCoreQueryReactions(this IServiceCollection services)
+    public static IServiceCollection AddNaeRacesTrackedProjections(this IServiceCollection services)
     {
         services.AddTrackedAllStreamProjection<PilotRelevantClubsProjection>();
         services.AddTrackedAllStreamProjection<ClubMemberPopularity>();
