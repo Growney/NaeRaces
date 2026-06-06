@@ -31,7 +31,7 @@ else
             {
                 <a href="/club/edit/@ClubId" class="btn btn-primary">Edit Club</a>
             }
-            @if (isAuthenticated && !isFollowing && !isMemberOrRegistered)
+            @if (isAuthenticated && !isFollowing)
             {
                 <button class="btn btn-outline-primary" disabled="@isTogglingFollow" @onclick="FollowClubAsync">
                     @if (isTogglingFollow)
