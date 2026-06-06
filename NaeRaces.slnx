@@ -18,6 +18,7 @@
     <Project Path="EventDbLite/EventDbLite.Collections/EventDbLite.Collections.csproj" />
     <Project Path="EventDbLite/EventDbLite.Handlers/EventDbLite.Handlers.csproj" />
     <Project Path="EventDbLite/EventDbLite.KurrentDb/EventDbLite.KurrentDb.csproj" Id="01841d00-bbee-4956-836c-c7aec7a7dadc" />
+    <Project Path="EventDbLite/EventDbLite.MongoDb/EventDbLite.MongoDb.csproj" Id="8b6486c3-dc81-4b32-b866-50ab43b125a7" />
     <Project Path="EventDbLite/EventDbLite.Reactions.Abstractions/EventDbLite.Reactions.Abstractions.csproj" />
     <Project Path="EventDbLite/EventDbLite.Reactions.SignalR.Client/EventDbLite.Reactions.SignalR.Client.csproj" />
     <Project Path="EventDbLite/EventDbLite.Reactions.SignalR.Server/EventDbLite.Reactions.SignalR.Server.csproj" />

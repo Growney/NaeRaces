@@ -9,22 +9,38 @@ namespace NaeRaces.Query.EntityFrameworkCore;
 public class NaeRacesEntityFrameworkSnapshotRepository : ISnapshotRepository
 {
     private readonly NaeRacesQueryDbContext _dbContext;
+    private readonly IEventSerializer _eventSerializer;
 
-    public NaeRacesEntityFrameworkSnapshotRepository(NaeRacesQueryDbContext dbContext)
+    private class EntityFrameworkSnapshot : IReadSnapshot
+    {
+        public required byte[] Data { get; set; }
+        public required string Identifier { get; set; }
+        public required Position Position { get; set; }
+        public required StreamPosition StreamPosition { get; set; }
+    }
+
+    public NaeRacesEntityFrameworkSnapshotRepository(NaeRacesQueryDbContext dbContext, IEventSerializer eventSerializer)
     {
         _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
+        _eventSerializer = eventSerializer ?? throw new ArgumentNullException(nameof(eventSerializer));
     }
-    public IAsyncEnumerable<Snapshot> GetSnapshots(string snapshotKey)
+    public IAsyncEnumerable<IReadSnapshot> GetSnapshots(string snapshotKey)
     {
         return _dbContext.Snapshots.Where(x => x.SnapshotKey == snapshotKey)
             .OrderByDescending(x => x.StreamPosition)
             .ThenByDescending(x => x.CommitPosition)
             .ThenByDescending(x => x.PreparePosition)
             .AsAsyncEnumerable()
-            .Select(x => new Snapshot(x.Data, x.Identifier, new Position(x.CommitPosition, x.PreparePosition), new StreamPosition(x.StreamPosition)));
+            .Select(x => new EntityFrameworkSnapshot()
+            {
+                Data = x.Data,
+                Identifier = x.Identifier,
+                Position = new Position(x.CommitPosition, x.PreparePosition),
+                StreamPosition = new StreamPosition(x.StreamPosition)
+            });
     }
 
-    public async Task StoreSnapshot(string snapshotKey, Snapshot snapshot)
+    public async Task StoreSnapshot(string snapshotKey, object data, string identifier, Position position, StreamPosition streamPosition)
     {
         try
         {
@@ -38,7 +54,7 @@ public class NaeRacesEntityFrameworkSnapshotRepository : ISnapshotRepository
 
                 ulong maxCurrent = Math.Max(Math.Max(maxStreamPosition, maxPrepare), maxCommit);
 
-                ulong newMax = Math.Max(Math.Max(snapshot.StreamPosition.Position, snapshot.Position.PreparePosition), snapshot.Position.CommitPosition);
+                ulong newMax = Math.Max(Math.Max(streamPosition.Position, position.PreparePosition), position.CommitPosition);
 
                 if (newMax <= maxCurrent)
                 {
@@ -46,15 +62,17 @@ public class NaeRacesEntityFrameworkSnapshotRepository : ISnapshotRepository
                 }
             }
 
+            byte[] serialized = _eventSerializer.SerializeEvent(data);
+
             _dbContext.Snapshots.Add(new Models.ProjectionSnapshot()
             {
                 Id = Guid.NewGuid(),
                 SnapshotKey = snapshotKey,
-                Data = snapshot.Data,
-                Identifier = snapshot.Identifier,
-                StreamPosition = snapshot.StreamPosition.Position,
-                CommitPosition = snapshot.Position.CommitPosition,
-                PreparePosition = snapshot.Position.PreparePosition
+                Data = serialized,
+                Identifier = identifier,
+                StreamPosition = streamPosition.Position,
+                CommitPosition = position.CommitPosition,
+                PreparePosition = position.PreparePosition
             });
 
             await _dbContext.SaveChangesAsync();
@@ -63,5 +81,15 @@ public class NaeRacesEntityFrameworkSnapshotRepository : ISnapshotRepository
         {
             await _dbContext.Database.CommitTransactionAsync();
         }
+    }
+
+    public object? DeserializeSnapshot(IReadSnapshot snapshot, Type targetType)
+    {
+        if(snapshot is not EntityFrameworkSnapshot entityFrameworkSnapshot)
+        {
+            throw new NotSupportedException("Snapshot type not supported");
+        }
+
+        return _eventSerializer.DeserializeEvent(entityFrameworkSnapshot.Data, targetType);
     }
 }
