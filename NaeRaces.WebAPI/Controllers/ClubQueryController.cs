@@ -1,6 +1,7 @@
 using EventDbLite.Abstractions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using NaeRaces.Command.Aggregates;
 using NaeRaces.Query.Abstractions;
 using NaeRaces.Query.Models;
 using NaeRaces.Query.Projections;
@@ -90,15 +91,21 @@ public class ClubQueryController : Controller
     [HttpGet("api/club/query/top/{count:int}")]
     public async Task<IActionResult> GetTopClubsByMemberCountAsync([FromRoute] int count)
     {
+        var projection = await _projectionProvider.CloneAsync<ClubMemberPopularity>();
+
+        var relevantClubs = projection.Object.GetTop(count);
+
         var results = new List<TopClubByMemberCountResponse>();
-        await foreach (var club in _clubOverviewQueryHandler.GetTopClubsByMemberCount(count))
+
+        foreach (var club in relevantClubs)
         {
             results.Add(new TopClubByMemberCountResponse
             {
                 ClubId = club.ClubId,
-                Code = club.Code,
-                Name = club.Name,
-                MemberCount = club.TotalMemberCount
+                Code = club.ClubCode,
+                Name = club.ClubName,
+                MemberCount = club.Members,
+                FollowerCount = club.Followers
             });
         }
         return Ok(results);

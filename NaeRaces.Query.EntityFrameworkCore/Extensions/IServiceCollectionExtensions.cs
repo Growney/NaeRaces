@@ -64,9 +64,6 @@ public static class IServiceCollectionExtensions
         services.AddConstantReactionClass<PilotSelectionPolicyDetailsProjection>();
         services.AddConstantReactionClass<TeamMemberProjection>();
         services.AddConstantReactionClass<ClubOverviewProjection>();
-
-        services.AddTrackedAllStreamProjection<PilotRelevantClubsProjection>();
-
         return services;
     }
 }
