@@ -1,0 +1,122 @@
+﻿@using NaeRaces.WebAPI.Shared.Club
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h1 class="mb-0">@ClubName</h1>
+        @if (Overview != null)
+        {
+            <span class="text-muted">@Overview</span>
+        }
+    </div>
+    <div class="d-flex gap-2">
+        <a href=@($"club/{ClubId}/join") class="btn btn-outline-primary">Join</a>
+        @if (!_isFollowing)
+        {
+            <button class="btn btn-outline-primary" disabled="@_isTogglingFollow" @onclick="FollowClubAsync">
+                @if (_isTogglingFollow)
+                {
+                    <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                }
+                Follow
+            </button>
+        }
+        else
+        {
+            <button class="btn btn-outline-danger" disabled="@_isTogglingFollow" @onclick="UnfollowClubAsync">
+                @if (_isTogglingFollow)
+                {
+                    <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                }
+                Unfollow
+            </button>
+        }
+        <a href=@($"club/{ClubId}/news") class="btn btn-outline-secondary">News</a>
+        <a href=@($"club/{ClubId}/about") class="btn btn-outline-secondary">About</a>
+        <a href=@($"club/{ClubId}/contact") class="btn btn-outline-secondary">Contact</a>
+        <a href=@($"club/{ClubId}/members") class="btn btn-outline-secondary">Members</a>
+        <a href=@($"club/{ClubId}/events") class="btn btn-outline-secondary">Events</a>
+    </div>
+</div>
+@code {
+
+    [Parameter]
+    [EditorRequired]
+    public Guid ClubId { get; set; }
+    [Parameter]
+    [EditorRequired]
+    public string ClubName { get; set; }
+    [Parameter]
+    public string? Overview { get; set; }
+    [Parameter]
+    public bool IsFollowing { get; set; }
+
+    [CascadingParameter] 
+    private Task<AuthenticationState> AuthenticationStateTask { get; set; } = default!;
+
+    [Inject]
+    public HttpClient Http { get; set; } = null!;
+    [Inject]
+    public NavigationManager NavigationManager { get; set; } = null!;
+
+    private ClubOverviewResponse? overview;
+    private bool _isTogglingFollow;
+    private bool _isAuthenticated;
+    private bool _isFollowing;
+
+    protected override Task OnParametersSetAsync()
+    {
+        _isFollowing = IsFollowing;
+        Console.WriteLine(_isFollowing.ToString());
+        return base.OnParametersSetAsync();
+    }
+
+    private async Task FollowClubAsync()
+    {
+        var user = (await AuthenticationStateTask).User;
+        if (!user?.Identity?.IsAuthenticated ?? true)
+        {
+            NavigationManager.NavigateTo($"authentication/login?returnUrl={Uri.EscapeDataString(NavigationManager.Uri)}");
+        }
+
+        _isTogglingFollow = true;
+        try
+        {
+            var response = await Http.PostAsync($"api/pilot/follow/{ClubId}", null);
+            if (response.IsSuccessStatusCode)
+            {
+                _isFollowing = true;
+            }
+        }
+        catch { }
+        finally
+        {
+            _isTogglingFollow = false;
+        }
+    }
+
+    private async Task UnfollowClubAsync()
+    {
+        var user = (await AuthenticationStateTask).User;
+        if (!user?.Identity?.IsAuthenticated ?? true)
+        {
+            NavigationManager.NavigateTo($"authentication/login?returnUrl={Uri.EscapeDataString(NavigationManager.Uri)}");
+        }
+
+        _isTogglingFollow = true;
+        try
+        {
+            var response = await Http.DeleteAsync($"api/pilot/follow/{ClubId}");
+            if (response.IsSuccessStatusCode)
+            {
+                _isFollowing = false;
+            }
+        }
+        catch
+        {
+            
+        }
+        finally
+        {
+            _isTogglingFollow = false;
+        }
+    }
+}
