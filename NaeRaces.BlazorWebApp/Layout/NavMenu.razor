@@ -1,28 +1,42 @@
-﻿<nav class="top-navbar navbar navbar-dark">
+﻿<nav >
     <div class="navbar-inner">
-        <a class="navbar-brand" href="">NaeRaces</a>
+        @if(_theme == "dark")
+        {
+            <a class="navbar-brand" href=""> <img style="max-height:2.5em" src="img/NaeRaces - Dark.png" alt="NaeRaces" /> </a>
+        }
+        else
+        {
+            <a class="navbar-brand" href=""> <img style="max-height:2.5em" src="img/NaeRaces - Light.png" alt="NaeRaces" /> </a>
+        }
         <button title="Navigation menu" class="navbar-toggler" @onclick="ToggleNavMenu">
             <span class="navbar-toggler-icon"></span>
         </button>
         <div class="@NavMenuCssClass navbar-collapse">
             <ul class="navbar-nav">
                 <li class="nav-item">
-                    <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                        <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Home
-                    </NavLink>
+                    <a class="nav-link" href="">
+                        <i class="fa-solid fa-people-group"></i> Clubs
+                    </a>
                 </li>
                 <li class="nav-item">
-                    <NavLink class="nav-link" href="club/create">
-                        <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> Create Club
-                    </NavLink>
+                    <a class="nav-link" href="races">
+                        <i class="fa-solid fa-flag-checkered"></i> Races
+                    </a>
                 </li>
                 <li class="nav-item">
-                    <NavLink class="nav-link" href="race/create">
-                        <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> Create Race
-                    </NavLink>
+                    <a class="nav-link" href="series">
+                        <i class="fa-solid fa-flag-checkered"></i> Series
+                    </a>
+                </li>
+
+                <li class="nav-item">
+                    <a class="nav-link" href="pilots">
+                        <i class="fa-solid fa-user"></i> Pilots
+                    </a>
                 </li>
             </ul>
             <div class="navbar-login">
+                <ThemeSwitcher OnThemeChanged="OnThemeChanged"></ThemeSwitcher>
                 <LoginDisplay />
             </div>
         </div>
@@ -31,11 +45,17 @@
 
 @code {
     private bool collapseNavMenu = true;
+    private string _theme;
 
     private string? NavMenuCssClass => collapseNavMenu ? "collapse" : null;
 
     private void ToggleNavMenu()
     {
         collapseNavMenu = !collapseNavMenu;
+    }
+
+    private void OnThemeChanged(string themeName)
+    {
+        _theme = themeName;
     }
 }

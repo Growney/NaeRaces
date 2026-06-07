@@ -1,0 +1,91 @@
+@using Microsoft.AspNetCore.Components.Authorization
+@using NaeRaces.BlazorWebApp.Pages.Club
+@using NaeRaces.WebAPI.Shared.Club
+
+@inherits LayoutComponentBase
+@layout MainLayout
+@implements IDisposable
+@inject NavigationManager Navigation
+@inject HttpClient Http
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+@if (_clubId.HasValue)
+{
+    <Nav ClubId="_clubId.Value"
+             ClubName="@(_clubOverview?.Name ?? "Club")"
+             Overview="@_clubOverview?.Code"
+             IsFollowing="_isFollowing" />
+}
+
+@Body
+
+@code {
+    private Guid? _clubId;
+    private ClubOverviewResponse? _clubOverview;
+    private bool _isFollowing;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Navigation.LocationChanged += OnLocationChanged;
+        await LoadFromCurrentUrlAsync();
+    }
+
+    private async void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        await LoadFromCurrentUrlAsync();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task LoadFromCurrentUrlAsync()
+    {
+        _clubId = TryGetClubIdFromUrl();
+
+        if (!_clubId.HasValue)
+        {
+            _clubOverview = null;
+            _isFollowing = false;
+            return;
+        }
+
+        _clubOverview = await Http.GetFromJsonAsync<ClubOverviewResponse>($"api/club/{_clubId}/query/overview");
+
+        var auth = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        if (auth.User.Identity?.IsAuthenticated == true)
+        {
+            try
+            {
+                _isFollowing = await Http.GetFromJsonAsync<bool>($"api/club/{_clubId}/query/is-following");
+            }
+            catch
+            {
+                _isFollowing = false;
+            }
+        }
+        else
+        {
+            _isFollowing = false;
+        }
+    }
+
+    private Guid? TryGetClubIdFromUrl()
+    {
+        var uri = new Uri(Navigation.Uri);
+        var segments = uri.AbsolutePath.Split('/', StringSplitOptions.RemoveEmptyEntries);
+
+        for (var i = 0; i < segments.Length - 1; i++)
+        {
+            if (segments[i].Equals("club", StringComparison.OrdinalIgnoreCase) &&
+                Guid.TryParse(segments[i + 1], out var clubId))
+            {
+                return clubId;
+            }
+        }
+
+        return null;
+    }
+
+    public void Dispose()
+    {
+        Navigation.LocationChanged -= OnLocationChanged;
+    }
+}

@@ -75,6 +75,7 @@
         if (!user?.Identity?.IsAuthenticated ?? true)
         {
             NavigationManager.NavigateTo($"authentication/login?returnUrl={Uri.EscapeDataString(NavigationManager.Uri)}");
+            return;
         }
 
         _isTogglingFollow = true;
@@ -99,6 +100,7 @@
         if (!user?.Identity?.IsAuthenticated ?? true)
         {
             NavigationManager.NavigateTo($"authentication/login?returnUrl={Uri.EscapeDataString(NavigationManager.Uri)}");
+            return;
         }
 
         _isTogglingFollow = true;

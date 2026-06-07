@@ -4,7 +4,7 @@
 @using Microsoft.AspNetCore.Components.Authorization
 @inject HttpClient Http
 @inject NavigationManager Navigation
-
+@layout ClubLayout
 <PageTitle>@(overview?.Name ?? "Club")</PageTitle>
 
 @if (isLoading)
@@ -21,8 +21,6 @@ else if (overview == null)
 }
 else
 {
-    <ClubNav ClubId=@overview.ClubId ClubName=@overview.Name Overview="@($"{overview.Code} {@overview.MemberCount} members")" IsFollowing="@isFollowing"></ClubNav>
-
     <!-- Contact Details -->
     @if (!string.IsNullOrWhiteSpace(contactDetails?.PhoneNumber) || !string.IsNullOrWhiteSpace(contactDetails?.EmailAddress))
     {

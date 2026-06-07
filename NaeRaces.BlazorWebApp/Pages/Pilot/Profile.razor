@@ -1,0 +1,10 @@
+﻿@page "/pilot/{PilotId:guid}/profile"
+
+<h3>Pilot Profile</h3>
+<p>Coming soon</p>
+<p>@PilotId</p>
+
+@code {
+    [Parameter]
+    public Guid PilotId { get; set; }
+}

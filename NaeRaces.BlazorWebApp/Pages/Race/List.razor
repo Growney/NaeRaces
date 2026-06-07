@@ -1,0 +1,73 @@
+﻿@page "/races"
+
+@using NaeRaces.WebAPI.Shared.Race
+
+<div class="text-end">
+    <a href="/race/create">Nae races? Click here to create your own!</a>
+</div>
+<div class="card mb-3">
+    <div class="card-header fw-bold">Races</div>
+    <div class="card-body">
+        @if (displayedRaces.Count == 0)
+        {
+            <p class="text-muted">No up coming races found.</p>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-striped mb-0">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Location</th>
+                            <th>First Date</th>
+                            <th>Registered</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var race in displayedRaces)
+                        {
+                            <tr style="cursor: pointer" @onclick="() => NavigateToRace(race.RaceId)">
+                                <td>@race.Name</td>
+                                <td>@(race.LocationName ?? "—")</td>
+                                <td>@(race.FirstRaceDateStart != default ? race.FirstRaceDateStart.ToString("g") : "—")</td>
+                                <td>
+                                    @race.RegisteredPilotCount
+                                    @if (race.MaximumPilots.HasValue)
+                                    {
+                                        <text> / @race.MaximumPilots</text>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+
+    [Inject]
+    public HttpClient Http { get; set; } = null!;
+    [Inject]
+    public AuthenticationStateProvider AuthenticationState { get; set; } = null!;
+    [Inject]
+    public NavigationManager Navigation { get; set; } = null!;
+
+    
+    private List<RaceInformationResponse> displayedRaces = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        displayedRaces = await Http.GetFromJsonAsync<List<RaceInformationResponse>>($"api/race/query/relevant") ?? [];
+    }
+
+    
+    private void NavigateToRace(Guid raceId)
+    {
+        Navigation.NavigateTo($"/race/{raceId}");
+    }
+}
+            

@@ -1,0 +1,8 @@
+﻿@page "/club/{ClubId:guid}/news"
+@layout ClubLayout
+<h3>News</h3>
+
+@code {
+    [Parameter]
+    public Guid ClubId { get; set; }
+}

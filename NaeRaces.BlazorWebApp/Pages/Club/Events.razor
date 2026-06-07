@@ -1,0 +1,9 @@
+﻿@page "/club/{ClubId:guid}/events"
+@layout ClubLayout
+
+<h1>Events!</h1>
+@code {
+    [Parameter]
+    public Guid ClubId { get; set; }
+}
+
