@@ -25,7 +25,7 @@
             <div class="d-flex">
                 <AuthorizeView>
                     <Authorized>
-                        <MudNavLink Href="@($"/pilot/{context.User.Claims.First(x => x.Type == "sub").Value}/profile")">@context.User.Identity!.Name</MudNavLink>
+                        <MudNavLink Style="white-space: nowrap;" Href="@($"/pilot/{context.User.Claims.First(x => x.Type == "sub").Value}/profile")">@context.User.Identity!.Name</MudNavLink>
                         <MudNavLink Icon="@Icons.Material.Filled.Logout" OnClick="BeginSignOut"></MudNavLink>
                     </Authorized>
                     <NotAuthorized>
