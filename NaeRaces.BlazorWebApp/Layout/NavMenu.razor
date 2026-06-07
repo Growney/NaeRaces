@@ -1,6 +1,6 @@
 ﻿<nav >
     <div class="navbar-inner">
-        @if(_theme == "dark")
+        @if (_isDarkMode)
         {
             <a class="navbar-brand" href=""> <img style="max-height:2.5em" src="img/NaeRaces - Dark.png" alt="NaeRaces" /> </a>
         }
@@ -36,7 +36,8 @@
                 </li>
             </ul>
             <div class="navbar-login">
-                <ThemeSwitcher OnThemeChanged="OnThemeChanged"></ThemeSwitcher>
+                <MudThemeProvider @ref="_mudThemeProvider" @bind-IsDarkMode="_isDarkMode" />
+                <MudSwitch @bind-Value="_isDarkMode" Color="Color.Primary" Class="ma-4" T="bool" Label="Toggle Light/Dark Mode" />
                 <LoginDisplay />
             </div>
         </div>
@@ -44,18 +45,28 @@
 </nav>
 
 @code {
-    private bool collapseNavMenu = true;
-    private string _theme;
 
+    private bool _isDarkMode;
+    private MudThemeProvider? _mudThemeProvider;
+
+    private bool collapseNavMenu = true;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            if(_mudThemeProvider is not null)
+            {     
+                _isDarkMode = await _mudThemeProvider.GetSystemDarkModeAsync();
+                StateHasChanged();
+            }
+        }
+        
+    }
     private string? NavMenuCssClass => collapseNavMenu ? "collapse" : null;
 
     private void ToggleNavMenu()
     {
         collapseNavMenu = !collapseNavMenu;
-    }
-
-    private void OnThemeChanged(string themeName)
-    {
-        _theme = themeName;
     }
 }

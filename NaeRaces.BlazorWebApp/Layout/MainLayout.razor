@@ -1,11 +1,106 @@
 ﻿@inherits LayoutComponentBase
 
+<MudPopoverProvider />
+<MudThemeProvider @ref="_mudThemeProvider" @bind-IsDarkMode="_isDarkMode" />
 <NavMenu />
+<MudLayout>
+    <MudAppBar>
+        <div>
+            @if (_isDarkMode)
+            {
+                <a class="navbar-brand" href=""> <img style="max-height:2.5em" src="img/NaeRaces - Dark.png" alt="NaeRaces" /> </a>
+            }
+            else
+            {
+                <a class="navbar-brand" href=""> <img style="max-height:2.5em" src="img/NaeRaces - Light.png" alt="NaeRaces" /> </a>
+            }
+        </div>
+        <div class="d-flex justify-space-between" style="width: 100%">
+            <div class="d-flex">
+                <MudNavLink Icon="@Icons.Material.Filled.People" Href="">Clubs</MudNavLink>
+                <MudNavLink Icon="@Icons.Material.Filled.Flag" Href="races">Races</MudNavLink>
+                <MudNavLink Icon="@Icons.Material.Filled.FlagCircle" Href="series">Series</MudNavLink>
+                <MudNavLink Icon="@Icons.Material.Filled.Person" Href="pilots">Pilots</MudNavLink>
+            </div>
+            <div class="d-flex">
+                <AuthorizeView>
+                    <Authorized>
+                        <MudNavLink Href="@($"/pilot/{context.User.Claims.First(x => x.Type == "sub").Value}/profile")">@context.User.Identity!.Name</MudNavLink>
+                        <MudNavLink Icon="@Icons.Material.Filled.Logout" OnClick="BeginSignOut"></MudNavLink>
+                    </Authorized>
+                    <NotAuthorized>
+                        <MudNavLink @onclick="NavigateToRegister">Register</MudNavLink>
+                        <MudNavLink @onclick="NavigateToLogin">Log in</MudNavLink>
+                    </NotAuthorized>
+                </AuthorizeView>
+            </div>
+        </div>
+    </MudAppBar>
+    
+    <MudMainContent>
+        @Body
+    </MudMainContent>
+</MudLayout>
 
-<div class="content-wrapper">
-    <main>
-        <article class="content py-4">
-            @Body
-        </article>
-    </main>
-</div>
+@code {
+
+    private bool _isDarkMode;
+    private MudThemeProvider? _mudThemeProvider;
+
+    private bool collapseNavMenu = true;
+
+    [Inject]
+    private NavigationManager Navigation { get; set; } = null!;
+    [Inject]
+    private IConfiguration Configuration { get; set; } = null!;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            if (_mudThemeProvider is not null)
+            {
+                _isDarkMode = await _mudThemeProvider.GetSystemDarkModeAsync();
+                StateHasChanged();
+            }
+        }
+
+    }
+    private string? NavMenuCssClass => collapseNavMenu ? "collapse" : null;
+
+    private void ToggleNavMenu()
+    {
+        collapseNavMenu = !collapseNavMenu;
+    }
+
+    private void NavigateToRegister()
+    {
+        var apiBase = Configuration["ApiSettings:BaseAddress"];
+
+        if (string.IsNullOrWhiteSpace(apiBase))
+        {
+            apiBase = Navigation.BaseUri;
+        }
+
+        var baseUri = apiBase.TrimEnd('/');
+        Navigation.NavigateTo($"{baseUri}/Identity/Account/Register?returnUrl={Navigation.BaseUri}", forceLoad: true);
+    }
+    private void NavigateToLogin()
+    {
+        var relativeReturnUrl = Navigation.ToBaseRelativePath(Navigation.Uri);
+        relativeReturnUrl = string.IsNullOrWhiteSpace(relativeReturnUrl)
+            ? "/"
+            : $"/{relativeReturnUrl}";
+
+        Navigation.NavigateToLogin("authentication/login", new InteractiveRequestOptions
+        {
+            Interaction = InteractionType.SignIn,
+            ReturnUrl = relativeReturnUrl
+        });
+    }
+
+    private void BeginSignOut(MouseEventArgs args)
+    {
+        Navigation.NavigateToLogout("authentication/logout");
+    }
+}
