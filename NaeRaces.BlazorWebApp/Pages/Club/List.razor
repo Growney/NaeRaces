@@ -8,7 +8,7 @@
 }
 else
 {
-    <MudSimpleTable>
+    <MudSimpleTable Hover="true">
         <thead>
             <tr>
                 <th>Code</th>
@@ -22,7 +22,7 @@ else
         <tbody>
             @foreach (var club in _clubs)
             {
-                <tr>
+                <tr @onclick="()=>NavigateToClub(club.ClubId)">
                     <td>@club.ClubCode</td>
                     <td>@club.ClubName</td>
                     <td>@club.Members</td>
@@ -91,5 +91,10 @@ else
                 club.IsFollowing = false;
             }
         }
+    }
+
+    private void NavigateToClub(Guid clubId)
+    {
+        Navigation.NavigateTo($"club/{clubId}");
     }
 }
