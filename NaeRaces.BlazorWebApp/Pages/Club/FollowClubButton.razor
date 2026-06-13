@@ -1,10 +1,10 @@
 ﻿@if (!_isFollowing)
 {
-    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="FollowClub">Follow</MudButton>
+    <MudIconButton Icon="@Icons.Material.Outlined.Notifications" Variant="FollowVariant" Color="FollowColor" OnClick="FollowClub"></MudIconButton>
 }
 else
 {
-    <MudButton Variant="Variant.Outlined" Color="Color.Secondary" OnClick="UnFollowClub">Unfollow</MudButton>
+    <MudIconButton Icon="@Icons.Material.Outlined.NotificationsOff" Variant="UnfollowVariant" Color="UnfollowColor" OnClick="UnFollowClub"></MudIconButton>
 }
 
 @code {
@@ -14,11 +14,18 @@ else
     [Parameter]
     [EditorRequired]
     public bool IsFollowing { get; set; }
+    [Parameter]
+    public Variant FollowVariant { get; set; } = Variant.Filled;
+    [Parameter]
+    public Color FollowColor { get; set; } = Color.Primary;
+    [Parameter]
+    public Variant UnfollowVariant { get; set; } = Variant.Outlined;
+    [Parameter]
+    public Color UnfollowColor { get; set; } = Color.Secondary;
 
     [Parameter]
     [SupplyParameterFromQuery(Name = "follow-clubId")]
     public Guid? FollowClubId { get; set; }
-
 
     [Inject]
     public AuthenticationStateProvider AuthenticationStateProvider { get; set; } = null!;

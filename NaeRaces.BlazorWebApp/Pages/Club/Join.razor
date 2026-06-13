@@ -1,0 +1,8 @@
+﻿@page "/club/{ClubId:guid}/join"
+@layout ClubLayout
+<h3>Join</h3>
+
+@code {
+    [Parameter]
+    public Guid ClubId { get; set; }
+}

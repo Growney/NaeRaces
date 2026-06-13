@@ -1,41 +1,38 @@
 ﻿@using NaeRaces.WebAPI.Shared.Club
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <div>
-        <h1 class="mb-0">@ClubName</h1>
-        @if (Overview != null)
-        {
-            <span class="text-muted">@Overview</span>
-        }
-    </div>
-    <div class="d-flex gap-2">
-        <a href=@($"club/{ClubId}/join") class="btn btn-outline-primary">Join</a>
-        @if (!_isFollowing)
-        {
-            <button class="btn btn-outline-primary" disabled="@_isTogglingFollow" @onclick="FollowClubAsync">
-                @if (_isTogglingFollow)
-                {
-                    <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
-                }
-                Follow
-            </button>
-        }
-        else
-        {
-            <button class="btn btn-outline-danger" disabled="@_isTogglingFollow" @onclick="UnfollowClubAsync">
-                @if (_isTogglingFollow)
-                {
-                    <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
-                }
-                Unfollow
-            </button>
-        }
-        <a href=@($"club/{ClubId}/news") class="btn btn-outline-secondary">News</a>
-        <a href=@($"club/{ClubId}/about") class="btn btn-outline-secondary">About</a>
-        <a href=@($"club/{ClubId}/contact") class="btn btn-outline-secondary">Contact</a>
-        <a href=@($"club/{ClubId}/members") class="btn btn-outline-secondary">Members</a>
-        <a href=@($"club/{ClubId}/events") class="btn btn-outline-secondary">Events</a>
-    </div>
-</div>
+<MudGrid Justify="Justify.SpaceBetween">
+    <MudItem xs="5">
+        <MudItem>
+            <MudText Typo="Typo.h3">@ClubName</MudText>
+        </MudItem>
+    </MudItem>
+    <MudItem xs="7">
+        <MudGrid Justify="Justify.FlexEnd" Class="mt-auto">
+            <MudItem>
+                <FollowClubButton FollowVariant="Variant.Text" UnfollowVariant="Variant.Text" IsFollowing="_isFollowing" ClubId="ClubId"></FollowClubButton>
+            </MudItem>
+            <MudItem>
+                <MudButton href=@($"club/{ClubId}/join") class="btn btn-outline-primary">Join</MudButton>
+            </MudItem>
+            <MudItem>
+                <MudButton href=@($"club/{ClubId}/news")>News</MudButton>
+            </MudItem>
+            <MudItem>
+                <MudButton href=@($"club/{ClubId}/about") class="btn btn-outline-secondary">About</MudButton>
+            </MudItem>
+            <MudItem>
+                <MudButton href=@($"club/{ClubId}/contact") class="btn btn-outline-secondary">Contact</MudButton>
+            </MudItem>
+            <MudItem>
+                <MudButton href=@($"club/{ClubId}/members") class="btn btn-outline-secondary">Members</MudButton>
+            </MudItem>
+            <MudItem>
+                <MudButton href=@($"club/{ClubId}/events") class="btn btn-outline-secondary">Events</MudButton>
+            </MudItem>
+        </MudGrid>
+    </MudItem>
+</MudGrid>
+
+
 @code {
 
     [Parameter]
@@ -49,7 +46,7 @@
     [Parameter]
     public bool IsFollowing { get; set; }
 
-    [CascadingParameter] 
+    [CascadingParameter]
     private Task<AuthenticationState> AuthenticationStateTask { get; set; } = default!;
 
     [Inject]
@@ -114,7 +111,7 @@
         }
         catch
         {
-            
+
         }
         finally
         {
