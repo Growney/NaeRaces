@@ -6,46 +6,24 @@
 
 <PageTitle>Create Club</PageTitle>
 
-<h1>Create Club</h1>
-<p class="text-muted">Enter the details for your new club. You will become the club administrator.</p>
+<MudForm @ref="_form" @bind-IsValid="@_success" @bind-Errors="@_errors" OnEnterPressed="@(() => _form.ValidateAsync())" >
+    <MudText Typo="Typo.h4">Create Club</MudText>
+    <MudText Typo="Typo.caption">Enter the details for your new club. You will become the club administrator.</MudText>
 
-<div class="row">
-    <div class="col-md-6">
-        <EditForm Model="request" OnValidSubmit="CreateAsync">
-            <DataAnnotationsValidator />
-            <ValidationSummary class="text-danger" />
+    <MudTextField @bind-Value="request.Code" Required=true Label="Code" HelperText="A short unique identifier for the club." RequiredError="Code is required"></MudTextField>
+    <MudTextField @bind-Value="request.Name" Required=true Label="Name" HelperText="e.g. NAE FPV Club" RequiredError="Name is required"></MudTextField>
 
-            <div class="mb-3">
-                <label for="code" class="form-label">Club Code <span class="text-danger">*</span></label>
-                <InputText id="code" @bind-Value="request.Code" class="form-control" placeholder="e.g. NAER" />
-                <div class="form-text">A short unique identifier for the club.</div>
-            </div>
-
-            <div class="mb-3">
-                <label for="name" class="form-label">Club Name <span class="text-danger">*</span></label>
-                <InputText id="name" @bind-Value="request.Name" class="form-control" placeholder="e.g. National Aerobatic Race Club" />
-            </div>
-
-            @if (!string.IsNullOrEmpty(errorMessage))
-            {
-                <div class="alert alert-danger">@errorMessage</div>
-            }
-
-            <div class="d-flex gap-2">
-                <button type="submit" class="btn btn-primary" disabled="@isSubmitting">
-                    @if (isSubmitting)
-                    {
-                        <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
-                    }
-                    Create Club
-                </button>
-                <a href="/" class="btn btn-secondary">Cancel</a>
-            </div>
-        </EditForm>
+    <div class="d-flex flex-row-reverse gap-2">
+        <MudButton Variant="Variant.Outlined" Color="Color.Primary" Href="/">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="()=> CreateAsync()">Create Club</MudButton>
     </div>
-</div>
+</MudForm>
 
 @code {
+    private MudForm? _form;
+    private bool _success;
+    private string[] _errors = [];
+
     private readonly CreateClubRequest request = new();
     private bool isSubmitting;
     private string? errorMessage;
@@ -57,6 +35,17 @@
 
     private async Task CreateAsync()
     {
+        if(_form is null)
+        {
+            return;
+        }
+
+        await _form.ValidateAsync();
+        if (!_form.IsValid)
+        {
+            return;
+        }
+
         isSubmitting = true;
         errorMessage = null;
 
