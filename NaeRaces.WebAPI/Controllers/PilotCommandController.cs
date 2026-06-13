@@ -8,6 +8,7 @@ using NaeRaces.Query.Abstractions;
 using NaeRaces.WebAPI.Shared.Pilot;
 using OpenIddict.Abstractions;
 using System.ComponentModel.DataAnnotations;
+using System.Net;
 using System.Runtime.CompilerServices;
 using System.Security.Claims;
 
@@ -301,9 +302,14 @@ public class PilotCommandController : Controller
 
         pilot.FollowClub(clubId);
 
-        await _aggregateRepository.Save(pilot);
-
-        return Ok();
+        if(await _aggregateRepository.Save(pilot) > 0)
+        {
+            return Ok();
+        }
+        else
+        {
+            return StatusCode((int)HttpStatusCode.NotModified);
+        }
     }
 
     [HttpDelete("api/pilot/follow/{clubId}")]
@@ -323,8 +329,13 @@ public class PilotCommandController : Controller
 
         pilot.UnfollowClub(clubId);
 
-        await _aggregateRepository.Save(pilot);
-
-        return Ok();
+        if (await _aggregateRepository.Save(pilot) > 0)
+        {
+            return Ok();
+        }
+        else
+        {
+            return StatusCode((int)HttpStatusCode.NotModified);
+        }
     }
 }

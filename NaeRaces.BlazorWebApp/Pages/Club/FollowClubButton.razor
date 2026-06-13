@@ -1,0 +1,83 @@
+﻿@if (!_isFollowing)
+{
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="FollowClub">Follow</MudButton>
+}
+else
+{
+    <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="UnFollowClub">Unfollow</MudButton>
+}
+
+@code {
+    [Parameter]
+    [EditorRequired]
+    public Guid ClubId { get; set; }
+    [Parameter]
+    [EditorRequired]
+    public bool IsFollowing { get; set; }
+
+    [Parameter]
+    [SupplyParameterFromQuery(Name = "follow-clubId")]
+    public Guid? FollowClubId { get; set; }
+
+
+    [Inject]
+    public AuthenticationStateProvider AuthenticationStateProvider { get; set; } = null!;
+    [Inject]
+    public NavigationManager NavigationManager { get; set; } = null!;
+    [Inject]
+    public HttpClient Http { get; set; } = null!;
+
+    private bool _isFollowing;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _isFollowing = IsFollowing;
+
+        Console.WriteLine($"Follow Club: {FollowClubId}");
+
+        if (FollowClubId.HasValue && ClubId == FollowClubId)
+        {
+            await SendFollowClub(FollowClubId.Value);
+        }      
+
+        await base.OnParametersSetAsync();
+    }
+
+    private async Task FollowClub()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+
+        if (!authState.User?.Identity?.IsAuthenticated ?? false)
+        {
+            string afterLoginReturn = $"{NavigationManager.BaseUri}?follow-clubId={ClubId}";
+            NavigationManager.NavigateToLogin("authentication/login", new InteractiveRequestOptions
+            {
+                Interaction = InteractionType.SignIn,
+                ReturnUrl = afterLoginReturn
+            });
+
+            return;
+        }
+
+        await SendFollowClub(ClubId);
+    }
+
+    private async Task SendFollowClub(Guid clubId)
+    {
+        var response = await Http.PostAsync($"api/pilot/follow/{clubId}", null);
+
+        if (response.StatusCode == System.Net.HttpStatusCode.OK)
+        {
+            _isFollowing = true;
+        }
+    }
+
+    private async Task UnFollowClub()
+    {
+        var response = await Http.DeleteAsync($"api/pilot/follow/{ClubId}");
+        if (response.StatusCode == System.Net.HttpStatusCode.OK)
+        {
+            _isFollowing = false;
+        }
+    }
+}

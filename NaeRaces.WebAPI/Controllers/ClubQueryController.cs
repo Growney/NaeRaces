@@ -88,6 +88,39 @@ public class ClubQueryController : Controller
         return Ok(isFollowing);
     }
 
+    [HttpGet("api/club/query/all-with-membership")]
+    public async Task<IActionResult> GetAllClubsWithMembershipInfoAsync()
+    {
+        var pilotIdClaim = User.FindFirst(OpenIddictConstants.Claims.Subject)?.Value;
+
+        IEnumerable<PilotRelevantClubsProjection.PilotRelevantClub> clubsRelevantToCurrentUser = Enumerable.Empty<PilotRelevantClubsProjection.PilotRelevantClub>();
+        if (Guid.TryParse(pilotIdClaim, out Guid pilotId))
+        {
+            var relevantClubProjection = await _projectionProvider.CloneAsync<PilotRelevantClubsProjection>();
+
+            clubsRelevantToCurrentUser = relevantClubProjection.Object.GetRelevantClubs(pilotId);
+        }
+
+        var memberPopularityProjection = await _projectionProvider.CloneAsync<ClubMemberPopularity>();
+
+        var clubPopularity = memberPopularityProjection.Object.GetAll();
+
+        var responses = clubPopularity.Select(x => new ClubWithMembershipResponse
+        {
+            ClubId = x.ClubId,
+            ClubCode = x.ClubCode,
+            ClubName = x.ClubName,
+            MembershipLevelName = clubsRelevantToCurrentUser.FirstOrDefault(clubMembership => x.ClubId == clubMembership.ClubId)?.Relationship?.Membership?.MembershipName,
+            MembershipExpiry = clubsRelevantToCurrentUser.FirstOrDefault(clubMembership => x.ClubId == clubMembership.ClubId)?.Relationship?.Membership?.Expiry,
+            IsMembershipConfirmed = clubsRelevantToCurrentUser.FirstOrDefault(clubMembership => x.ClubId == clubMembership.ClubId)?.Relationship?.Membership?.IsConfirmed,
+            IsFollowing = clubsRelevantToCurrentUser.FirstOrDefault(clubMembership => x.ClubId == clubMembership.ClubId)?.Relationship?.IsFollowing ?? false,
+            Members = x.Members,
+            Followers = x.Followers
+        });
+
+        return Ok(responses);
+    }
+
     [HttpGet("api/club/query/top/{count:int}")]
     public async Task<IActionResult> GetTopClubsByMemberCountAsync([FromRoute] int count)
     {

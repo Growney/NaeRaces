@@ -1,9 +1,10 @@
 ﻿@inherits LayoutComponentBase
 
-<MudPopoverProvider />
-<MudThemeProvider @ref="_mudThemeProvider" @bind-IsDarkMode="_isDarkMode" />
+
 <NavMenu />
-<MudLayout>
+<MudLayout >
+    <MudPopoverProvider />
+    <MudThemeProvider Theme="_theme" @ref="_mudThemeProvider" @bind-IsDarkMode="_isDarkMode" />
     <MudAppBar>
         <div>
             @if (_isDarkMode)
@@ -38,7 +39,9 @@
     </MudAppBar>
     
     <MudMainContent>
-        @Body
+        <MudContainer MaxWidth="MaxWidth.Large">
+            @Body
+        </MudContainer>
     </MudMainContent>
 </MudLayout>
 
@@ -46,6 +49,17 @@
 
     private bool _isDarkMode;
     private MudThemeProvider? _mudThemeProvider;
+    private MudTheme _theme = new()
+        {
+            PaletteDark = new PaletteDark()
+            {
+                Primary = Colors.DeepOrange.Darken2
+            },
+            PaletteLight = new PaletteLight()
+            {
+            Primary = Colors.DeepOrange.Darken2
+            }
+        };
 
     private bool collapseNavMenu = true;
 
