@@ -12,6 +12,7 @@ public static class IServiceCollectionExtensions
     {
         services.AddTrackedAllStreamProjection<PilotRelevantClubsProjection>();
         services.AddTrackedAllStreamProjection<ClubMemberPopularity>();
+        services.AddTrackedAllStreamProjection<ClubDescription>();
 
         return services;
     }

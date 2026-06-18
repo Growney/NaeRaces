@@ -47,6 +47,7 @@ public class ClubQueryController : Controller
         _projectionProvider = projectionProvider ?? throw new ArgumentNullException(nameof(projectionProvider));
     }
 
+
     [Authorize]
     [HttpGet("api/club/query/my-clubs")]
     public async Task<IActionResult> GetMyClubsAsync()
@@ -72,6 +73,19 @@ public class ClubQueryController : Controller
         });
 
         return Ok(responses);
+    }
+
+    [HttpGet("api/club/{clubId:guid}/query/description")]
+    public async Task<IActionResult> GetClubDescriptionAsync([FromRoute] Guid clubId)
+    {
+        var projection = await _projectionProvider.CloneAsync<ClubDescription>();
+
+        string? description = projection.Object.GetClubDescription(clubId);
+
+        return Ok(new ClubDescriptionResponse()
+        {
+            Description = description
+        });
     }
 
     [Authorize]
@@ -279,7 +293,6 @@ public class ClubQueryController : Controller
         }
         return Ok(results);
     }
-
     [HttpGet("api/club/{clubId:guid}/query/contactdetails")]
     public async Task<IActionResult> GetClubContactDetailsAsync([FromRoute] Guid clubId)
     {
@@ -294,9 +307,7 @@ public class ClubQueryController : Controller
         });
     }
 
-    [Authorize]
-    [HttpGet("api/club/{clubId:guid}/query/is-admin")]
-    public async Task<IActionResult> IsCurrentUserAdminAsync([FromRoute] Guid clubId)
+    private async Task<IActionResult> CheckForRolesAsync(Guid clubId, params IEnumerable<string> roles)
     {
         var pilotIdClaim = User.FindFirst(OpenIddictConstants.Claims.Subject)?.Value;
         if (!Guid.TryParse(pilotIdClaim, out Guid pilotId))
@@ -304,9 +315,25 @@ public class ClubQueryController : Controller
             return Unauthorized();
         }
 
-        var isAdmin = await _clubMemberQueryHandler.HasClubMemberRole(clubId, pilotId, nameof(Command.ValueTypes.ClubMemberRole.Administrator));
-        return Ok(isAdmin);
+        var canEditAbout = await _clubMemberQueryHandler.HasClubMemberRole(clubId, pilotId, roles);
+
+        if (!canEditAbout)
+        {
+            return Unauthorized();
+        }
+
+        return Ok(canEditAbout);
     }
+
+    [Authorize]
+    [HttpGet("api/club/{clubId:guid}/query/can-edit-about")]
+    public Task<IActionResult> CanCurrentUserEditAboutAsync([FromRoute] Guid clubId) => CheckForRolesAsync(clubId, Command.ValueTypes.ClubMemberRole.Trustee, Command.ValueTypes.ClubMemberRole.Administrator);
+    [Authorize]
+    [HttpGet("api/club/{clubId:guid}/query/can-manage-races")]
+    public Task<IActionResult> CanCurrentManageRacesAsync([FromRoute] Guid clubId) => CheckForRolesAsync(clubId, Command.ValueTypes.ClubMemberRole.Trustee, Command.ValueTypes.ClubMemberRole.Administrator, Command.ValueTypes.ClubMemberRole.RaceOrganiser);
+    [Authorize]
+    [HttpGet("api/club/{clubId:guid}/query/is-admin")]
+    public Task<IActionResult> IsCurrentUserAdminAsync([FromRoute] Guid clubId) => CheckForRolesAsync(clubId, Command.ValueTypes.ClubMemberRole.Administrator);
 
     [Authorize]
     [HttpGet("api/club/{clubId:guid}/query/is-member")]

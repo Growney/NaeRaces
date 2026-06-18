@@ -5,6 +5,6 @@ namespace NaeRaces.WebAPI.Shared.Club;
 public class UpdateClubDescriptionRequest
 {
     [Required]
-    [MaxLength(500)]
+    [MaxLength(2000)]
     public string Description { get; set; } = string.Empty;
 }

@@ -1,8 +1,119 @@
 ﻿@page "/club/{ClubId:guid}/about"
+@using NaeRaces.WebAPI.Shared.Club;
 @layout ClubLayout
-<h3>About</h3>
+
+<MudGrid>
+    @if (_canEdit)
+    {
+        <MudItem xs="12" Class="d-flex justify-end gap-2">
+            @if (_isEditing)
+            {
+                @if (_isFullScreen)
+                {
+                    <MudButton Variant="Variant.Outlined" Color="Color.Surface" OnClick="() => _isFullScreen = false">Edit</MudButton>
+                }
+                else
+                {
+                    <MudButton Variant="Variant.Text" Color="Color.Surface" OnClick="() => _isFullScreen = true">Preview</MudButton>
+                }
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="() => SaveDescriptionAsync()">Save</MudButton>
+                <MudButton Variant="Variant.Filled" Color="Color.Secondary" OnClick="() => _isEditing = false">Cancel</MudButton>
+            }
+            else
+            {
+                <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.EditNote" Color="Color.Secondary" OnClick="() => _isEditing = true">Edit</MudButton>
+            }
+            
+        </MudItem>
+    }
+    @if (ShowEdit)
+    {
+        <MudItem xs="12" sm="6">
+            <MudTextField Immediate="true" MaxLength="2000" Variant="Variant.Filled" Sizing="InputSizing.Auto" @bind-Value="_description" Lines="20" Placeholder="About"></MudTextField>
+        </MudItem>
+    }
+    <MudItem xs="12" sm="@(ShowEdit ? 6 : 12)">
+        @if (_description is null)
+        {
+            <MudText Typo="Typo.h5" Align="Align.Center" Class="w-100">
+                Loading
+            </MudText>
+        }
+        else if(_description == string.Empty)
+        {
+            <MudText Typo="Typo.h5" Align="Align.Center" Class="w-100">
+                This club has not yet started its description journey!
+            </MudText>
+            <MudText Typo="Typo.body1" Align="Align.Center" Class="w-100">
+                <MudLink Class="w-100" Href="@($"/club/{ClubId}/news")">Check out their news instead.</MudLink>
+            </MudText>
+        }
+        else
+        {
+            @(Services.MarkdownHelper.ToHtml(_description))
+        }
+    </MudItem>
+</MudGrid>
 
 @code {
     [Parameter]
     public Guid ClubId { get; set; }
+
+    [Inject]
+    public HttpClient Http { get; set; } = null!;
+
+    private bool ShowEdit => _isEditing && !_isFullScreen;
+
+    [System.Diagnostics.CodeAnalysis.MemberNotNullWhen(true, nameof(_description))]
+    private bool _hasDescription => !string.IsNullOrWhiteSpace(_description);
+    private string? _description;
+    private string _test = string.Empty;
+
+    private bool _canEdit = false;
+    private bool _isEditing = false;
+    private bool _isFullScreen = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        HttpResponseMessage descriptionResponseMessage = await Http.GetAsync($"api/club/{ClubId}/query/description");
+
+        if (descriptionResponseMessage.IsSuccessStatusCode)
+        {
+            ClubDescriptionResponse? descriptionResponse = await descriptionResponseMessage.Content.ReadFromJsonAsync<ClubDescriptionResponse>();
+
+            _description = descriptionResponse?.Description;
+        }
+
+        HttpResponseMessage canEditResponse = await Http.GetAsync($"api/club/{ClubId}/query/can-edit-about");
+
+        Console.WriteLine(canEditResponse.StatusCode);
+
+        _canEdit = canEditResponse.StatusCode == System.Net.HttpStatusCode.OK;
+
+        await base.OnInitializedAsync();
+    }
+
+    private async Task SaveDescriptionAsync()
+    {
+        try
+        {
+            UpdateClubDescriptionRequest request = new()
+            {
+                Description = _description ?? string.Empty
+            };
+
+            var response = await Http.PutAsJsonAsync($"api/club/{ClubId}/description", request);
+
+            if (response.IsSuccessStatusCode)
+            {
+                _isEditing = false;
+            }
+        }
+        catch
+        {
+        }
+        finally
+        {
+        }
+    }
 }

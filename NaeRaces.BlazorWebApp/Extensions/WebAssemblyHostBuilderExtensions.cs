@@ -27,6 +27,13 @@ static class WebAssemblyHostBuilderExtensions
                 Console.WriteLine(apiBaseAddress);
                 client.BaseAddress = new Uri(apiBaseAddress);
             })
+            .ConfigurePrimaryHttpMessageHandler(() =>
+            {
+                return new HttpClientHandler()
+                {
+                    AllowAutoRedirect = false
+                };
+            })
             .AddHttpMessageHandler<ApiAuthorizationMessageHandler>();
 
         builder.Services.AddHttpClient("NaeRaces.ServerAPI.Health")

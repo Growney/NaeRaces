@@ -15,7 +15,10 @@
              ClubName="@(_clubOverview?.Name ?? "Club")"
              Overview="@_clubOverview?.Code"
              IsFollowing="_isFollowing" />
+
+    <PageTitle>@_clubOverview?.Name</PageTitle>
 }
+
 
 <MudContainer Class="mt-5">
     @Body
