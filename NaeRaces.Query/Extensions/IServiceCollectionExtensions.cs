@@ -10,7 +10,7 @@ public static class IServiceCollectionExtensions
 {
     public static IServiceCollection AddNaeRacesTrackedProjections(this IServiceCollection services)
     {
-        services.AddTrackedAllStreamProjection<PilotRelevantClubsProjection>();
+        services.AddTrackedAllStreamProjection<PilotRelevantClubs>();
         services.AddTrackedAllStreamProjection<ClubMemberPopularity>();
         services.AddTrackedAllStreamProjection<ClubDescription>();
         services.AddTrackedAllStreamProjection<ClubMember>();

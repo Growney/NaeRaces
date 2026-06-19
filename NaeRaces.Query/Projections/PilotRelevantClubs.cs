@@ -7,7 +7,7 @@ using System.Threading.Channels;
 
 namespace NaeRaces.Query.Projections;
 
-public class PilotRelevantClubsProjection
+public class PilotRelevantClubs
 {
     public record PilotRelevantClub(Guid PilotId, Guid ClubId, string ClubCode, string ClubName, PilotClubRelationship Relationship);
     public record PilotClubRelationship(PilotClubMembership? Membership, bool IsFollowing, IEnumerable<string> Roles);
