@@ -408,6 +408,39 @@ public class ClubQueryController : Controller
         return Ok(results);
     }
 
+    [HttpGet("api/club/{clubId:guid}/query/members/details")]
+    public async Task<IActionResult> GetClubMemberDetailsAsync([FromRoute] Guid clubId)
+    {
+        var pilotIdClaim = User.FindFirst(OpenIddictConstants.Claims.Subject)?.Value;
+        bool isAdminOrTrustee = false;
+        if (!Guid.TryParse(pilotIdClaim, out Guid pilotId))
+        {
+            isAdminOrTrustee = await _clubMemberQueryHandler.HasClubMemberRole(clubId, pilotId,
+                nameof(Command.ValueTypes.ClubMemberRole.Administrator),
+                nameof(Command.ValueTypes.ClubMemberRole.Trustee));
+        }
+
+        var projection = await _projectionProvider.CloneAsync<NaeRaces.Query.Projections.ClubMember>();
+        var members = projection.Object.GetClubMembers(clubId);
+
+        var results = members.Select(member => new ClubMemberDetailResponse
+        {
+            PilotId = member.PilotId,
+            CallSign = member.CallSign,
+            Name = member.Name,
+            Nationality = member.Nationality,
+            Email = isAdminOrTrustee ? member.Email : null,
+            DateOfBirth = isAdminOrTrustee ? member.DateOfBirth : null,
+            MembershipLevelId = isAdminOrTrustee ? member.MembershipLevelId : null,
+            MembershipLevelName = isAdminOrTrustee ? member.MembershipLevelName : null,
+            PaymentOptionId = isAdminOrTrustee ? member.PaymentOptionId : null,
+            PaymentOptionName = isAdminOrTrustee ? member.PaymentOptionName : null,
+            ValidUntil = isAdminOrTrustee ? member.ValidUntil : null,
+        }).ToList();
+
+        return Ok(results);
+    }
+
     [Authorize]
     [HttpGet("api/club/query/my-organiser-clubs")]
     public async Task<IActionResult> GetMyOrganiserClubsAsync()
