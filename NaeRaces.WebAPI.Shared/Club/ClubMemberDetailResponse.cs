@@ -13,4 +13,5 @@ public class ClubMemberDetailResponse
     public int? PaymentOptionId { get; set; }
     public string? PaymentOptionName { get; set; }
     public DateTime? ValidUntil { get; set; }
+    public IEnumerable<string> Roles { get; set; } = Enumerable.Empty<string>();
 }

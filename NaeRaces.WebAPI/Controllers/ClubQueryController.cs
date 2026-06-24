@@ -57,7 +57,7 @@ public class ClubQueryController : Controller
         {
             return Unauthorized();
         }
-        var projection = await _projectionProvider.CloneAsync<PilotRelevantClubsProjection>();
+        var projection = await _projectionProvider.CloneAsync<PilotRelevantClubs>();
 
         var relevantClubs = projection.Object.GetRelevantClubs(pilotId);
 
@@ -107,10 +107,10 @@ public class ClubQueryController : Controller
     {
         var pilotIdClaim = User.FindFirst(OpenIddictConstants.Claims.Subject)?.Value;
 
-        IEnumerable<PilotRelevantClubsProjection.PilotRelevantClub> clubsRelevantToCurrentUser = Enumerable.Empty<PilotRelevantClubsProjection.PilotRelevantClub>();
+        IEnumerable<PilotRelevantClubs.PilotRelevantClub> clubsRelevantToCurrentUser = Enumerable.Empty<PilotRelevantClubs.PilotRelevantClub>();
         if (Guid.TryParse(pilotIdClaim, out Guid pilotId))
         {
-            var relevantClubProjection = await _projectionProvider.CloneAsync<PilotRelevantClubsProjection>();
+            var relevantClubProjection = await _projectionProvider.CloneAsync<PilotRelevantClubs>();
 
             clubsRelevantToCurrentUser = relevantClubProjection.Object.GetRelevantClubs(pilotId);
         }
@@ -436,6 +436,7 @@ public class ClubQueryController : Controller
             PaymentOptionId = isAdminOrTrustee ? member.PaymentOptionId : null,
             PaymentOptionName = isAdminOrTrustee ? member.PaymentOptionName : null,
             ValidUntil = isAdminOrTrustee ? member.ValidUntil : null,
+            Roles = member.Roles
         }).ToList();
 
         return Ok(results);

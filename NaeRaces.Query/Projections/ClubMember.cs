@@ -8,18 +8,20 @@ namespace NaeRaces.Query.Projections;
 
 public class ClubMember
 {
-    public record ClubMemberResult(Guid PilotId, string CallSign, string Name, string Email, string Nationality, DateTime? DateOfBirth, int MembershipLevelId, string MembershipLevelName, int PaymentOptionId, string PaymentOptionName, DateTime ValidUntil);
+    public record ClubMemberResult(Guid PilotId, string CallSign, string Name, string Email, string Nationality, DateTime? DateOfBirth, int? MembershipLevelId, string? MembershipLevelName, int? PaymentOptionId, string? PaymentOptionName, DateTime? ValidUntil, IEnumerable<string> Roles);
 
     private class ClubMemberProjectionSnapshot
     {
         public record PilotInfo(Guid PilotId, string CallSign, string Name, string Email, string Nationality, DateTime? DateOfBirth);
-        public record PilotMembership(Guid PilotId, Guid ClubId, int MembershipLevelId, int PaymentOptionId, DateTime ValidUntil);
+        public record PilotMembership(Guid PilotId, Guid ClubId, int? MembershipLevelId, int? PaymentOptionId, DateTime? ValidUntil);
+        public record PilotRole(Guid PilotId, Guid ClubId, IEnumerable<string> Roles);
         public record ClubInfo(Guid ClubId, List<MembershipLevel> MembershipLevels);
         public record MembershipLevel(int Id, string Name, List<PaymentOption> PaymentOptions);
         public record PaymentOption(int Id, string Name);
 
         public IEnumerable<PilotInfo> Pilots { get; set; } = Enumerable.Empty<PilotInfo>();
         public IEnumerable<PilotMembership> Memberships { get; set; } = Enumerable.Empty<PilotMembership>();
+        public IEnumerable<PilotRole> Roles { get; set; } = Enumerable.Empty<PilotRole>();
         public IEnumerable<ClubInfo> Clubs { get; set; } = Enumerable.Empty<ClubInfo>();
     }
 
@@ -39,6 +41,17 @@ public class ClubMember
             }
 
             clubMemberships[membership.PilotId] = new MembershipInfo(membership.MembershipLevelId, membership.PaymentOptionId, membership.ValidUntil);
+        }
+
+        foreach (var role in snapshot.Roles)
+        {
+            if (!_clubRoles.TryGetValue(role.ClubId, out var clubRoles))
+            {
+                clubRoles = new Dictionary<Guid, HashSet<string>>();
+                _clubRoles[role.ClubId] = clubRoles;
+            }
+
+            clubRoles[role.PilotId] = new HashSet<string>(role.Roles);
         }
 
         foreach (var club in snapshot.Clubs)
@@ -80,6 +93,16 @@ public class ClubMember
             }
         }
 
+        List<ClubMemberProjectionSnapshot.PilotRole> roles = new();
+
+        foreach (var clubKvp in _clubRoles)
+        {
+            foreach (var pilotKvp in clubKvp.Value)
+            {
+                roles.Add(new ClubMemberProjectionSnapshot.PilotRole(pilotKvp.Key, clubKvp.Key, pilotKvp.Value));
+            }
+        }
+
         List<ClubMemberProjectionSnapshot.ClubInfo> clubs = new();
 
         foreach (var clubKvp in _clubInfo)
@@ -105,48 +128,100 @@ public class ClubMember
         {
             Pilots = pilots,
             Memberships = memberships,
+            Roles = roles,
             Clubs = clubs
         };
     }
 
     private record PilotDetails(string CallSign, string Name, string Email, string Nationality, DateTime? DateOfBirth);
-    private record MembershipInfo(int MembershipLevelId, int PaymentOptionId, DateTime ValidUntil);
+    private record MembershipInfo(int? MembershipLevelId, int? PaymentOptionId, DateTime? ValidUntil);
     private record ClubDetails(List<MembershipLevelDetails> MembershipLevels);
     private record MembershipLevelDetails(int Id, string Name, List<PaymentOptionDetails> PaymentOptions);
     private record PaymentOptionDetails(int Id, string Name);
 
     private Dictionary<Guid, PilotDetails> _pilots = new();
     private Dictionary<Guid, Dictionary<Guid, MembershipInfo>> _memberships = new();
+    private Dictionary<Guid, Dictionary<Guid, HashSet<string>>> _clubRoles = new();
     private Dictionary<Guid, ClubDetails> _clubInfo = new();
 
     public IEnumerable<ClubMemberResult> GetClubMembers(Guid clubId)
     {
-        if (!_memberships.TryGetValue(clubId, out var clubMemberships))
-        {
-            return Enumerable.Empty<ClubMemberResult>();
-        }
-
         if (!_clubInfo.TryGetValue(clubId, out var clubInfo))
         {
             return Enumerable.Empty<ClubMemberResult>();
         }
 
+        _memberships.TryGetValue(clubId, out var clubMemberships);
+        _clubRoles.TryGetValue(clubId, out var clubRoles);
+
+        HashSet<Guid> pilotIds = new();
+
+        if (clubMemberships is not null)
+        {
+            foreach (var pilotId in clubMemberships.Keys)
+            {
+                pilotIds.Add(pilotId);
+            }
+        }
+
+        if (clubRoles is not null)
+        {
+            foreach (var roleKvp in clubRoles)
+            {
+                if (roleKvp.Value.Count > 0)
+                {
+                    pilotIds.Add(roleKvp.Key);
+                }
+            }
+        }
+
         List<ClubMemberResult> results = new();
 
-        foreach (var memberKvp in clubMemberships)
+        foreach (var pilotId in pilotIds)
         {
-            if (!_pilots.TryGetValue(memberKvp.Key, out var pilot))
+            if (!_pilots.TryGetValue(pilotId, out var pilot))
             {
                 continue;
             }
 
-            MembershipLevelDetails? level = clubInfo.MembershipLevels.FirstOrDefault(x => x.Id == memberKvp.Value.MembershipLevelId);
-            PaymentOptionDetails? option = level?.PaymentOptions.FirstOrDefault(x => x.Id == memberKvp.Value.PaymentOptionId);
+            MembershipInfo? membership = null;
+            if (clubMemberships is not null && clubMemberships.TryGetValue(pilotId, out var membershipInfo))
+            {
+                membership = membershipInfo;
+            }
 
-            string membershipLevelName = level?.Name ?? string.Empty;
-            string paymentOptionName = option?.Name ?? string.Empty;
+            MembershipLevelDetails? level = null;
+            PaymentOptionDetails? option = null;
+            IEnumerable<string> roles = [];
 
-            results.Add(new ClubMemberResult(memberKvp.Key, pilot.CallSign, pilot.Name, pilot.Email, pilot.Nationality, pilot.DateOfBirth, memberKvp.Value.MembershipLevelId, membershipLevelName, memberKvp.Value.PaymentOptionId, paymentOptionName, memberKvp.Value.ValidUntil));
+            if (clubRoles is not null && clubRoles.TryGetValue(pilotId, out var pilotRoles))
+            {
+                roles = pilotRoles;
+            }
+
+            if (membership?.MembershipLevelId is int membershipLevelId)
+            {
+                level = clubInfo.MembershipLevels.FirstOrDefault(x => x.Id == membershipLevelId);
+
+                if (membership.PaymentOptionId is int paymentOptionId)
+                {
+                    option = level?.PaymentOptions.FirstOrDefault(x => x.Id == paymentOptionId);
+                }
+            }
+
+            results.Add(new ClubMemberResult(
+                pilotId,
+                pilot.CallSign,
+                pilot.Name,
+                pilot.Email,
+                pilot.Nationality,
+                pilot.DateOfBirth,
+                membership?.MembershipLevelId,
+                level?.Name,
+                membership?.PaymentOptionId,
+                option?.Name,
+                membership?.ValidUntil,
+                roles));
         }
 
         return results;
@@ -298,10 +373,47 @@ public class ClubMember
         level.PaymentOptions[optionIndex] = level.PaymentOptions[optionIndex] with { Name = renamedOption.NewName };
     }
 
+    private void When(ClubMemberRoleAssigned assigned)
+    {
+        if (!_clubRoles.TryGetValue(assigned.ClubId, out var clubRoles))
+        {
+            clubRoles = new Dictionary<Guid, HashSet<string>>();
+            _clubRoles[assigned.ClubId] = clubRoles;
+        }
+
+        if (!clubRoles.TryGetValue(assigned.PilotId, out var roles))
+        {
+            roles = new HashSet<string>();
+            clubRoles[assigned.PilotId] = roles;
+        }
+
+        roles.Add(assigned.Role);
+    }
+
+    private void When(ClubMemberRoleRevoked revoked)
+    {
+        if (!_clubRoles.TryGetValue(revoked.ClubId, out var clubRoles))
+        {
+            return;
+        }
+
+        if (!clubRoles.TryGetValue(revoked.PilotId, out var roles))
+        {
+            return;
+        }
+
+        roles.Remove(revoked.Role);
+
+        if (roles.Count == 0)
+        {
+            clubRoles.Remove(revoked.PilotId);
+        }
+    }
+
     private void When(PilotClubMembershipConfirmed confirmed) => ConfirmMembership(confirmed.PilotId, confirmed.ClubId, confirmed.MembershipLevelId, confirmed.PaymentOptionId, confirmed.ValidUntil);
     private void When(PilotClubMembershipManuallyConfirmed confirmed) => ConfirmMembership(confirmed.PilotId, confirmed.ClubId, confirmed.MembershipLevelId, confirmed.PaymentOptionId, confirmed.ValidUntil);
 
-    private void ConfirmMembership(Guid pilotId, Guid clubId, int membershipLevelId, int paymentOptionId, DateTime validUntil)
+    private void ConfirmMembership(Guid pilotId, Guid clubId, int membershipLevelId, int paymentOptionId, DateTime? validUntil)
     {
         if (!_memberships.TryGetValue(clubId, out var clubMemberships))
         {
