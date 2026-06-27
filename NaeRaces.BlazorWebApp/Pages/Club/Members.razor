@@ -8,40 +8,44 @@
 }
 else
 {
-    <div class="row">
-        <div class="col-md-6">
-            <h3>Leadership</h3>
-            @if (_membersWithRoles.Any())
+    <MudText Typo="Typo.h4">Leadership</MudText>
+    @if (_membersWithRoles.Any())
+    {
+        <MudGrid>
+            @foreach (var member in _membersWithRoles)
             {
-                <ul>
-                    @foreach (var member in _membersWithRoles)
-                    {
-                        <li>@member.Name (@string.Join(", ", member.Roles))</li>
-                    }
-                </ul>
+                <MudItem xs="12" md="6" lg="4">
+                    <ClubMemberCard PilotId="@member.PilotId" CallSign="@member.CallSign" Name="@member.Name" Nationality="@member.Nationality"
+                                    Email="@member.Email" DateOfBirth="@member.DateOfBirth" MembershipLevelId="@member.MembershipLevelId" MembershipLevelName="@member.MembershipLevelName"
+                                    PaymentOptionId="@member.PaymentOptionId" PaymentOptionName="@member.PaymentOptionName" ValidUntil="@member.ValidUntil" MemberSince="@member.MemberSince"
+                                    Roles="@member.Roles"></ClubMemberCard>
+                </MudItem>
             }
-            else
+        </MudGrid>
+    }
+    else
+    {
+        <p>Club has no leadership</p>
+    }
+    <MudText Typo="Typo.h4">Members</MudText>
+    @if (_membersWithoutRoles.Any())
+    {
+        <MudGrid>
+            @foreach(var member in _membersWithoutRoles)
             {
-                <p>No members with roles found.</p>
+                <MudItem>
+                    <ClubMemberCard PilotId="@member.PilotId" CallSign="@member.CallSign" Name="@member.Name" Nationality="@member.Nationality" 
+                    Email="@member.Email" DateOfBirth="@member.DateOfBirth" MembershipLevelId="@member.MembershipLevelId" MembershipLevelName="@member.MembershipLevelName"
+                    PaymentOptionId="@member.PaymentOptionId" PaymentOptionName="@member.PaymentOptionName" ValidUntil="@member.ValidUntil" MemberSince="@member.MemberSince"
+                    Roles="@member.Roles"></ClubMemberCard>
+                </MudItem>
             }
-        </div>
-        <div class="col-md-6">
-            <h3>Members</h3>
-            @if (_membersWithoutRoles.Any())
-            {
-                <ul>
-                    @foreach (var nonMember in _membersWithoutRoles)
-                    {
-                        <li>@nonMember.Name</li>
-                    }
-                </ul>
-            }
-            else
-            {
-                <p>No non-members found.</p>
-            }
-        </div>
-    </div>
+        </MudGrid>
+    }
+    else
+    {
+        <p>Club has no members</p>
+    }
 }
 
 @code {

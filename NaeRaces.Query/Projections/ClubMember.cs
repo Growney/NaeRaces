@@ -1,4 +1,5 @@
-﻿using NaeRaces.Events;
+﻿using EventDbLite;
+using NaeRaces.Events;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -6,14 +7,14 @@ using System.Text;
 
 namespace NaeRaces.Query.Projections;
 
-public class ClubMember
+public class ClubMember : ContextProjection
 {
-    public record ClubMemberResult(Guid PilotId, string CallSign, string Name, string Email, string Nationality, DateTime? DateOfBirth, int? MembershipLevelId, string? MembershipLevelName, int? PaymentOptionId, string? PaymentOptionName, DateTime? ValidUntil, IEnumerable<string> Roles);
+    public record ClubMemberResult(Guid PilotId, string CallSign, string Name, string Email, string Nationality, DateTime? DateOfBirth, DateTime? MemberSince, int? MembershipLevelId, string? MembershipLevelName, int? PaymentOptionId, string? PaymentOptionName, DateTime? ValidUntil, IEnumerable<string> Roles);
 
     private class ClubMemberProjectionSnapshot
     {
         public record PilotInfo(Guid PilotId, string CallSign, string Name, string Email, string Nationality, DateTime? DateOfBirth);
-        public record PilotMembership(Guid PilotId, Guid ClubId, int? MembershipLevelId, int? PaymentOptionId, DateTime? ValidUntil);
+        public record PilotMembership(Guid PilotId, Guid ClubId, DateTime MemberSince, int? MembershipLevelId, int? PaymentOptionId, DateTime? ValidUntil);
         public record PilotRole(Guid PilotId, Guid ClubId, IEnumerable<string> Roles);
         public record ClubInfo(Guid ClubId, List<MembershipLevel> MembershipLevels);
         public record MembershipLevel(int Id, string Name, List<PaymentOption> PaymentOptions);
@@ -40,7 +41,7 @@ public class ClubMember
                 _memberships[membership.ClubId] = clubMemberships;
             }
 
-            clubMemberships[membership.PilotId] = new MembershipInfo(membership.MembershipLevelId, membership.PaymentOptionId, membership.ValidUntil);
+            clubMemberships[membership.PilotId] = new MembershipInfo(membership.MemberSince, membership.MembershipLevelId, membership.PaymentOptionId, membership.ValidUntil);
         }
 
         foreach (var role in snapshot.Roles)
@@ -89,7 +90,7 @@ public class ClubMember
         {
             foreach (var pilotKvp in clubKvp.Value)
             {
-                memberships.Add(new ClubMemberProjectionSnapshot.PilotMembership(pilotKvp.Key, clubKvp.Key, pilotKvp.Value.MembershipLevelId, pilotKvp.Value.PaymentOptionId, pilotKvp.Value.ValidUntil));
+                memberships.Add(new ClubMemberProjectionSnapshot.PilotMembership(pilotKvp.Key, clubKvp.Key, pilotKvp.Value.MemberSince, pilotKvp.Value.MembershipLevelId, pilotKvp.Value.PaymentOptionId, pilotKvp.Value.ValidUntil));
             }
         }
 
@@ -134,7 +135,7 @@ public class ClubMember
     }
 
     private record PilotDetails(string CallSign, string Name, string Email, string Nationality, DateTime? DateOfBirth);
-    private record MembershipInfo(int? MembershipLevelId, int? PaymentOptionId, DateTime? ValidUntil);
+    private record MembershipInfo(DateTime MemberSince, int? MembershipLevelId, int? PaymentOptionId, DateTime? ValidUntil);
     private record ClubDetails(List<MembershipLevelDetails> MembershipLevels);
     private record MembershipLevelDetails(int Id, string Name, List<PaymentOptionDetails> PaymentOptions);
     private record PaymentOptionDetails(int Id, string Name);
@@ -216,6 +217,7 @@ public class ClubMember
                 pilot.Email,
                 pilot.Nationality,
                 pilot.DateOfBirth,
+                membership?.MemberSince,
                 membership?.MembershipLevelId,
                 level?.Name,
                 membership?.PaymentOptionId,
@@ -421,7 +423,15 @@ public class ClubMember
             _memberships[clubId] = clubMemberships;
         }
 
-        clubMemberships[pilotId] = new MembershipInfo(membershipLevelId, paymentOptionId, validUntil);
+        if (!clubMemberships.ContainsKey(pilotId))
+        {
+            DateTime membershipStart = Metadata?.InceptionUtc ?? DateTime.UtcNow;
+            clubMemberships.Add(pilotId, new MembershipInfo(membershipStart, membershipLevelId, paymentOptionId, validUntil));
+        }
+        else
+        {
+            clubMemberships[pilotId] = clubMemberships[pilotId] with { MembershipLevelId = membershipLevelId, PaymentOptionId = paymentOptionId, ValidUntil = validUntil };
+        }
     }
 
     private void When(PilotClubMembershipRenewed renewed)

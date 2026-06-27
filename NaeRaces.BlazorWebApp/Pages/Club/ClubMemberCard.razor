@@ -1,0 +1,72 @@
+﻿<MudPaper Class="pa-3">
+    <div class="card-body">
+        <div class="card-header">
+            <MudText Typo="Typo.h4" Align="Align.Right">@PrimaryHeaderText</MudText>
+            <MudText Typo="Typo.subtitle2" Align="Align.Right">@SecondaryHeaderText</MudText>
+            <MudText></MudText>
+        </div>
+        <div class="card-image">
+            <NaeRaces.BlazorWebApp.Pages.Pilot.PilotImage></NaeRaces.BlazorWebApp.Pages.Pilot.PilotImage>
+        </div>
+        <div class="card-content">
+            @if (Roles.Any())
+            {
+                <MudText Typo="Typo.body2">Roles: @(string.Join(", ", Roles))</MudText>
+            }
+            @if (!string.IsNullOrWhiteSpace(MembershipLevelName))
+            {
+                <MudText Typo="Typo.body2">Membership: @MembershipLevelName</MudText>
+            }
+            @if (!string.IsNullOrWhiteSpace(PaymentOptionName))
+            {
+                <MudText Typo="Typo.body2">Payment Option: @PaymentOptionName</MudText>
+            }
+            @if (ValidUntil.HasValue)
+            {
+                <MudText Typo="Typo.body2">Valid Until: @ValidUntil.Value.ToShortDateString()</MudText>
+            }
+            @if (DateOfBirth.HasValue)
+            {
+                <MudText Typo="Typo.body2">DoB: @DateOfBirth.Value</MudText>
+            }
+        </div>
+        <div class="card-footer">
+            @if (MemberSince.HasValue)
+            {
+                <MudText Typo="Typo.caption">First Joined: @MemberSince.Value.ToShortDateString() (@(Math.Floor((DateTime.UtcNow - MemberSince.Value).TotalDays)) days)</MudText>
+            }
+        </div>
+    </div>
+</MudPaper>
+
+@code {
+    [Parameter]
+    public Guid PilotId { get; set; }
+    [Parameter]
+    public string? CallSign { get; set; } = string.Empty;
+    [Parameter]
+    public string? Name { get; set; } = string.Empty;
+    [Parameter]
+    public string? Nationality { get; set; }
+    [Parameter]
+    public string? Email { get; set; }
+    [Parameter]
+    public DateTime? DateOfBirth { get; set; }
+    [Parameter]
+    public int? MembershipLevelId { get; set; }
+    [Parameter]
+    public string? MembershipLevelName { get; set; }
+    [Parameter]
+    public int? PaymentOptionId { get; set; }
+    [Parameter]
+    public string? PaymentOptionName { get; set; }
+    [Parameter]
+    public DateTime? ValidUntil { get; set; }
+    [Parameter]
+    public DateTime? MemberSince { get; set; }
+    [Parameter]
+    public IEnumerable<string> Roles { get; set; } = Enumerable.Empty<string>();
+
+    private string PrimaryHeaderText => CallSign ?? Name ?? "Pilot X";
+    private string SecondaryHeaderText => !string.IsNullOrWhiteSpace(CallSign) ? Name ?? string.Empty : string.Empty;
+}

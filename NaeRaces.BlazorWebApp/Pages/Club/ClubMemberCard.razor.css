@@ -1,0 +1,21 @@
+﻿.card-body {
+    display: grid;
+    grid-template:
+        "card-image card-header card-header"
+        "card-image card-content card-content"
+        "card-footer card-footer card-footer";
+
+}
+.card-image{
+    grid-area: card-image;
+}
+.card-header{
+    grid-area: card-header;
+    font-size: 2rem;
+}
+.card-content{
+    grid-area: card-content;
+}
+.card-footer{
+    grid-area: card-footer;
+}

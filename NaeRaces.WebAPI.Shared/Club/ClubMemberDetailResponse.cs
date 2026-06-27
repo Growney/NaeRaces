@@ -8,6 +8,7 @@ public class ClubMemberDetailResponse
     public string? Nationality { get; set; }
     public string? Email { get; set; }
     public DateTime? DateOfBirth { get; set; }
+    public DateTime? MemberSince { get; set; }
     public int? MembershipLevelId { get; set; }
     public string? MembershipLevelName { get; set; }
     public int? PaymentOptionId { get; set; }

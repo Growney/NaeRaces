@@ -413,7 +413,7 @@ public class ClubQueryController : Controller
     {
         var pilotIdClaim = User.FindFirst(OpenIddictConstants.Claims.Subject)?.Value;
         bool isAdminOrTrustee = false;
-        if (!Guid.TryParse(pilotIdClaim, out Guid pilotId))
+        if (Guid.TryParse(pilotIdClaim, out Guid pilotId))
         {
             isAdminOrTrustee = await _clubMemberQueryHandler.HasClubMemberRole(clubId, pilotId,
                 nameof(Command.ValueTypes.ClubMemberRole.Administrator),
@@ -430,6 +430,7 @@ public class ClubQueryController : Controller
             Name = member.Name,
             Nationality = member.Nationality,
             Email = isAdminOrTrustee ? member.Email : null,
+            MemberSince = member.MemberSince,
             DateOfBirth = isAdminOrTrustee ? member.DateOfBirth : null,
             MembershipLevelId = isAdminOrTrustee ? member.MembershipLevelId : null,
             MembershipLevelName = isAdminOrTrustee ? member.MembershipLevelName : null,
@@ -440,7 +441,7 @@ public class ClubQueryController : Controller
         }).ToList();
 
         return Ok(results);
-    }
+    } 
 
     [Authorize]
     [HttpGet("api/club/query/my-organiser-clubs")]
