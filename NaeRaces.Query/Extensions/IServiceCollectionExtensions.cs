@@ -15,6 +15,7 @@ public static class IServiceCollectionExtensions
         services.AddTrackedAllStreamProjection<ClubMemberPopularity>();
         services.AddTrackedAllStreamProjection<ClubDescription>();
         services.AddTrackedAllStreamProjection<ClubMember>();
+        services.AddTrackedAllStreamProjection<ClubMemberships>();
 
         return services;
     }

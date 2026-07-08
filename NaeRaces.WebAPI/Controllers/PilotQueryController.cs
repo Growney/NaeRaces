@@ -17,15 +17,9 @@ public class PilotQueryController : Controller
     }
 
     [Authorize]
-    [HttpGet("api/pilot/query/my-profile")]
-    public async Task<IActionResult> GetMyProfileAsync()
+    [HttpGet("api/pilot/query/profile/{pilotId:guid}")]
+    public async Task<IActionResult> GetProfileAsync(Guid pilotId)
     {
-        var pilotIdClaim = User.FindFirst(OpenIddictConstants.Claims.Subject)?.Value;
-        if (!Guid.TryParse(pilotIdClaim, out Guid pilotId))
-        {
-            return Unauthorized();
-        }
-
         var projection = await _projectionProvider.CloneAsync<PilotProfile>();
         var profile = projection.Object.GetPilotProfile(pilotId);
 

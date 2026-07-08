@@ -18,7 +18,7 @@
                 <MudSwitch T=bool ThumbIconColor="Color.Primary" ThumbIcon="@(_isDarkMode ? @Icons.Material.Filled.LightMode : @Icons.Material.Filled.DarkMode)" @bind-Value="_isDarkMode"></MudSwitch>
                 <AuthorizeView>
                     <Authorized>
-                        <MudNavLink Style="white-space: nowrap;" Href="@($"/pilot/{context.User.Claims.First(x => x.Type == "sub").Value}/profile")">@context.User.Identity!.Name</MudNavLink>
+                        <MudNavLink Style="white-space: nowrap;" Href="@($"/pilot/{context.User.Claims.First(x => x.Type == "sub").Value}/profile/edit")">@context.User.Identity!.Name</MudNavLink>
                         <MudNavLink IconColor="Color.Primary" Icon="@Icons.Material.Filled.Logout" OnClick="BeginSignOut"></MudNavLink>
                     </Authorized>
                     <NotAuthorized>

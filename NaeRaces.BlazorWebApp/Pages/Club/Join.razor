@@ -1,8 +1,558 @@
 ﻿@page "/club/{ClubId:guid}/join"
+@using NaeRaces.WebAPI.Shared.Club
+@using Microsoft.AspNetCore.Components.Authorization
 @layout ClubLayout
-<h3>Join</h3>
+@inject HttpClient Http
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+<PageTitle>Join Club</PageTitle>
+
+@if (_isLoading)
+{
+    <MudProgressCircular Indeterminate="true" />
+}
+else
+{
+    @if (_isAdmin)
+    {
+        <div class="d-flex justify-end mt-4">
+            @if (_isEditing)
+            {
+                <MudButton Variant="Variant.Filled" Color="Color.Secondary" OnClick="() => _isEditing = false">Done</MudButton>
+            }
+            else
+            {
+                <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.EditNote" Color="Color.Secondary" OnClick="() => _isEditing = true">Manage Memberships</MudButton>
+            }
+        </div>
+    }
+    @if (_membershipLevels is null || !_membershipLevels.Any())
+    {
+        <MudAlert Severity="Severity.Info">This club has no membership options available.</MudAlert>
+    }
+    else
+    {
+        <MudText Typo="Typo.h4" Class="mb-4">Choose a Membership</MudText>
+
+        @foreach (var level in _membershipLevels)
+        {
+            <MudCard Class="mb-4">
+                <MudCardHeader>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.h5">@level.Name</MudText>
+                    </CardHeaderContent>
+                </MudCardHeader>
+                <MudCardContent>
+                    @if (!level.PaymentOptions.Any())
+                    {
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">No payment options available for this level.</MudText>
+                    }
+                    else
+                    {
+                        <MudGrid>
+                            @foreach (var option in level.PaymentOptions)
+                            {
+                                <MudItem xs="12" sm="6" md="4">
+                                    <MudCard Outlined="true">
+                                        <MudCardContent>
+                                            <MudText Typo="Typo.subtitle1">@option.Name</MudText>
+                                            <MudText Typo="Typo.body1">@option.Currency @option.Price.ToString("0.00")</MudText>
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary">@FormatPaymentType(option)</MudText>
+                                        </MudCardContent>
+                                        <MudCardActions>
+                                                             @if (_currentMembership == null)
+                                                             {
+                                                                 <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true"
+                                                                            OnClick="@(() => JoinAsync(level.MembershipLevelId, option.PaymentOptionId))">
+                                                                     Join
+                                                                 </MudButton>
+                                                             }
+                                                             else if (_currentMembership.MembershipLevelId == level.MembershipLevelId &&
+                                                                      _currentMembership.PaymentOptionId == option.PaymentOptionId)
+                                                             {
+                                                                 <MudChip T="string" Color="Color.Success" Variant="Variant.Filled" Class="me-2">Current</MudChip>
+                                                                 <MudButton Variant="Variant.Outlined" Color="Color.Error" FullWidth="true"
+                                                                            OnClick="CancelMembershipAsync" Disabled="_isCancelling">
+                                                                     @if (_isCancelling)
+                                                                     {
+                                                                         <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="me-2" />
+                                                                     }
+                                                                     Cancel Membership
+                                                                 </MudButton>
+                                                             }
+                                                         </MudCardActions>
+                                    </MudCard>
+                                </MudItem>
+                            }
+                        </MudGrid>
+                    }
+                </MudCardContent>
+            </MudCard>
+        }
+    }
+
+    @if (_errorMessage is not null)
+    {
+        <MudAlert Severity="Severity.Error" Class="mt-3">@_errorMessage</MudAlert>
+    }
+
+    @if (_successMessage is not null)
+    {
+        <MudAlert Severity="Severity.Success" Class="mt-3">@_successMessage</MudAlert>
+    }
+
+
+    @if (_isAdmin && _isEditing)
+    {
+        <MudDivider Class="my-6" />
+        <MudText Typo="Typo.h5" Class="mb-4">Manage Membership Levels</MudText>
+
+        @foreach (var level in _membershipLevels ?? [])
+        {
+            <MudCard Class="mb-4" Outlined="true">
+                <MudCardHeader>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.h6">@level.Name</MudText>
+                    </CardHeaderContent>
+                </MudCardHeader>
+                <MudCardContent>
+                    @if (!level.PaymentOptions.Any())
+                    {
+                        <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-2">No payment options yet.</MudText>
+                    }
+                    else
+                    {
+                        <MudSimpleTable Dense="true" Hover="true" Class="mb-3">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Type</th>
+                                    <th>Price</th>
+                                    <th>Details</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var po in level.PaymentOptions)
+                                {
+                                    <tr>
+                                        <td>@po.Name</td>
+                                        <td>@po.PaymentType</td>
+                                        <td>@po.Currency @po.Price.ToString("0.00")</td>
+                                        <td>
+                                            @if (po.PaymentType == "Monthly")
+                                            {
+                                                <MudText Typo="Typo.caption">Day of month: @po.DayOfMonthDue, every @po.PaymentInterval month(s)</MudText>
+                                            }
+                                            else if (po.PaymentType == "Subscription")
+                                            {
+                                                <MudText Typo="Typo.caption">Every @po.PaymentInterval month(s)</MudText>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </MudSimpleTable>
+                    }
+
+                    @if (_addingPaymentOptionForLevelId == level.MembershipLevelId)
+                    {
+                        <MudPaper Class="pa-4" Outlined="true">
+                            <MudText Typo="Typo.subtitle2" Class="mb-3">Add Payment Option</MudText>
+                            <MudGrid>
+                                <MudItem xs="12" sm="6" md="3">
+                                    <MudSelect T="string" Label="Type" @bind-Value="_paymentOptionType" Variant="Variant.Outlined" Margin="Margin.Dense">
+                                        <MudSelectItem Value="@("Annual")">Annual</MudSelectItem>
+                                        <MudSelectItem Value="@("Monthly")">Monthly</MudSelectItem>
+                                        <MudSelectItem Value="@("Subscription")">Subscription</MudSelectItem>
+                                    </MudSelect>
+                                </MudItem>
+                                <MudItem xs="12" sm="6" md="3">
+                                    <MudTextField T="string" Label="Name" @bind-Value="_paymentOptionName" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                                </MudItem>
+                                <MudItem xs="12" sm="6" md="3">
+                                    <MudTextField T="string" Label="Currency" @bind-Value="_paymentOptionCurrency" Variant="Variant.Outlined" Margin="Margin.Dense" Placeholder="GBP" />
+                                </MudItem>
+                                <MudItem xs="12" sm="6" md="3">
+                                    <MudNumericField T="decimal" Label="Price" @bind-Value="_paymentOptionPrice" Variant="Variant.Outlined" Margin="Margin.Dense" Step="0.01m" Min="0" />
+                                </MudItem>
+                                @if (_paymentOptionType == "Monthly")
+                                {
+                                    <MudItem xs="12" sm="6" md="3">
+                                        <MudNumericField T="int" Label="Day of Month Due" @bind-Value="_paymentOptionDayOfMonthDue" Variant="Variant.Outlined" Margin="Margin.Dense" Min="1" Max="28" />
+                                    </MudItem>
+                                    <MudItem xs="12" sm="6" md="3">
+                                        <MudNumericField T="int" Label="Payment Interval (months)" @bind-Value="_paymentOptionInterval" Variant="Variant.Outlined" Margin="Margin.Dense" Min="1" />
+                                    </MudItem>
+                                }
+                                @if (_paymentOptionType == "Subscription")
+                                {
+                                    <MudItem xs="12" sm="6" md="3">
+                                        <MudNumericField T="int" Label="Payment Interval (months)" @bind-Value="_paymentOptionInterval" Variant="Variant.Outlined" Margin="Margin.Dense" Min="1" />
+                                    </MudItem>
+                                }
+                            </MudGrid>
+                            @if (_paymentOptionMessage is not null)
+                            {
+                                <MudAlert Severity="@(_paymentOptionSuccess ? Severity.Success : Severity.Error)" Dense="true" Class="mt-2">@_paymentOptionMessage</MudAlert>
+                            }
+                            <div class="d-flex gap-2 mt-3">
+                                <MudButton Variant="Variant.Filled" Color="Color.Success" OnClick="@(() => AddPaymentOptionAsync(level.MembershipLevelId))" Disabled="_isAddingPaymentOption">
+                                    @if (_isAddingPaymentOption)
+                                    {
+                                        <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="me-2" />
+                                    }
+                                    Add
+                                </MudButton>
+                                <MudButton Variant="Variant.Outlined" OnClick="@(() => _addingPaymentOptionForLevelId = null)">Cancel</MudButton>
+                            </div>
+                        </MudPaper>
+                    }
+                    else
+                    {
+                        <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small"
+                                   OnClick="@(() => StartAddPaymentOption(level.MembershipLevelId))">
+                            Add Payment Option
+                        </MudButton>
+                    }
+                </MudCardContent>
+            </MudCard>
+        }
+
+        <MudCard Class="mb-4">
+            <MudCardHeader>
+                <CardHeaderContent>
+                    <MudText Typo="Typo.h6">Add Membership Level</MudText>
+                </CardHeaderContent>
+            </MudCardHeader>
+            <MudCardContent>
+                <MudTextField T="string" Label="Level Name" @bind-Value="_newLevelName" Variant="Variant.Outlined"
+                              Margin="Margin.Dense" Placeholder="e.g. Standard, Premium..." />
+                @if (_levelMessage is not null)
+                {
+                    <MudAlert Severity="@(_levelSuccess ? Severity.Success : Severity.Error)" Dense="true" Class="mt-2">@_levelMessage</MudAlert>
+                }
+            </MudCardContent>
+            <MudCardActions>
+                <MudButton Variant="Variant.Filled" Color="Color.Success" OnClick="AddLevelAsync"
+                           Disabled="@(_isAddingLevel || string.IsNullOrWhiteSpace(_newLevelName))">
+                    @if (_isAddingLevel)
+                    {
+                        <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="me-2" />
+                    }
+                    Add Level
+                </MudButton>
+            </MudCardActions>
+        </MudCard>
+    }
+}
 
 @code {
     [Parameter]
     public Guid ClubId { get; set; }
+
+    [Parameter]
+    [SupplyParameterFromQuery(Name = "join-membershipLevelId")]
+    public int? JoinMembershipLevelId { get; set; }
+
+    [Parameter]
+    [SupplyParameterFromQuery(Name = "join-paymentOptionId")]
+    public int? JoinPaymentOptionId { get; set; }
+
+    private List<ClubMembershipLevelResponse>? _membershipLevels;
+    private CurrentUserClubMembershipResponse? _currentMembership;
+    private bool _isLoading = true;
+    private bool _joinInitiated;
+    private bool _isAdmin;
+    private bool _isEditing;
+    private bool _isCancelling;
+    private string? _errorMessage;
+    private string? _successMessage;
+
+    // Add membership level
+    private string _newLevelName = string.Empty;
+    private bool _isAddingLevel;
+    private string? _levelMessage;
+    private bool _levelSuccess;
+
+    // Add payment option
+    private int? _addingPaymentOptionForLevelId;
+    private string _paymentOptionType = "Annual";
+    private string _paymentOptionName = string.Empty;
+    private string _paymentOptionCurrency = string.Empty;
+    private decimal _paymentOptionPrice;
+    private int _paymentOptionDayOfMonthDue = 1;
+    private int _paymentOptionInterval = 1;
+    private bool _isAddingPaymentOption;
+    private string? _paymentOptionMessage;
+    private bool _paymentOptionSuccess;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        bool isAuthenticated = authState.User?.Identity?.IsAuthenticated ?? false;
+
+        var levelsTask = Http.GetAsync($"api/club/{ClubId}/query/membershiplevels");
+        var adminTask = Http.GetAsync($"api/club/{ClubId}/query/is-admin");
+        var membershipTask = isAuthenticated
+            ? Http.GetAsync($"api/club/{ClubId}/query/my-membership")
+            : Task.FromResult(new HttpResponseMessage(System.Net.HttpStatusCode.Unauthorized));
+
+        await Task.WhenAll(levelsTask, adminTask, membershipTask);
+
+        var levelsResponse = levelsTask.Result;
+        if (levelsResponse.IsSuccessStatusCode)
+        {
+            _membershipLevels = await levelsResponse.Content.ReadFromJsonAsync<List<ClubMembershipLevelResponse>>();
+        }
+
+        var adminResponse = adminTask.Result;
+        if (adminResponse.IsSuccessStatusCode)
+        {
+            _isAdmin = await adminResponse.Content.ReadFromJsonAsync<bool>();
+        }
+
+        var membershipResponse = membershipTask.Result;
+        if (membershipResponse.IsSuccessStatusCode)
+        {
+            _currentMembership = await membershipResponse.Content.ReadFromJsonAsync<CurrentUserClubMembershipResponse>();
+        }
+
+        _isLoading = false;
+
+        await base.OnInitializedAsync();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (JoinMembershipLevelId.HasValue && JoinPaymentOptionId.HasValue && !_joinInitiated)
+        {
+            _joinInitiated = true;
+            await SendJoinAsync(JoinMembershipLevelId.Value, JoinPaymentOptionId.Value);
+        }
+
+        await base.OnParametersSetAsync();
+    }
+
+    private async Task JoinAsync(int membershipLevelId, int paymentOptionId)
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+
+        if (!authState.User?.Identity?.IsAuthenticated ?? false)
+        {
+            string returnUrl = $"{NavigationManager.BaseUri}club/{ClubId}/join?join-membershipLevelId={membershipLevelId}&join-paymentOptionId={paymentOptionId}";
+            NavigationManager.NavigateToLogin("authentication/login", new InteractiveRequestOptions
+            {
+                Interaction = InteractionType.SignIn,
+                ReturnUrl = returnUrl
+            });
+            return;
+        }
+
+        await SendJoinAsync(membershipLevelId, paymentOptionId);
+    }
+
+    private async Task SendJoinAsync(int membershipLevelId, int paymentOptionId)
+    {
+        _errorMessage = null;
+        _successMessage = null;
+
+        var request = new RegisterPilotForClubMembershipLevelRequest
+        {
+            MembershipLevelId = membershipLevelId,
+            PaymentOptionId = paymentOptionId,
+            RegistrationId = Guid.NewGuid()
+        };
+
+        var response = await Http.PostAsJsonAsync($"api/club/{ClubId}/pilotmembership", request);
+
+        if (response.IsSuccessStatusCode)
+        {
+            _successMessage = "Successfully registered for membership. Your registration is pending confirmation.";
+            var membershipResponse = await Http.GetAsync($"api/club/{ClubId}/query/my-membership");
+            if (membershipResponse.IsSuccessStatusCode)
+            {
+                _currentMembership = await membershipResponse.Content.ReadFromJsonAsync<CurrentUserClubMembershipResponse>();
+            }
+        }
+        else if (response.StatusCode == System.Net.HttpStatusCode.Conflict)
+        {
+            _errorMessage = "You already have an active or pending membership for this club.";
+        }
+        else
+        {
+            var message = await response.Content.ReadAsStringAsync();
+            _errorMessage = string.IsNullOrWhiteSpace(message)
+                ? "An error occurred while registering. Please try again."
+                : message;
+        }
+    }
+
+    private async Task AddLevelAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_newLevelName)) return;
+
+        _isAddingLevel = true;
+        _levelMessage = null;
+        try
+        {
+            var response = await Http.PostAsJsonAsync($"api/club/{ClubId}/membershiplevel",
+                new AddClubMembershipLevelRequest { Name = _newLevelName });
+
+            _levelSuccess = response.IsSuccessStatusCode;
+            _levelMessage = response.IsSuccessStatusCode ? "Membership level added." : "Failed to add membership level.";
+
+            if (response.IsSuccessStatusCode)
+            {
+                await RefreshMembershipLevelsAsync();
+                _newLevelName = string.Empty;
+            }
+        }
+        catch
+        {
+            _levelSuccess = false;
+            _levelMessage = "An error occurred.";
+        }
+        finally
+        {
+            _isAddingLevel = false;
+        }
+    }
+
+    private void StartAddPaymentOption(int levelId)
+    {
+        _addingPaymentOptionForLevelId = levelId;
+        _paymentOptionType = "Annual";
+        _paymentOptionName = string.Empty;
+        _paymentOptionCurrency = string.Empty;
+        _paymentOptionPrice = 0;
+        _paymentOptionDayOfMonthDue = 1;
+        _paymentOptionInterval = 1;
+        _paymentOptionMessage = null;
+    }
+
+    private async Task AddPaymentOptionAsync(int membershipLevelId)
+    {
+        _isAddingPaymentOption = true;
+        _paymentOptionMessage = null;
+        try
+        {
+            HttpResponseMessage response = _paymentOptionType switch
+            {
+                "Annual" => await Http.PostAsJsonAsync(
+                    $"api/club/{ClubId}/membershiplevel/{membershipLevelId}/paymentoption/annual",
+                    new AddClubMembershipLevelAnnualPaymentOptionRequest
+                    {
+                        Name = _paymentOptionName,
+                        Currency = _paymentOptionCurrency,
+                        Price = _paymentOptionPrice
+                    }),
+                "Monthly" => await Http.PostAsJsonAsync(
+                    $"api/club/{ClubId}/membershiplevel/{membershipLevelId}/paymentoption/monthly",
+                    new AddClubMembershipLevelMonthlyPaymentOptionRequest
+                    {
+                        Name = _paymentOptionName,
+                        Currency = _paymentOptionCurrency,
+                        Price = _paymentOptionPrice,
+                        DayOfMonthDue = _paymentOptionDayOfMonthDue,
+                        PaymentInterval = _paymentOptionInterval
+                    }),
+                "Subscription" => await Http.PostAsJsonAsync(
+                    $"api/club/{ClubId}/membershiplevel/{membershipLevelId}/paymentoption/subscription",
+                    new AddClubMembershipLevelSubscriptionPaymentOptionRequest
+                    {
+                        Name = _paymentOptionName,
+                        Currency = _paymentOptionCurrency,
+                        Price = _paymentOptionPrice,
+                        PaymentInterval = _paymentOptionInterval
+                    }),
+                _ => throw new InvalidOperationException("Unknown payment type")
+            };
+
+            _paymentOptionSuccess = response.IsSuccessStatusCode;
+            _paymentOptionMessage = response.IsSuccessStatusCode ? "Payment option added." : "Failed to add payment option.";
+
+            if (response.IsSuccessStatusCode)
+            {
+                await RefreshMembershipLevelsAsync();
+                _addingPaymentOptionForLevelId = null;
+            }
+        }
+        catch
+        {
+            _paymentOptionSuccess = false;
+            _paymentOptionMessage = "An error occurred.";
+        }
+        finally
+        {
+            _isAddingPaymentOption = false;
+        }
+    }
+
+    private async Task CancelMembershipAsync()
+    {
+        if (_currentMembership == null) return;
+
+        _isCancelling = true;
+        _errorMessage = null;
+        _successMessage = null;
+        try
+        {
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            var pilotId = authState.User?.FindFirst("sub")?.Value
+                ?? authState.User?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
+            if (pilotId == null)
+            {
+                _errorMessage = "Unable to determine your user identity.";
+                return;
+            }
+
+            var response = await Http.DeleteAsync(
+                $"api/club/{ClubId}/pilotmembership/{pilotId}/{_currentMembership.RegistrationId}");
+
+            if (response.IsSuccessStatusCode)
+            {
+                _successMessage = "Your membership has been cancelled.";
+                _currentMembership = null;
+            }
+            else
+            {
+                var message = await response.Content.ReadAsStringAsync();
+                _errorMessage = string.IsNullOrWhiteSpace(message)
+                    ? "Failed to cancel membership. Please try again."
+                    : message;
+            }
+        }
+        catch
+        {
+            _errorMessage = "An error occurred while cancelling your membership.";
+        }
+        finally
+        {
+            _isCancelling = false;
+        }
+    }
+
+    private async Task RefreshMembershipLevelsAsync()
+    {
+        var response = await Http.GetAsync($"api/club/{ClubId}/query/membershiplevels");
+        if (response.IsSuccessStatusCode)
+        {
+            _membershipLevels = await response.Content.ReadFromJsonAsync<List<ClubMembershipLevelResponse>>();
+        }
+    }
+
+    private static string FormatPaymentType(ClubMembershipLevelPaymentOptionResponse option) =>
+        option.PaymentType switch
+        {
+            "Annual" => "Paid annually",
+            "Monthly" when option.DayOfMonthDue.HasValue && option.PaymentInterval.HasValue
+                => $"Paid monthly on day {option.DayOfMonthDue}, every {option.PaymentInterval} month(s)",
+            "Monthly" => "Paid monthly",
+            "Subscription" when option.PaymentInterval.HasValue
+                => $"Subscription, every {option.PaymentInterval} month(s)",
+            "Subscription" => "Subscription",
+            _ => option.PaymentType
+        };
 }

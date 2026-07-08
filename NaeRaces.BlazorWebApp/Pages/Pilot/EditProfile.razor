@@ -1,10 +1,233 @@
-﻿@page "/pilot/{PilotId:Guid}/profile/edit"
+﻿@page "/pilot/{PilotId:guid}/profile/edit"
+@attribute [Authorize]
+@using System.ComponentModel.DataAnnotations
+@using Microsoft.AspNetCore.Authorization
+@using NaeRaces.WebAPI.Shared.Pilot
+@inject HttpClient Http
+@inject ISnackbar Snackbar
 
-<h3>Pilot Profile Edit</h3>
-<p>Coming soon</p>
-<p>@PilotId</p>
+<PageTitle>Edit Pilot Profile</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Small" Class="mt-6">
+    <MudText Typo="Typo.h4" Class="mb-4">Edit Pilot Profile</MudText>
+
+    @if (isLoading)
+    {
+        <MudPaper Class="pa-6 d-flex justify-center">
+            <MudProgressCircular Indeterminate="true" Color="Color.Primary" />
+        </MudPaper>
+    }
+    else if (!string.IsNullOrWhiteSpace(loadError))
+    {
+        <MudAlert Severity="Severity.Error">@loadError</MudAlert>
+    }
+    else if (model is null)
+    {
+        <MudAlert Severity="Severity.Warning">Pilot profile not found.</MudAlert>
+    }
+    else
+    {
+        <MudPaper Class="pa-4">
+            <MudForm @ref="form" Model="model" Disabled="@isSaving">
+                <MudTextField T="string" Label="Call Sign" @bind-Value="model.CallSign" Required="true" />
+                <MudTextField T="string" Label="Name" @bind-Value="model.Name" Required="true" />
+                <MudTextField T="string" Label="Nationality" @bind-Value="model.Nationality" Required="true" />
+                <MudDatePicker Label="Date of Birth" @bind-Date="model.DateOfBirth" DateFormat="yyyy-MM-dd" />
+
+                <MudDivider Class="my-4" />
+
+                <MudTextField T="string" Label="Email" Value="model.Email" ReadOnly="true" Variant="Variant.Outlined" />
+                <MudTextField T="string" Label="Username" Value="model.UserName" ReadOnly="true" Variant="Variant.Outlined" />
+
+                <MudStack Row="true" Spacing="2" Class="mt-4">
+                    <MudButton Variant="Variant.Filled"
+                               Color="Color.Primary"
+                               OnClick="SaveAsync"
+                               Disabled="@isSaving">
+                        Save Changes
+                    </MudButton>
+                    <MudButton Variant="Variant.Outlined"
+                               Color="Color.Default"
+                               OnClick="ReloadAsync"
+                               Disabled="@isSaving">
+                        Reload
+                    </MudButton>
+                </MudStack>
+            </MudForm>
+        </MudPaper>
+    }
+</MudContainer>
 
 @code {
     [Parameter]
     public Guid PilotId { get; set; }
+
+    private MudForm? form;
+    private bool isLoading = true;
+    private bool isSaving;
+    private string? loadError;
+    private EditPilotProfileModel? model;
+    private PilotProfileResponse? original;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await LoadProfileAsync();
+    }
+
+    private async Task ReloadAsync()
+    {
+        await LoadProfileAsync();
+    }
+
+    private async Task LoadProfileAsync()
+    {
+        isLoading = true;
+        loadError = null;
+
+        try
+        {
+            original = await Http.GetFromJsonAsync<PilotProfileResponse>($"api/pilot/query/profile/{PilotId}");
+
+            if (original is null)
+            {
+                model = null;
+                return;
+            }
+
+            model = new EditPilotProfileModel
+            {
+                CallSign = original.CallSign,
+                Name = original.Name,
+                Nationality = original.Nationality,
+                DateOfBirth = original.DateOfBirth,
+                Email = original.Email,
+                UserName = original.UserName
+            };
+        }
+        catch (Exception ex)
+        {
+            loadError = $"Failed to load profile: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task SaveAsync()
+    {
+        if (model is null || original is null || form is null)
+        {
+            return;
+        }
+
+        await form.ValidateAsync();
+        if (!form.IsValid)
+        {
+            return;
+        }
+
+        isSaving = true;
+
+        try
+        {
+            var changed = false;
+
+            if (!string.Equals(model.CallSign, original.CallSign, StringComparison.Ordinal))
+            {
+                var res = await Http.PutAsJsonAsync("api/pilot/callsign", new ChangePilotCallSignRequest
+                {
+                    NewCallSign = model.CallSign.Trim()
+                });
+
+                if (!res.IsSuccessStatusCode)
+                {
+                    Snackbar.Add("Failed to save call sign.", Severity.Error);
+                    return;
+                }
+
+                changed = true;
+            }
+
+            if (!string.Equals(model.Name, original.Name, StringComparison.Ordinal))
+            {
+                var res = await Http.PutAsJsonAsync("api/pilot/name", new SetPilotNameRequest
+                {
+                    Name = model.Name.Trim()
+                });
+
+                if (!res.IsSuccessStatusCode)
+                {
+                    Snackbar.Add("Failed to save name.", Severity.Error);
+                    return;
+                }
+
+                changed = true;
+            }
+
+            if (!string.Equals(model.Nationality, original.Nationality, StringComparison.Ordinal))
+            {
+                var res = await Http.PutAsJsonAsync("api/pilot/nationality", new SetPilotNationalityRequest
+                {
+                    Nationality = model.Nationality.Trim()
+                });
+
+                if (!res.IsSuccessStatusCode)
+                {
+                    Snackbar.Add("Failed to save nationality.", Severity.Error);
+                    return;
+                }
+
+                changed = true;
+            }
+
+            if (model.DateOfBirth.HasValue && model.DateOfBirth != original.DateOfBirth)
+            {
+                var res = await Http.PutAsJsonAsync("api/pilot/dateofbirth", new SetPilotDateOfBirthRequest
+                {
+                    DateOfBirth = model.DateOfBirth.Value
+                });
+
+                if (!res.IsSuccessStatusCode)
+                {
+                    Snackbar.Add("Failed to save date of birth.", Severity.Error);
+                    return;
+                }
+
+                changed = true;
+            }
+
+            if (!changed)
+            {
+                Snackbar.Add("No changes to save.", Severity.Info);
+                return;
+            }
+
+            Snackbar.Add("Profile updated.", Severity.Success);
+            await LoadProfileAsync();
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private sealed class EditPilotProfileModel
+    {
+        [Required]
+        public string CallSign { get; set; } = string.Empty;
+
+        [Required]
+        [MaxLength(150)]
+        public string Name { get; set; } = string.Empty;
+
+        [Required]
+        [MaxLength(50)]
+        public string Nationality { get; set; } = string.Empty;
+
+        public DateTime? DateOfBirth { get; set; }
+
+        public string Email { get; set; } = string.Empty;
+        public string UserName { get; set; } = string.Empty;
+    }
 }

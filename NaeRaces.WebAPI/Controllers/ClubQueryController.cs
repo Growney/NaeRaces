@@ -255,42 +255,27 @@ public class ClubQueryController : Controller
     [HttpGet("api/club/{clubId:guid}/query/membershiplevels")]
     public async Task<IActionResult> GetClubMembershipLevelsAsync([FromRoute] Guid clubId)
     {
-        var results = new List<ClubMembershipLevelResponse>();
-        var policyNames = new Dictionary<Guid, string>();
+        var projection = await _projectionProvider.CloneAsync<ClubMemberships>();
 
-        var levels = await _clubMembershipLevelQueryHandler.GetClubMembershipLevels(clubId).ToListAsync();
-        foreach (var level in levels)
+        var levels = projection.Object.GetClubMembershipLevels(clubId);
+
+        var results = levels.Select(level => new ClubMembershipLevelResponse
         {
-            string? policyName = null;
-            if (level.PilotPolicyId.HasValue)
+            MembershipLevelId = level.MembershipLevelId,
+            Name = level.Name,
+            PilotPolicyId = level.PilotPolicyId,
+            PaymentOptions = level.PaymentOptions.Select(po => new ClubMembershipLevelPaymentOptionResponse
             {
-                if (!policyNames.TryGetValue(level.PilotPolicyId.Value, out policyName))
-                {
-                    var policy = await _pilotSelectionPolicyQueryHandler.GetPolicyDetails(level.PilotPolicyId.Value, clubId);
-                    policyName = policy?.Name;
-                    if (policyName != null)
-                        policyNames[level.PilotPolicyId.Value] = policyName;
-                }
-            }
+                PaymentOptionId = po.PaymentOptionId,
+                Name = po.Name,
+                PaymentType = po.PaymentType.ToString(),
+                Currency = po.Currency,
+                Price = po.Price,
+                DayOfMonthDue = po.DayOfMonthDue,
+                PaymentInterval = po.PaymentInterval
+            }).ToList()
+        }).ToList();
 
-            results.Add(new ClubMembershipLevelResponse
-            {
-                MembershipLevelId = level.MembershipLevelId,
-                Name = level.Name,
-                PilotPolicyId = level.PilotPolicyId,
-                PilotPolicyName = policyName,
-                PaymentOptions = level.PaymentOptions.Select(po => new ClubMembershipLevelPaymentOptionResponse
-                {
-                    PaymentOptionId = po.PaymentOptionId,
-                    Name = po.Name,
-                    PaymentType = po.PaymentType.ToString(),
-                    Currency = po.Currency,
-                    Price = po.Price,
-                    DayOfMonthDue = po.DayOfMonthDue,
-                    PaymentInterval = po.PaymentInterval
-                }).ToList()
-            });
-        }
         return Ok(results);
     }
     [HttpGet("api/club/{clubId:guid}/query/contactdetails")]
@@ -347,6 +332,32 @@ public class ClubQueryController : Controller
 
         var isMember = await _clubMemberQueryHandler.HasEverBeenClubMember(clubId, pilotId);
         return Ok(isMember);
+    }
+
+    [Authorize]
+    [HttpGet("api/club/{clubId:guid}/query/my-membership")]
+    public async Task<IActionResult> GetCurrentUserMembershipAsync([FromRoute] Guid clubId)
+    {
+        var pilotIdClaim = User.FindFirst(OpenIddictConstants.Claims.Subject)?.Value;
+        if (!Guid.TryParse(pilotIdClaim, out Guid pilotId))
+        {
+            return Unauthorized();
+        }
+
+        var membership = await _clubMemberQueryHandler.GetPilotMembershipDetails(pilotId)
+            .FirstOrDefaultAsync(x => x.ClubId == clubId);
+
+        if (membership == null)
+            return NotFound();
+
+        return Ok(new CurrentUserClubMembershipResponse
+        {
+            RegistrationId = membership.Id,
+            MembershipLevelId = membership.MembershipLevelId ?? 0,
+            PaymentOptionId = membership.PaymentOptionId ?? 0,
+            IsConfirmed = membership.IsRegistrationConfirmed,
+            ValidUntil = membership.RegistrationValidUntil
+        });
     }
 
     [HttpGet("api/club/{clubId:guid}/query/members")]
